@@ -14,7 +14,9 @@ namespace Meitou.Launcher;
 public sealed partial class MainWindow : Window
 {
     readonly LauncherConfig config;
-    readonly Releases releases = new(Releases.CreateClient());
+    static readonly HttpClient Http = Releases.CreateClient();
+    readonly Releases releases = new(Http);
+    readonly NewsFeed news = new(Http);
     readonly LauncherUpdater updater;
     readonly ObservableCollection<ModRow> mods = [];
     List<Release> allReleases = [];
@@ -44,7 +46,7 @@ public sealed partial class MainWindow : Window
         RefreshPresets();
         RefreshInstalled();
         UseKenshi(found);
-        Opened += async (_, _) => await RefreshReleasesAsync();
+        Opened += async (_, _) => await Task.WhenAll(LoadNewsAsync(), RefreshReleasesAsync());
     }
 
     void Status(string text) => StatusText.Text = text;
@@ -53,11 +55,40 @@ public sealed partial class MainWindow : Window
 
     void Nav_Click(object? sender, RoutedEventArgs e)
     {
-        foreach (var (nav, page) in new (ToggleButton, Control)[] { (NavMods, ModsPage), (NavVersions, VersionsPage), (NavSettings, SettingsPage) })
+        foreach (var (nav, page) in new (ToggleButton, Control)[] { (NavHome, HomePage), (NavMods, ModsPage), (NavVersions, VersionsPage), (NavSettings, SettingsPage) })
         {
             nav.IsChecked = nav == sender;
             page.IsVisible = nav == sender;
         }
+    }
+
+    // ---- Home: news ----
+
+    async Task LoadNewsAsync()
+    {
+        NewsCount.Text = "Loading";
+        var (posts, problem) = await news.FetchAsync();
+        NewsPanel.Children.Clear();
+        foreach (var post in posts) NewsPanel.Children.Add(PostCard(post));
+        if (posts.Count == 0) NewsPanel.Children.Add(new TextBlock { Classes = { "desc" }, Text = problem ?? "No news yet." });
+        NewsCount.Text = posts.Count == 0 ? "" : problem is not null ? "Offline: saved posts" : posts.Count == 1 ? "1 post" : $"{posts.Count} posts";
+    }
+
+    Control PostCard(NewsPost post)
+    {
+        var card = new StackPanel { Spacing = 8 };
+        if (post.Image is { } cover) card.Children.Add(MarkdownView.Image(NewsFeed.Resolve(post, cover), news, 300));
+        card.Children.Add(new TextBlock { Text = post.Title, FontSize = 22, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        if (post.Date is { } date) card.Children.Add(new TextBlock { Classes = { "desc" }, Text = date.ToString("d MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture) });
+        card.Children.Add(MarkdownView.Render(post, news, OpenLink));
+        return new Border { Classes = { "post" }, Child = card };
+    }
+
+    // Links in posts open in the browser; only web addresses.
+    async void OpenLink(string url)
+    {
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme is "https" or "http")
+            await this.Launcher.LaunchUriAsync(uri);
     }
 
     // ---- Kenshi folder ----

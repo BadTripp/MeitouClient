@@ -23,11 +23,10 @@
       </DockPanel>
       <Border DockPanel.Dock="Top" Classes="rule" Margin="0,0,0,12" />
 
-      <!-- Footer: secondary action left, the version to start and the one paper action right -->
+      <!-- Footer: status left, the version to start and the one paper action right -->
       <StackPanel DockPanel.Dock="Bottom">
         <Border Classes="rule" Margin="0,12,0,10" />
         <DockPanel>
-          <Button DockPanel.Dock="Left" Content="Save mod list" Click="SaveMods_Click" />
           <Button x:Name="PlayButton" DockPanel.Dock="Right" Classes="paper" Click="Play_Click" Margin="12,0,0,0">
             <StackPanel Orientation="Horizontal" Spacing="12">
               <Path Data="M0,0 L0,18 L15,9 Z" VerticalAlignment="Center" />
@@ -35,7 +34,7 @@
             </StackPanel>
           </Button>
           <ComboBox x:Name="VersionBox" DockPanel.Dock="Right" MinWidth="150" PlaceholderText="No version installed" VerticalAlignment="Center" />
-          <TextBlock x:Name="StatusText" Classes="desc" VerticalAlignment="Center" Margin="16,0" />
+          <TextBlock x:Name="StatusText" Classes="desc" VerticalAlignment="Center" Margin="4,0,16,0" />
         </DockPanel>
       </StackPanel>
 
@@ -46,7 +45,8 @@
           <TextBlock x:Name="LauncherVersionText" Classes="desc" />
         </StackPanel>
         <StackPanel Spacing="8">
-          <ToggleButton x:Name="NavMods" Classes="nav" Content="Mods" Click="Nav_Click" IsChecked="True" />
+          <ToggleButton x:Name="NavHome" Classes="nav" Content="Home" Click="Nav_Click" IsChecked="True" />
+          <ToggleButton x:Name="NavMods" Classes="nav" Content="Mods" Click="Nav_Click" />
           <ToggleButton x:Name="NavVersions" Classes="nav" Content="Versions" Click="Nav_Click" />
           <ToggleButton x:Name="NavSettings" Classes="nav" Content="Settings" Click="Nav_Click" />
         </StackPanel>
@@ -54,8 +54,21 @@
       <Border DockPanel.Dock="Left" Classes="vrule" Margin="18,0" />
 
       <Panel>
+        <!-- Home: news posts from the repository's news/ folder -->
+        <DockPanel x:Name="HomePage">
+          <Border DockPanel.Dock="Top" Classes="header" Margin="0,0,0,10">
+            <DockPanel>
+              <TextBlock x:Name="NewsCount" DockPanel.Dock="Right" Classes="aside" />
+              <TextBlock Text="News" />
+            </DockPanel>
+          </Border>
+          <ScrollViewer>
+            <StackPanel x:Name="NewsPanel" Spacing="14" Margin="0,0,14,4" />
+          </ScrollViewer>
+        </DockPanel>
+
         <!-- Mods -->
-        <DockPanel x:Name="ModsPage">
+        <DockPanel x:Name="ModsPage" IsVisible="False">
           <Border DockPanel.Dock="Top" Classes="header" Margin="0,0,0,10">
             <DockPanel>
               <TextBlock x:Name="ModCount" DockPanel.Dock="Right" Classes="aside" />
@@ -74,10 +87,13 @@
               <Button Content="Refresh" Click="RefreshMods_Click" />
             </StackPanel>
           </DockPanel>
-          <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" Margin="0,10,0,0">
-            <TextBox x:Name="PresetName" Width="240" PlaceholderText="New preset name" />
-            <Button Content="Save as preset" Click="SavePreset_Click" />
-          </StackPanel>
+          <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <Button DockPanel.Dock="Left" Content="Save mod list" Click="SaveMods_Click" ToolTip.Tip="Write data/mods.cfg (Play does this too)" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
+              <TextBox x:Name="PresetName" Width="240" PlaceholderText="New preset name" />
+              <Button Content="Save as preset" Click="SavePreset_Click" />
+            </StackPanel>
+          </DockPanel>
           <TextBlock x:Name="ModDetails" DockPanel.Dock="Bottom" Classes="desc" Margin="0,8,0,0" MaxLines="2" TextTrimming="CharacterEllipsis" />
           <ListBox x:Name="ModListBox" SelectionChanged="ModListBox_SelectionChanged" KeyDown="ModListBox_KeyDown">
             <ListBox.ItemTemplate>
@@ -198,16 +214,16 @@
     </DockPanel>
     </Border>
 
-    <!-- Resize grips in the margin (hidden while maximised) -->
+    <!-- Resize grips over the plate's visible edge: 4 px outside it, 6 px inside (hidden while maximised) -->
     <Panel x:Name="Grips">
-      <Border Tag="North" Height="6" VerticalAlignment="Top" Margin="14,0" Background="Transparent" Cursor="SizeNorthSouth" PointerPressed="Grip_PointerPressed" />
-      <Border Tag="South" Height="6" VerticalAlignment="Bottom" Margin="14,0" Background="Transparent" Cursor="SizeNorthSouth" PointerPressed="Grip_PointerPressed" />
-      <Border Tag="West" Width="6" HorizontalAlignment="Left" Margin="0,14" Background="Transparent" Cursor="SizeWestEast" PointerPressed="Grip_PointerPressed" />
-      <Border Tag="East" Width="6" HorizontalAlignment="Right" Margin="0,14" Background="Transparent" Cursor="SizeWestEast" PointerPressed="Grip_PointerPressed" />
-      <Border Tag="NorthWest" Width="14" Height="14" HorizontalAlignment="Left" VerticalAlignment="Top" Background="Transparent" Cursor="TopLeftCorner" PointerPressed="Grip_PointerPressed" />
-      <Border Tag="NorthEast" Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Top" Background="Transparent" Cursor="TopRightCorner" PointerPressed="Grip_PointerPressed" />
-      <Border Tag="SouthWest" Width="14" Height="14" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomLeftCorner" PointerPressed="Grip_PointerPressed" />
-      <Border Tag="SouthEast" Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomRightCorner" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="North" Height="10" VerticalAlignment="Top" Margin="18,4,18,0" Background="Transparent" Cursor="SizeNorthSouth" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="South" Height="10" VerticalAlignment="Bottom" Margin="18,0,18,4" Background="Transparent" Cursor="SizeNorthSouth" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="West" Width="10" HorizontalAlignment="Left" Margin="4,18,0,18" Background="Transparent" Cursor="SizeWestEast" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="East" Width="10" HorizontalAlignment="Right" Margin="0,18,4,18" Background="Transparent" Cursor="SizeWestEast" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="NorthWest" Width="18" Height="18" Margin="4,4,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Background="Transparent" Cursor="TopLeftCorner" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="NorthEast" Width="18" Height="18" Margin="0,4,4,0" HorizontalAlignment="Right" VerticalAlignment="Top" Background="Transparent" Cursor="TopRightCorner" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="SouthWest" Width="18" Height="18" Margin="4,0,0,4" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomLeftCorner" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="SouthEast" Width="18" Height="18" Margin="0,0,4,4" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomRightCorner" PointerPressed="Grip_PointerPressed" />
     </Panel>
   </Panel>
 </Window>

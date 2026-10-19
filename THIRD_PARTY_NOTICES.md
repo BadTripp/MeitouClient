@@ -1,3 +1,6 @@
+| Avalonia, Avalonia.Desktop, Avalonia.Themes.Fluent 12.1.4 (with SkiaSharp and HarfBuzzSharp) | `launcher/Meitou.Launcher` (UI) | MIT |
+| Velopack 1.2.161 | `launcher/Meitou.Launcher` (install and self-update) | MIT |
+| Markdig 1.4.2 | `launcher/Meitou.Launcher` (news posts) | BSD-2-Clause |
 # Third-party notices
 
 MeitouClient is licensed under GPL-3.0-or-later (see [LICENSE](LICENSE)). Parts of it are derived

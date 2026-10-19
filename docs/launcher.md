@@ -74,3 +74,12 @@ versions. The game gets the Kenshi folder through `KENSHI_PATH`.
 - A preset is a named, ordered list of names with enabled flags. Applying one reorders the list. Mods the preset doesn't name go
   to the end, disabled, and mods it names that aren't on disk are reported. Applying doesn't save.
 - A mod folder with `RE_Kenshi.json` is marked as a plugin mod whose DLLs Meitou ignores ([RE_Kenshi](formats/rekenshi.md)).
+
+## News
+
+The Home page shows the repository's `news/` folder (format in `news/README.md`): `<yyyy-mm-dd>-<slug>.md` posts with an optional
+front matter block (`title`, `date`, `image`), newest 20 first. The folder is listed through the contents API on `master` (one
+call, cached with its ETag in `news-cache/`); posts download from raw.githubusercontent.com and are kept by blob hash, images by
+URL, so the page works offline. Relative image and link paths resolve against `news/`. Markdown is parsed by Markdig and drawn
+by `MarkdownView` (headings, paragraphs, emphasis, code, links, lists, quotes, code blocks, rules, images); raw HTML is dropped
+and links open only for http(s).
