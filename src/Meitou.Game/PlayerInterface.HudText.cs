@@ -35,6 +35,26 @@ sealed partial class PlayerInterface
         : prison.Sentence > 0 && prison.HoursLeft > 0 ? $"Imprisoned, sentence time remaining: {Math.Ceiling(prison.HoursLeft).ToString(CultureInfo.InvariantCulture)} hrs"
         : "Waiting to be released";
 
+    /// <summary>The goal line for a character the AI is not running (the player's orders, a fight, a job): what its movement task is, else Aimless.</summary>
+    static string TaskText(CharacterTask task) => task switch
+    {
+        CharacterTask.GoTo => "Moving",
+        CharacterTask.Follow => "Following",
+        CharacterTask.Attack => "Attacking",
+        CharacterTask.Treat => "Giving first aid",
+        CharacterTask.Rest => "Resting",
+        CharacterTask.PickUp => "Picking up",
+        CharacterTask.PutDown => "Putting down",
+        CharacterTask.Loot => "Looting",
+        CharacterTask.StealthKo => "Sneak attack",
+        CharacterTask.Build => "Building",
+        CharacterTask.Dismantle => "Dismantling",
+        CharacterTask.DeliverMaterials => "Delivering materials",
+        CharacterTask.Operate => "Operating machine",
+        CharacterTask.Haul => "Hauling",
+        _ => "Aimless",
+    };
+
     /// <summary>The state lines (State, Goal, Encumbrance) of the selected character.</summary>
     static HudLine[] StateLines(CharacterSnapshot lead)
     {
@@ -47,7 +67,7 @@ sealed partial class PlayerInterface
             colour = BadColour;
         }
         int encumbrance = (int)((1 - Math.Clamp(lead.Hud?.Encumbrance ?? 1, 0, 1)) * 100);
-        return [new("State:", state, ValueColour: colour), new("Goal:", lead.Activity ?? "Aimless"),
+        return [new("State:", state, ValueColour: colour), new("Goal:", lead.Activity ?? TaskText(lead.Task)),
             new("Encumbrance:", encumbrance.ToString(CultureInfo.InvariantCulture) + "%", ValueColour: encumbrance >= 50 ? BadColour : null)];
     }
 
