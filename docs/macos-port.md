@@ -340,10 +340,13 @@ macOS arm64 with modest patches:
 - Game-side (`FsrUpscaler.cs`): the macOS library name and `libvulkan.1.dylib` for
   `vkGetDeviceProcAddr`; nothing else — the game hands FFX its own MoltenVK device.
 
-Measured: full-resolution (1512×856 render + FSR passes) ≈ 24 fps / GPU 40.5 ms, versus TAA at the
-same full resolution ≈ 21 fps — FSR at 1:1 is not the use case; at render scale 0.5 the context
-recreates at half size and the usual upscaler trade applies. Include the built dylib next to the
-executable (or set `MEITOU_FFX_PATH`) and pick FSR in the Tab panel.
+Measured at render scale 0.5 (the swapchain is the full Retina 3024×1712, so FSR renders 1512×856
+and upscales 2×): **28 fps**, versus **36–40 with TAA** and 39 with Off at the same scale — FSR's
+passes cost ~12 ms GPU in `post` (TAA's resolve is nearly free), almost all of it MoltenVK
+translating the upscaler's many small compute dispatches and barriers. Correct but a net fps loss
+on Apple Silicon: **TAA remains the right choice on M1 Pro**; FSR is now merely *available* on
+macOS, where before it could not load at all. Include the built dylib next to the executable (or
+set `MEITOU_FFX_PATH`) and pick FSR in the Tab panel.
 
 ## 10. Decisions worth making upstream (input from this tester)
 
