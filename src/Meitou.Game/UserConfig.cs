@@ -30,7 +30,7 @@ sealed class UserConfig
     /// <summary>A double click (or double tap) on a squad member farther than <see cref="FlightDistance"/> from the view flies the camera there in an arc (Advanced settings; Meitou only, the game cuts).</summary>
     public bool CharacterFlights { get; set; } = false;
     /// <summary>Keeps the object meshes and textures and the terrain textures around every squad bar character loaded, not only around the camera (Advanced settings; Meitou only, costs video memory).</summary>
-    public bool KeepTexturesAtCharacters { get; set; } = false;
+    public bool KeepTexturesAtCharacters { get; set; } = true;
     /// <summary>Seconds a character flight (and each squad tour hop, numpad /) takes.</summary>
     public float CharacterFlightSeconds { get; set; } = DefaultFlightSeconds;
     public const float DefaultFlightSeconds = 2, FlightDistance = 10000;

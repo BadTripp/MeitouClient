@@ -421,7 +421,7 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
         config.MainMenuTransitionSpeed = 1.5f;
         config.InGameTransitionSpeed = 1.5f;
         config.CharacterFlights = false;
-        config.KeepTexturesAtCharacters = false;
+        config.KeepTexturesAtCharacters = true;
         config.CharacterFlightSeconds = UserConfig.DefaultFlightSeconds;
         AttackSlotsSlider.Set(UserConfig.MeitouAttackSlots);
         config.LateDefences = true;
