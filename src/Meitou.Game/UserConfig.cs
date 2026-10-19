@@ -28,7 +28,7 @@ sealed class UserConfig
     public float MainMenuTransitionSpeed { get; set; } = 1.5f;
     public float InGameTransitionSpeed { get; set; } = 1.5f;
     /// <summary>A double click (or double tap) on a squad member farther than <see cref="FlightDistance"/> from the view flies the camera there in an arc (Advanced settings; Meitou only, the game cuts).</summary>
-    public bool CharacterFlights { get; set; } = true;
+    public bool CharacterFlights { get; set; } = false;
     /// <summary>Seconds a character flight (and each squad tour hop, numpad /) takes.</summary>
     public float CharacterFlightSeconds { get; set; } = DefaultFlightSeconds;
     public const float DefaultFlightSeconds = 2, FlightDistance = 10000;
