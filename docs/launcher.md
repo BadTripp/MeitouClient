@@ -77,9 +77,10 @@ versions. The game gets the Kenshi folder through `KENSHI_PATH`.
 
 ## News
 
-The Home page shows the repository's `news/` folder (format in `news/README.md`): `<yyyy-mm-dd>-<slug>.md` posts with an optional
-front matter block (`title`, `date`, `image`), newest 20 first. The folder is listed through the contents API on `master` (one
-call, cached with its ETag in `news-cache/`); posts download from raw.githubusercontent.com and are kept by blob hash, images by
-URL, so the page works offline. Relative image and link paths resolve against `news/`. Markdown is parsed by Markdig and drawn
+The Home page shows the repository's `news/` folder (format in `news/README.md`): one folder per article,
+`<yyyy-mm-dd>-<slug>/index.md` with an optional front matter block (`title`, `date`, `image`) and its pictures beside it, newest
+20 first. `news/` is listed through the contents API on `master` (one call, cached with its ETag in `news-cache/`); each
+`index.md` downloads from raw.githubusercontent.com and is kept by its folder's tree hash, images by URL, so the page works
+offline. Relative image and link paths resolve against the article's folder; a folder without `index.md` is skipped. Markdown is parsed by Markdig and drawn
 by `MarkdownView` (headings, paragraphs, emphasis, code, links, lists, quotes, code blocks, rules, images); raw HTML is dropped
 and links open only for http(s).

@@ -1,15 +1,23 @@
 # News
 
-Posts shown on the Meitou launcher's Home page, newest first (docs/launcher.md, "News"). One file per post,
-`<yyyy-mm-dd>-<slug>.md`, Markdown after an optional front matter block:
+Posts shown on the Meitou launcher's Home page, newest first (docs/launcher.md, "News"). One folder per article, named
+`<yyyy-mm-dd>-<slug>`, holding `index.md` and the article's pictures:
+
+```
+news/2026-10-19-meitou-launcher/
+  index.md
+  cover.png
+```
+
+`index.md` is Markdown after an optional front matter block:
 
 ```
 ---
 title: Post title
 date: 2026-10-19
-image: images/cover.png
+image: cover.png
 ---
 ```
 
-`image` is an optional cover; images in the text (`![alt](images/x.png)`) and links may be relative to this folder. Put
-pictures in `images/`. Posts appear once they are on `master`.
+`image` is an optional cover; images in the text (`![alt](screenshot.png)`) and links are relative to the article's folder.
+Articles appear once they are on `master`.

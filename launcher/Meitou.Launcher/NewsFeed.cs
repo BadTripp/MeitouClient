@@ -6,12 +6,13 @@ using System.Text.Json;
 
 namespace Meitou.Launcher;
 
-/// <summary>A news post: <c>news/&lt;yyyy-mm-dd&gt;-&lt;slug&gt;.md</c> with an optional front matter block (docs/launcher.md, "News").</summary>
+/// <summary>A news post: <c>news/&lt;yyyy-mm-dd&gt;-&lt;slug&gt;/index.md</c> with an optional front matter block, its images beside it (docs/launcher.md, "News").</summary>
 public sealed record NewsPost(string File, string Title, DateOnly? Date, string? Image, string Body, string BaseUrl);
 
 /// <summary>
-/// The Home page's posts, from the repository's <c>news/</c> folder: listed through the contents API (one call, cached with its
-/// ETag), each post fetched from raw.githubusercontent.com and kept on disk by its blob hash, so only new or changed posts download.
+/// The Home page's posts, from the repository's <c>news/</c> folder, one folder per article: listed through the contents API (one call, cached
+/// with its ETag), each folder's <c>index.md</c> fetched from raw.githubusercontent.com and kept on disk by the folder's tree hash,
+/// so only new or changed posts download.
 /// Images are fetched the same way and cached by URL. Works offline from the cache.
 /// </summary>
 public sealed class NewsFeed(HttpClient http)
@@ -19,6 +20,7 @@ public sealed class NewsFeed(HttpClient http)
     public const string Branch = "master";
     const string Folder = "news";
     const int MaxPosts = 20;
+    const string PostFile = "index.md";
 
     static string CacheDirectory => Path.Combine(LauncherConfig.DataDirectory, "news-cache");
 
@@ -56,20 +58,27 @@ public sealed class NewsFeed(HttpClient http)
 
         var posts = new List<NewsPost>();
         using var doc = JsonDocument.Parse(listJson);
-        var files = doc.RootElement.ValueKind == JsonValueKind.Array
+        // Article folders, named by date: their tree hash changes whenever anything in them does.
+        var folders = doc.RootElement.ValueKind == JsonValueKind.Array
             ? doc.RootElement.EnumerateArray()
-                .Where(f => f.GetProperty("type").GetString() == "file" && (f.GetProperty("name").GetString() ?? "").EndsWith(".md", StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(f.GetProperty("name").GetString(), "README.md", StringComparison.OrdinalIgnoreCase))
-                .Select(f => (Name: f.GetProperty("name").GetString()!, Sha: f.GetProperty("sha").GetString()!, Url: f.GetProperty("download_url").GetString()!))
+                .Where(f => f.GetProperty("type").GetString() == "dir" && f.GetProperty("name").GetString() is { Length: > 10 } n && DateOnly.TryParse(n[..10], out _))
+                .Select(f => (Name: f.GetProperty("name").GetString()!, Sha: f.GetProperty("sha").GetString()!))
                 .OrderByDescending(f => f.Name, StringComparer.Ordinal).Take(MaxPosts).ToList()
             : [];
-        foreach (var (name, sha, url) in files)
+        foreach (var (name, sha) in folders)
         {
+            var baseUrl = $"https://raw.githubusercontent.com/{Releases.Repository}/{Branch}/{Folder}/{Uri.EscapeDataString(name)}/";
             var cached = Path.Combine(CacheDirectory, sha + ".md");
             try
             {
-                if (!File.Exists(cached)) await File.WriteAllTextAsync(cached, await http.GetStringAsync(url, ct), ct);
-                posts.Add(Parse(name, await File.ReadAllTextAsync(cached, ct), url[..(url.LastIndexOf('/') + 1)]));
+                if (!File.Exists(cached))
+                {
+                    using var response = await http.GetAsync(baseUrl + PostFile, ct);
+                    if (response.StatusCode == HttpStatusCode.NotFound) continue; // a folder without a post yet
+                    response.EnsureSuccessStatusCode();
+                    await File.WriteAllTextAsync(cached, await response.Content.ReadAsStringAsync(ct), ct);
+                }
+                posts.Add(Parse(name, await File.ReadAllTextAsync(cached, ct), baseUrl));
             }
             catch (Exception e) when (e is HttpRequestException or OperationCanceledException or IOException)
             {

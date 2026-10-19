@@ -1,7 +1,7 @@
 ---
 title: The Meitou launcher
 date: 2026-10-19
-image: ../assets/branding/header.png
+image: ../../assets/branding/header.png
 ---
 
 Meitou now has its own **launcher**. It installs game releases straight from GitHub, keeps several versions side by side
