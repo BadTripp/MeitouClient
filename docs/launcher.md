@@ -19,6 +19,26 @@ items); the launcher never downloads or hosts mods.
   `versions/<version>/`. On Unix the game executable (`meitou`) gets its execute bits.
 - A newer non-pre-release `launcher-v*` shows a button to its page. The launcher does not update itself yet.
 
+## Game zips per runtime
+
+`release.yml` runs `tools/scripts/package-release.ps1 -Rid <rid>` on one runner per RID (win-x64 on Windows, linux-x64 on Ubuntu,
+both osx RIDs on macOS) and attaches all four zips to the one `v<version>` release. Each zip has a single top folder
+`Meitou-<version>-<rid>/` with the game (named by `Meitou.Game`'s `AssemblyName`), `meitou-viewer` and the self-contained Satori runtime. Unix zips are made with
+`zip(1)` (execute bits kept), macOS binaries and dylibs are ad-hoc signed, runtime debug symbols (`*.dbg`, ~250 MB) are dropped.
+
+Native dependencies off Windows:
+- Bundled from NuGet runtimes (**Verified** in the linux-x64 publish output): `libopenal.so`/`.dylib` (OpenAL Soft 1.23.1),
+  `libglfw.so.3`/`.3.dylib` (GLFW 3.4), `libshaderc_shared`.
+- Windows-only, not shipped: DLSS/Streamline (`sl.*.dll`, `nvngx_dlss.dll`, `NvLowLatencyVk.dll`) and FSR (`amd_fidelityfx_vk.dll`);
+  both load via `NativeLibrary.TryLoad` and report a reason when missing. `FsrUpscaler` also loads `vulkan-1.dll` by name.
+- Linux: the Vulkan loader (`libvulkan.so.1`) and driver come from the system, as do X11/Wayland and the OpenAL backend
+  (PipeWire/PulseAudio/ALSA). **Unknown**: whether the game starts and renders on Linux; never run there.
+- macOS: no Vulkan loader or MoltenVK is bundled (no `Silk.NET.MoltenVK.Native` reference); the user must install one (LunarG SDK).
+  `VulkanDevice` requests and requires Vulkan 1.3 and does not enable `VK_KHR_portability_enumeration`, which the loader needs to list
+  MoltenVK. **Unknown**: whether MoltenVK offers 1.3 and the features the renderer uses; never run on macOS. Browser downloads get
+  Gatekeeper's quarantine flag (no Apple signing or notarisation).
+- Kenshi's Steam folder is found only on Windows (`GameInstall`); elsewhere it comes from `KENSHI_PATH` or the console prompt.
+
 ## Files
 
 The launcher's folder is `%LocalAppData%/Meitou`, `~/.local/share/Meitou` or `~/Library/Application Support/Meitou`, the same
