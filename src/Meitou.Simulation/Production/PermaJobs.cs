@@ -10,6 +10,9 @@ namespace Meitou.Simulation.Production;
 public sealed record PermaJob(TaskType Type, string? Site, Hand Saved)
 {
     public PermaJob(TaskType type, string site) : this(type, site, Hand.Null) { }
+
+    /// <summary>A job without a target (the medic and rescue jobs).</summary>
+    public static PermaJob Untargeted(TaskType type) => new(type, null, Hand.Null);
 }
 
 /// <summary>

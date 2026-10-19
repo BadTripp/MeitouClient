@@ -71,10 +71,16 @@ public sealed class FirstAidSystem(GameConstants constants, BodyOptions options,
                     }
                     break;
                 case MedicJobCommand job:
+                {
+                    var taken = job.Job ? null : Treated(table);
                     foreach (var id in Who(world, job.Characters))
-                        if (table.TryResolveNext(id, out int slot) && table.Cold(slot) is { } cold)
-                            cold.MedicJob = job.On ?? !cold.MedicJob;
+                    {
+                        if (!table.TryResolveNext(id, out int slot) || table.Cold(slot) is not { IsPlayer: true } cold) continue;
+                        if (taken is null) Production.PermaJobs.Add(cold, Meitou.Data.Gameplay.Ai.TaskType.JOB_MEDIC, Production.PermaJob.Untargeted(Meitou.Data.Gameplay.Ai.TaskType.JOB_MEDIC));
+                        else TreatSomeone(world, slot, taken);
+                    }
                     break;
+                }
             }
         }
     }
@@ -318,44 +324,65 @@ public sealed class FirstAidSystem(GameConstants constants, BodyOptions options,
         if (Settings.AutoEveryTicks <= 0 || world.Tick % Settings.AutoEveryTicks != 0) return;
         var table = world.Characters;
         var next = table.Next;
-        var taken = new HashSet<int>();
-        for (int i = 0; i < table.HighWater; i++)
-            if (next[i].Alive && next[i].Task == (byte)CharacterTask.Treat && table.TryResolveNext(table.Cold(i)!.TreatTarget, out int busy)) taken.Add(busy);
+        var taken = Treated(table);
         for (int i = 0; i < table.HighWater; i++)
         {
             if (!next[i].Alive) continue;
             var cold = table.Cold(i)!;
-            // Idle: no task, following, wandering, or an implicit job (the medic job ranks above them).
-            if (next[i].Task is not ((byte)CharacterTask.Idle or (byte)CharacterTask.Wander or (byte)CharacterTask.Follow) && cold.Implicit is null) continue;
-            if (cold.Medical is not { Incapacitated: false } || cold.Race is null || cold.Stats is null || cold.Inventory is null || cold.InCombat) continue;
             // The medic job runs whether the Jobs switch is on or off (docs/game/ai-tasks.md "Perma-jobs", FUN_14050c1c0).
             if (cold.IsPlayer ? !cold.MedicJob : !Settings.AutoNpcs) continue;
-            bool organic = Best(cold.Inventory, ItemInfo.FirstAidKitFunction) is not null, robotic = Best(cold.Inventory, ItemInfo.RobotKitFunction) is not null;
-            if (!organic && !robotic) continue;
-            var squad = cold.SquadId >= 0 ? world.Squads.Find(cold.SquadId) : null;
-            if (squad is not null && Fighting(table, squad)) continue;
-            int best = -1;
-            (int Down, float Blood, float Distance) bestKey = default;
-            IEnumerable<CharacterId> candidates = squad is not null ? squad.Members : [table.IdOf(i)];
-            foreach (var id in candidates)
-            {
-                if (!table.TryResolveNext(id, out int s) || taken.Contains(s) || table.Cold(s) is not { Medical: { Dead: false } med, Race: { } race } other || other.InCombat) continue;
-                float distance = Gap(next[i], next[s]);
-                if (distance > Settings.AutoReach || (s != i && !med.Incapacitated && Speed2(next[s].Velocity) > Settings.StillSpeed * Settings.StillSpeed)) continue;   // a moving patient cannot be treated (targetStandingStill)
-                if (!(organic && med.NeedsAid(race, false)) && !(robotic && med.NeedsAid(race, true))) continue;
-                float capacity = MathF.Max(MedicalState.BloodCapacity(race, other.Stats?.Strength ?? 50), 1);
-                var key = (med.Incapacitated ? 0 : 1, med.Blood / capacity, distance);
-                if (best < 0 || key.CompareTo(bestKey) < 0)
-                {
-                    best = s;
-                    bestKey = key;
-                }
-            }
-            if (best < 0) continue;
-            taken.Add(best);
-            var resume = cold.Implicit is not null ? cold.ResumeTask : next[i].Task is (byte)CharacterTask.Wander or (byte)CharacterTask.Follow ? (CharacterTask)next[i].Task : CharacterTask.Idle;
-            Begin(table, i, new CharacterId(best, next[best].Generation), resume);
+            // Idle: no task, following, wandering, an implicit job or a list job below the medic job (which ranks above them).
+            int medic = cold.Jobs.FindIndex(j => j.Type == Meitou.Data.Gameplay.Ai.TaskType.JOB_MEDIC);
+            bool idle = next[i].Task is (byte)CharacterTask.Idle or (byte)CharacterTask.Wander or (byte)CharacterTask.Follow || cold.Implicit is not null || medic >= 0 && cold.JobIndex > medic;
+            if (idle) TreatSomeone(world, i, taken);
         }
+    }
+
+    /// <summary>The patients being treated now (by slot).</summary>
+    static HashSet<int> Treated(CharacterTable table)
+    {
+        var taken = new HashSet<int>();
+        for (int i = 0; i < table.HighWater; i++)
+            if (table.Next[i].Alive && table.Next[i].Task == (byte)CharacterTask.Treat && table.TryResolveNext(table.Cold(i)!.TreatTarget, out int busy)) taken.Add(busy);
+        return taken;
+    }
+
+    /// <summary>
+    /// One look for a patient (the medic job's pass, and the Medic button without Shift once): a medic with a kit and no fight in its squad treats the squad mate (or itself) within
+    /// <see cref="FirstAidSettings.AutoReach"/> that most needs it, downed first, then the least blood; true when it started.
+    /// </summary>
+    bool TreatSomeone(World world, int i, HashSet<int> taken)
+    {
+        var table = world.Characters;
+        var next = table.Next;
+        var cold = table.Cold(i)!;
+        if (cold.Medical is not { Incapacitated: false } || cold.Race is null || cold.Stats is null || cold.Inventory is null || cold.InCombat) return false;
+        bool organic = Best(cold.Inventory, ItemInfo.FirstAidKitFunction) is not null, robotic = Best(cold.Inventory, ItemInfo.RobotKitFunction) is not null;
+        if (!organic && !robotic) return false;
+        var squad = cold.SquadId >= 0 ? world.Squads.Find(cold.SquadId) : null;
+        if (squad is not null && Fighting(table, squad)) return false;
+        int best = -1;
+        (int Down, float Blood, float Distance) bestKey = default;
+        IEnumerable<CharacterId> candidates = squad is not null ? squad.Members : [table.IdOf(i)];
+        foreach (var id in candidates)
+        {
+            if (!table.TryResolveNext(id, out int s) || taken.Contains(s) || table.Cold(s) is not { Medical: { Dead: false } med, Race: { } race } other || other.InCombat) continue;
+            float distance = Gap(next[i], next[s]);
+            if (distance > Settings.AutoReach || (s != i && !med.Incapacitated && Speed2(next[s].Velocity) > Settings.StillSpeed * Settings.StillSpeed)) continue;   // a moving patient cannot be treated (targetStandingStill)
+            if (!(organic && med.NeedsAid(race, false)) && !(robotic && med.NeedsAid(race, true))) continue;
+            float capacity = MathF.Max(MedicalState.BloodCapacity(race, other.Stats?.Strength ?? 50), 1);
+            var key = (med.Incapacitated ? 0 : 1, med.Blood / capacity, distance);
+            if (best < 0 || key.CompareTo(bestKey) < 0)
+            {
+                best = s;
+                bestKey = key;
+            }
+        }
+        if (best < 0) return false;
+        taken.Add(best);
+        var resume = cold.Implicit is not null || cold.JobIndex >= 0 ? cold.ResumeTask : next[i].Task is (byte)CharacterTask.Wander or (byte)CharacterTask.Follow ? (CharacterTask)next[i].Task : CharacterTask.Idle;
+        Begin(table, i, new CharacterId(best, next[best].Generation), resume);
+        return true;
     }
 
     /// <summary>A fight is on in the squad: a member in combat or with an attack order.</summary>

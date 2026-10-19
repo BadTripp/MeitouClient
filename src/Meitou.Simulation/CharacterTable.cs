@@ -143,8 +143,8 @@ public sealed class CharacterCold
     public bool TreatSplint { get; set; }
     /// <summary>The task a self-started treatment goes back to when it ends (<see cref="CharacterTask.Wander"/>, <see cref="CharacterTask.Follow"/> or Idle).</summary>
     public CharacterTask ResumeTask { get; set; }
-    /// <summary>The medic job (the original's <c>medic</c> toggle): an idle character with a kit treats hurt squad mates by itself. NPCs with a kit do so without it (an engine rule until the AI).</summary>
-    public bool MedicJob { get; set; }
+    /// <summary>The medic job (58 <c>JOB_MEDIC</c>) is in <see cref="Jobs"/>: an idle character with a kit treats hurt squad mates by itself. NPCs with a kit do so without it (an engine rule until the AI).</summary>
+    public bool MedicJob => Jobs.Exists(j => j.Type == Meitou.Data.Gameplay.Ai.TaskType.JOB_MEDIC);
     /// <summary>The character this one carries on its left shoulder (none: not carrying); the original's <c>isCarrying</c> with the partner handle. Set and cleared by <see cref="Carrying.CarrySystem"/> in serial phases only, together with <see cref="CarriedBy"/> of the other.</summary>
     public CharacterId Carrying { get; set; } = CharacterId.None;
     /// <summary>The character carrying this one (none: not carried); the original's <c>isBeingCarried</c> with the partner handle.</summary>
@@ -153,8 +153,8 @@ public sealed class CharacterCold
     public CharacterId CarryTarget { get; set; } = CharacterId.None;
     /// <summary>Seconds into the <c>shoulder lift left</c> clip of a pick-up or put-down, or the <c>knockout</c> swing of a stealth KO, in progress (-1: not yet; the animation system plays the clip at this time).</summary>
     public float LiftTime { get; set; } = -1;
-    /// <summary>The rescue job (the original's <c>rescue</c> toggle, NUM8): an idle character picks up a downed member of its faction by itself.</summary>
-    public bool RescueJob { get; set; }
+    /// <summary>The rescue job (148 <c>FIND_AND_RESCUE_IF_THERES_BEDS</c>, NUM8) is in <see cref="Jobs"/>: an idle character picks up a downed member of its faction by itself.</summary>
+    public bool RescueJob => Jobs.Exists(j => j.Type == Meitou.Data.Gameplay.Ai.TaskType.FIND_AND_RESCUE_IF_THERES_BEDS);
     /// <summary>The orders panel's toggles (<see cref="Simulation.Orders"/>); the player's characters only.</summary>
     public CharacterOrders Orders { get; set; } = CharacterOrders.Jobs;
     /// <summary>The speed mode the character's move orders use (the original's saved <c>speed mode</c>: walk, run or no cap); no cap by default.</summary>
@@ -438,14 +438,12 @@ public sealed class CharacterTable
             hasher.Add(k.Name.Length);
             // First aid state adds to the hash only while it is set, so worlds that never use it hash as before.
             if (c.Task == (byte)CharacterTask.Treat) { hasher.Add(k.TreatTarget); hasher.Add((int)k.ResumeTask); if (k.TreatSplint) hasher.Add(0x53706C74); }
-            if (k.MedicJob) hasher.Add(true);
             if (k.Fleeing) hasher.Add(0x466C6565);   // only while set, so worlds without fleeing hash as before
             if (k.StealthExposureTick != long.MinValue) { hasher.Add((int)k.StealthExposure); hasher.Add(k.StealthExposureTick); }   // likewise, once a sneaker was exposed
             // Carrying, looting and the rescue job add to the hash only while set, so worlds without them hash as before.
             if (!k.Carrying.IsNone) { hasher.Add(0x43617272); hasher.Add(k.Carrying); }
             if (!k.CarriedBy.IsNone) { hasher.Add(0x42726E65); hasher.Add(k.CarriedBy); }
             if (c.Task is (byte)CharacterTask.PickUp or (byte)CharacterTask.PutDown or (byte)CharacterTask.Loot or (byte)CharacterTask.StealthKo) { hasher.Add(k.CarryTarget); hasher.Add(k.LiftTime); hasher.Add((int)k.ResumeTask); }
-            if (k.RescueJob) hasher.Add(0x52657363);
             // Orders add to the hash only while set, so worlds without them hash as before.
             if (k.Orders != CharacterOrders.None) { hasher.Add(0x4F726473); hasher.Add((int)k.Orders); }
             if (k.RunSpeed != SpeedMode.Free) { hasher.Add(0x52756E53); hasher.Add((int)k.RunSpeed); }

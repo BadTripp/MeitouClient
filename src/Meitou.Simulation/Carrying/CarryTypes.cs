@@ -25,10 +25,11 @@ public sealed record StealthKoOrder(IReadOnlyList<CharacterId> Attackers, Charac
 public readonly record struct StealthKoEntry(long Tick, CharacterId Attacker, CharacterId Target, float Chance, bool Success);
 
 /// <summary>
-/// Switches the rescue job on or off for the characters (the selection when the list is empty): the original's <c>rescue</c> toggle (NUM8, job <c>FIND_AND_RESCUE_IF_THERES_BEDS</c>).
-/// While it is on, an idle character picks up the nearest downed member of its faction. <see cref="On"/> null flips each character's own switch.
+/// The Rescue button for the characters (the selection when the list is empty), the original's order 148 <c>FIND_AND_RESCUE_IF_THERES_BEDS</c> (NUM8; docs/game/ai-tasks.md
+/// "Perma-jobs"): with <see cref="Job"/> (Shift) it is added to their job lists (with its companion 106), where an idle character picks up the nearest downed member of
+/// its faction by itself; else each looks for one once.
 /// </summary>
-public sealed record RescueJobCommand(IReadOnlyList<CharacterId> Characters, bool? On = null) : SimCommand;
+public sealed record RescueJobCommand(IReadOnlyList<CharacterId> Characters, bool Job = true) : SimCommand;
 
 /// <summary>The numbers of <see cref="CarrySystem"/>: the clip fractions are the original's (<b>Observed</b>), the rest engine choices (docs/game/carry-loot.md, docs/simulation.md "Carrying").</summary>
 public sealed class CarrySettings

@@ -235,7 +235,7 @@ relation/research semantics remain partly unknown. Picking/HUD are host responsi
 
 ### Order toggles
 
-Passive/Hold/Block/Taunt/Jobs/medic/rescue state belongs to the player/character and relevant
+Passive/Hold/Block/Taunt/Jobs state belongs to the character (medic and rescue are job-list entries, [job lists](#production)) and relevant
 systems. Explicit player commands and automatic retaliation have different eligibility;
 Idle players self-defend unless Passive, and Hold prevents pursuit beyond attack reach.
 New player characters start with Jobs and Ranged enabled. Jobs gates the job list and automatic rescue (the medic job runs regardless, as the original); direct orders still run. Saved toggles override
@@ -785,7 +785,9 @@ crafting benches, generators and batteries. Facts: [production](game/buildings-p
     squad leader while it follows, so it gets up when the leader walks off. Sitters and sleepers are put on the seat's origin facing its way;
     the medic job counts them as idle.
   - The list is reordered by dragging a row (`MoveJob`).
-  - Engine choices: the check period; the medic and rescue buttons stay flags outside the list (the original's 58 and 148); kind-2 (turret)
+  - 58 Medic and 148 Find and rescue (+ companion 106): the Medic and Rescue buttons (H, J) start one look for a patient or body; with Shift they add
+    the job. The first aid and carry passes run them for a character that is idle, on an implicit job or on a list job below them.
+  - Engine choices: the check period; kind-2 (turret)
     jobs are not run; the injury test, the ranges, a bed's clip (`sleeponfloor`) and a seat's facing (its own, not the table it faces).
   - Saves: GAMESTATE_AI `pjob<i>` / `pjobT<i>` / `jobs` as the original, plus `meitou pjob<i>` (the site id) for a building the handle cannot
     name; the older `meitou jobs enabled` is read, not written. The squad AI options are the CAMERA bools `ditch`, `sleep`, `sit`. A job's

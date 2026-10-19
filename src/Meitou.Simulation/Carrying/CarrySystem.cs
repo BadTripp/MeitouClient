@@ -142,10 +142,16 @@ public sealed partial class CarrySystem(GameConstants constants, BodyOptions opt
                     }
                     break;
                 case RescueJobCommand job:
+                {
+                    var taken = job.Job ? null : Lifting(table);
                     foreach (var id in Who(world, job.Characters))
-                        if (table.TryResolveNext(id, out int slot) && table.Cold(slot) is { } cold)
-                            cold.RescueJob = job.On ?? !cold.RescueJob;
+                    {
+                        if (!table.TryResolveNext(id, out int slot) || table.Cold(slot) is not { IsPlayer: true } cold) continue;
+                        if (taken is null) Production.PermaJobs.Add(cold, Meitou.Data.Gameplay.Ai.TaskType.FIND_AND_RESCUE_IF_THERES_BEDS, Production.PermaJob.Untargeted(Meitou.Data.Gameplay.Ai.TaskType.FIND_AND_RESCUE_IF_THERES_BEDS));
+                        else if (Free(table, slot)) RescueSomeone(world, slot, taken);
+                    }
                     break;
+                }
                 case Combat.AttackOrder attack when !attack.Defensive:
                     // An ordered attack: the carrier lets the body fall and fights (engine choice; the original forbids no attack while carrying, but has no carrying fighter either).
                     foreach (var id in attack.Attackers)
@@ -506,29 +512,57 @@ public sealed partial class CarrySystem(GameConstants constants, BodyOptions opt
     void Rescue(World world, CharacterTable table)
     {
         var next = table.Next;
-        var taken = new HashSet<int>();
-        for (int i = 0; i < table.HighWater; i++)
-            if (next[i].Alive && next[i].Task == (byte)CharacterTask.PickUp && table.TryResolveNext(table.Cold(i)!.CarryTarget, out int busy)) taken.Add(busy);
+        var taken = Lifting(table);
         for (int i = 0; i < table.HighWater; i++)
         {
-            if (!Free(table, i) || !table.Cold(i)!.RescueJob) continue;
-            var cold = table.Cold(i)!;
+            if (!next[i].Alive || table.Cold(i) is not { RescueJob: true } cold) continue;
             if (cold.IsPlayer && !Orders.Has(cold, CharacterOrders.Jobs)) continue;
-            if (cold.SquadId >= 0 && world.Squads.Find(cold.SquadId) is { } squad && Fighting(table, squad)) continue;
-            float range = AggroSystem.RangeOf(cold, Settings.Sight), best2 = range * range;
-            int best = -1;
-            for (int s = 0; s < table.HighWater; s++)
-            {
-                if (s == i || !next[s].Alive || taken.Contains(s)) continue;
-                if (table.Cold(s) is not { Medical: { Unconscious: true, Dead: false } } other || other.Faction != cold.Faction || !CanBeLifted(other)) continue;
-                float d2 = Vector2.DistanceSquared(new Vector2(next[i].Position.X, next[i].Position.Z), new Vector2(next[s].Position.X, next[s].Position.Z));
-                if (d2 <= best2 && (best < 0 || d2 < best2)) { best = s; best2 = d2; }
-            }
-            if (best < 0) continue;
-            taken.Add(best);
-            Begin(table, i, table.IdOf(best), CharacterTask.PickUp, (CharacterTask)next[i].Task);
+            // Free, or on a list job below the rescue job (which ranks above it).
+            int rescue = cold.Jobs.FindIndex(j => j.Type == Meitou.Data.Gameplay.Ai.TaskType.FIND_AND_RESCUE_IF_THERES_BEDS);
+            if (!Free(table, i) && !(cold.JobIndex > rescue && cold is { Fleeing: false } && CanCarry(cold))) continue;
+            RescueSomeone(world, i, taken);
         }
-        if (!Settings.RescueNpcLeaders) return;
+        if (Settings.RescueNpcLeaders) RescueLeaders(world, table, taken);
+    }
+
+    /// <summary>The bodies being picked up now (by slot).</summary>
+    static HashSet<int> Lifting(CharacterTable table)
+    {
+        var taken = new HashSet<int>();
+        for (int i = 0; i < table.HighWater; i++)
+            if (table.Next[i].Alive && table.Next[i].Task == (byte)CharacterTask.PickUp && table.TryResolveNext(table.Cold(i)!.CarryTarget, out int busy)) taken.Add(busy);
+        return taken;
+    }
+
+    /// <summary>
+    /// One look for a body (the rescue job's pass, and the Rescue button without Shift once): with no fight in its squad, the character picks up the nearest knocked-out member of
+    /// its faction within its sight that nobody else lifts; true when it started.
+    /// </summary>
+    bool RescueSomeone(World world, int i, HashSet<int> taken)
+    {
+        var table = world.Characters;
+        var next = table.Next;
+        var cold = table.Cold(i)!;
+        if (cold.SquadId >= 0 && world.Squads.Find(cold.SquadId) is { } squad && Fighting(table, squad)) return false;
+        float range = AggroSystem.RangeOf(cold, Settings.Sight), best2 = range * range;
+        int best = -1;
+        for (int s = 0; s < table.HighWater; s++)
+        {
+            if (s == i || !next[s].Alive || taken.Contains(s)) continue;
+            if (table.Cold(s) is not { Medical: { Unconscious: true, Dead: false } } other || other.Faction != cold.Faction || !CanBeLifted(other)) continue;
+            float d2 = Vector2.DistanceSquared(new Vector2(next[i].Position.X, next[i].Position.Z), new Vector2(next[s].Position.X, next[s].Position.Z));
+            if (d2 <= best2 && (best < 0 || d2 < best2)) { best = s; best2 = d2; }
+        }
+        if (best < 0) return false;
+        taken.Add(best);
+        Begin(table, i, table.IdOf(best), CharacterTask.PickUp, cold.JobIndex >= 0 || cold.Implicit is not null ? cold.ResumeTask : (CharacterTask)next[i].Task);
+        return true;
+    }
+
+    /// <summary>NPC squads whose leader is knocked out send their nearest free member to pick it up.</summary>
+    void RescueLeaders(World world, CharacterTable table, HashSet<int> taken)
+    {
+        var next = table.Next;
         foreach (var squad in world.Squads.All)
         {
             if (!table.TryResolveNext(squad.Leader, out int l) || taken.Contains(l)) continue;

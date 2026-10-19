@@ -232,14 +232,12 @@ sealed partial class PlayerInterface
 
     /// <summary>
     /// The jobs list (<c>JobsPanel</c>, docs/game/ui-screens.md section 4): the lead's jobs, one row each with an X that removes it from that character; with none, the
-    /// layout's hint. The medic and rescue jobs (flags in Meitou, list entries 58 and 148 in the original) come first, named as their buttons, then the job list (<see cref="Meitou.Simulation.Production.PermaJobs"/>)
-    /// as "&lt;row text&gt;: &lt;building&gt;" (the original's row text is <b>Unknown</b>; its rows are dragged to reorder, which Meitou does not offer).
+    /// layout's hint. The job list (<see cref="Meitou.Simulation.Production.PermaJobs"/>, the medic and rescue jobs included)
+    /// as "&lt;row text&gt;: &lt;building&gt;" (the original's row text is <b>Unknown</b>); rows are dragged to reorder.
     /// </summary>
     void BindJobs(UiBindings b, Meitou.Simulation.CharacterSnapshot? lead)
     {
         var jobs = new List<UiListItem>();
-        if (lead?.Body is { MedicJob: true }) jobs.Add(new("medic", "Medic"));
-        if (lead?.Body is { RescueJob: true }) jobs.Add(new("rescue", "Rescue"));
         for (int i = 0; i < (lead?.Jobs.Count ?? 0); i++)
         {
             var job = lead!.Jobs[i];
@@ -296,9 +294,7 @@ sealed partial class PlayerInterface
     void RemoveJob(string job)
     {
         if ((Selected().FirstOrDefault() ?? Lead()) is not { IsPlayer: true } lead) return;
-        if (job == "medic") Say(new Meitou.Simulation.FirstAid.MedicJobCommand([lead.Id], false) { Tick = session.World.Tick });
-        else if (job == "rescue") Say(new Meitou.Simulation.Carrying.RescueJobCommand([lead.Id], false) { Tick = session.World.Tick });
-        else if (job.StartsWith("job:", StringComparison.Ordinal) && int.TryParse(job.AsSpan(4), NumberStyles.None, CultureInfo.InvariantCulture, out int index))
+        if (job.StartsWith("job:", StringComparison.Ordinal) && int.TryParse(job.AsSpan(4), NumberStyles.None, CultureInfo.InvariantCulture, out int index))
             Say(new Meitou.Simulation.Production.RemoveJob(lead.Id, index) { Tick = session.World.Tick });
     }
 

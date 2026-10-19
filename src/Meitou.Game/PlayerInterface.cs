@@ -254,10 +254,10 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
         else if (key == Meitou.Engine.Input.Key.F && !session.Camera.IsFree && Selected().FirstOrDefault() is { } lead) CentreOn(lead.Id, follow: false);
         else if (key == Meitou.Engine.Input.Key.Grave) Select(PlayerCharacters(), shift);
         else if (key == Meitou.Engine.Input.Key.R && !session.Camera.IsFree) Say(new StopCommand(SelectedIds()) { Tick = session.World.Tick });
-        else if (key == Meitou.Engine.Input.Key.H && !session.Camera.IsFree) Say(new Meitou.Simulation.FirstAid.MedicJobCommand(SelectedIds()) { Tick = session.World.Tick });
+        else if (key == Meitou.Engine.Input.Key.H && !session.Camera.IsFree) Say(new Meitou.Simulation.FirstAid.MedicJobCommand(SelectedIds(), shift) { Tick = session.World.Tick });
         else if (key == Meitou.Engine.Input.Key.L && !session.Camera.IsFree) Say(new Meitou.Simulation.FirstAid.RestOrder(SelectedIds()) { Tick = session.World.Tick });
-        // Rescue job (the original's NUM8 rescue toggle; the numpad is the cinema camera's) and put down (the original's context menu verb "Put Down").
-        else if (key == Meitou.Engine.Input.Key.J && !session.Camera.IsFree) Say(new Meitou.Simulation.Carrying.RescueJobCommand(SelectedIds()) { Tick = session.World.Tick });
+        // Rescue (the original's NUM8; the numpad is the cinema camera's; with Shift a job, as Medic on H) and put down (the original's context menu verb "Put Down").
+        else if (key == Meitou.Engine.Input.Key.J && !session.Camera.IsFree) Say(new Meitou.Simulation.Carrying.RescueJobCommand(SelectedIds(), shift) { Tick = session.World.Tick });
         else if (key == Meitou.Engine.Input.Key.K && !session.Camera.IsFree) Say(new Meitou.Simulation.Carrying.PutDownOrder(SelectedIds()) { Tick = session.World.Tick });
     }
 }

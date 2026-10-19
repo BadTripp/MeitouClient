@@ -182,6 +182,7 @@ sealed partial class PlayerInterface
             case Meitou.Simulation.Trading.SellItem sell: Sound("Sell_Item", item: sell.Item.Record); return;
             // The sound the exe posts after giving the selection a job (FUN_1407f5a90).
             case Meitou.Simulation.Production.AddJob: Sound("Permanent_Job"); return;
+            case Meitou.Simulation.FirstAid.MedicJobCommand { Job: true } or Meitou.Simulation.Carrying.RescueJobCommand { Job: true }: Sound("Permanent_Job"); return;
         }
         string name = command.GetType().Name;
         if (name == "DialogueChoice") Sound("Dialogue_Choice", "Dialogue_Choice", "Continue_Conversation");

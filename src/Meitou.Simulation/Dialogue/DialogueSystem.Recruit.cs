@@ -46,8 +46,7 @@ public sealed partial class DialogueSystem
         mc.Engaged = false;
         mc.Fleeing = false;
         mc.Pending = null;
-        mc.MedicJob = false;
-        mc.RescueJob = false;
+        mc.Jobs.Clear();   // an NPC's list, if any, does not carry over
         mc.Save = null;   // written as a new member of the player's platoon; the save's old slot of it is removed
         table.Next[slot].Mode = SpeedMode.Free;   // the original's speed mode 2
         MovementSystem.Stop(table, slot);
