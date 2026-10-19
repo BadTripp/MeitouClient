@@ -397,6 +397,14 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    async void OpenVersionFolder_Click(object? sender, RoutedEventArgs e)
+    {
+        if (ReleaseListBox.SelectedItem is not ReleaseRow { Release: var release }) return;
+        var dir = Releases.VersionDirectory(release.Version);
+        if (!Directory.Exists(dir)) { Status($"{release.Title} is not installed."); return; }
+        await this.Launcher.LaunchUriAsync(new Uri(dir + Path.DirectorySeparatorChar));
+    }
+
     async void OpenReleasePage_Click(object? sender, RoutedEventArgs e)
     {
         if (ReleaseListBox.SelectedItem is ReleaseRow row)
@@ -472,10 +480,10 @@ public sealed partial class MainWindow : Window
         base.OnPropertyChanged(change);
         if (change.Property != WindowStateProperty || Plate is null) return;
         bool max = WindowState == WindowState.Maximized;
-        Plate.Margin = new Thickness(max ? 0 : 14);
+        Plate.Margin = new Thickness(max ? 0 : 8);
         Plate.CornerRadius = new CornerRadius(max ? 0 : 10);
         Grips.IsVisible = !max;
-        MaximizeButton.Content = max ? "❐" : "▢";
+        MaximizeIcon.Data = Avalonia.Media.Geometry.Parse(max ? "M2,0 H10 V8 M0,2 H8 V10 H0 Z" : "M0,0 H10 V10 H0 Z");
     }
 
     // ---- Play ----

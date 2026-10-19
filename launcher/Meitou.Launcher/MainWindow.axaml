@@ -7,35 +7,40 @@
         Width="1040" Height="700" MinWidth="760" MinHeight="540">
   <!-- No system frame: the plate floats on a transparent window with its own title bar; the margin holds its shadow and the resize grips. -->
   <Panel>
-    <Border x:Name="Plate" Classes="plate" Margin="14" Padding="22,4,22,16">
+    <Border x:Name="Plate" Classes="plate" Margin="8" Padding="16,0,16,12">
     <DockPanel>
       <!-- Title bar: drag to move, double-click to maximise -->
-      <DockPanel x:Name="TitleBar" DockPanel.Dock="Top" Height="52" Background="Transparent" PointerPressed="TitleBar_PointerPressed">
+      <DockPanel x:Name="TitleBar" DockPanel.Dock="Top" Height="46" Background="Transparent" PointerPressed="TitleBar_PointerPressed">
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-          <Button Classes="chrome" Content="—" Click="Minimize_Click" ToolTip.Tip="Minimise" />
-          <Button x:Name="MaximizeButton" Classes="chrome" Content="▢" Click="Maximize_Click" ToolTip.Tip="Maximise" />
-          <Button Classes="chrome close" Content="✕" Click="Close_Click" ToolTip.Tip="Close" />
+          <Button Classes="chrome" Click="Minimize_Click" ToolTip.Tip="Minimise"><Path Data="M0,0 H10" StrokeThickness="1.6" /></Button>
+          <Button x:Name="MaximizeButton" Classes="chrome" Click="Maximize_Click" ToolTip.Tip="Maximise"><Path x:Name="MaximizeIcon" Data="M0,0 H10 V10 H0 Z" StrokeThickness="1.4" /></Button>
+          <Button Classes="chrome close" Click="Close_Click" ToolTip.Tip="Close"><Path Data="M0,0 L10,10 M10,0 L0,10" StrokeThickness="1.8" /></Button>
         </StackPanel>
         <TextBlock x:Name="KenshiBadge" DockPanel.Dock="Right" Classes="desc" VerticalAlignment="Center" Margin="0,0,18,0" />
-        <Image DockPanel.Dock="Left" Source="avares://meitou-launcher/Assets/meitou-64.png" Width="28" Height="28" Margin="0,0,12,0"
+        <Image DockPanel.Dock="Left" Source="avares://meitou-launcher/Assets/meitou-64.png" Width="24" Height="24" Margin="0,0,10,0"
                VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="HighQuality" />
         <TextBlock Classes="title" Text="Meitou" VerticalAlignment="Center" />
       </DockPanel>
-      <Border DockPanel.Dock="Top" Classes="rule" Margin="0,4,0,14" />
+      <Border DockPanel.Dock="Top" Classes="rule" Margin="0,0,0,12" />
 
       <!-- Footer: secondary action left, the version to start and the one paper action right -->
       <StackPanel DockPanel.Dock="Bottom">
-        <Border Classes="rule" Margin="0,14,0,12" />
+        <Border Classes="rule" Margin="0,12,0,10" />
         <DockPanel>
           <Button DockPanel.Dock="Left" Content="Save mod list" Click="SaveMods_Click" />
-          <Button x:Name="PlayButton" DockPanel.Dock="Right" Classes="paper" Content="Play" Click="Play_Click" Margin="10,0,0,0" />
+          <Button x:Name="PlayButton" DockPanel.Dock="Right" Classes="paper" Click="Play_Click" Margin="12,0,0,0">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <Path Data="M0,0 L0,18 L15,9 Z" VerticalAlignment="Center" />
+              <TextBlock Text="Play" VerticalAlignment="Center" Foreground="{StaticResource Secondary}" />
+            </StackPanel>
+          </Button>
           <ComboBox x:Name="VersionBox" DockPanel.Dock="Right" MinWidth="150" PlaceholderText="No version installed" VerticalAlignment="Center" />
           <TextBlock x:Name="StatusText" Classes="desc" VerticalAlignment="Center" Margin="16,0" />
         </DockPanel>
       </StackPanel>
 
       <!-- Navigation -->
-      <DockPanel DockPanel.Dock="Left" Width="184">
+      <DockPanel DockPanel.Dock="Left" Width="176">
         <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="8,0,0,4">
           <TextBlock Classes="caps" Text="MEITOU LAUNCHER" />
           <TextBlock x:Name="LauncherVersionText" Classes="desc" />
@@ -46,7 +51,7 @@
           <ToggleButton x:Name="NavSettings" Classes="nav" Content="Settings" Click="Nav_Click" />
         </StackPanel>
       </DockPanel>
-      <Border DockPanel.Dock="Left" Classes="vrule" Margin="22,0" />
+      <Border DockPanel.Dock="Left" Classes="vrule" Margin="18,0" />
 
       <Panel>
         <!-- Mods -->
@@ -105,6 +110,7 @@
             <DockPanel>
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
                 <Button Content="Release page" Click="OpenReleasePage_Click" />
+                <Button Content="Open folder" Click="OpenVersionFolder_Click" ToolTip.Tip="Open the installed version's folder" />
                 <Button Content="Uninstall" Click="Uninstall_Click" />
                 <Button x:Name="InstallButton" Content="Install" Click="Install_Click" MinWidth="110" />
               </StackPanel>
@@ -194,14 +200,14 @@
 
     <!-- Resize grips in the margin (hidden while maximised) -->
     <Panel x:Name="Grips">
-      <Border Tag="North" Height="8" VerticalAlignment="Top" Margin="20,0" Background="Transparent" Cursor="SizeNorthSouth" PointerPressed="Grip_PointerPressed" />
-      <Border Tag="South" Height="8" VerticalAlignment="Bottom" Margin="20,0" Background="Transparent" Cursor="SizeNorthSouth" PointerPressed="Grip_PointerPressed" />
-      <Border Tag="West" Width="8" HorizontalAlignment="Left" Margin="0,20" Background="Transparent" Cursor="SizeWestEast" PointerPressed="Grip_PointerPressed" />
-      <Border Tag="East" Width="8" HorizontalAlignment="Right" Margin="0,20" Background="Transparent" Cursor="SizeWestEast" PointerPressed="Grip_PointerPressed" />
-      <Border Tag="NorthWest" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Top" Background="Transparent" Cursor="TopLeftCorner" PointerPressed="Grip_PointerPressed" />
-      <Border Tag="NorthEast" Width="20" Height="20" HorizontalAlignment="Right" VerticalAlignment="Top" Background="Transparent" Cursor="TopRightCorner" PointerPressed="Grip_PointerPressed" />
-      <Border Tag="SouthWest" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomLeftCorner" PointerPressed="Grip_PointerPressed" />
-      <Border Tag="SouthEast" Width="20" Height="20" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomRightCorner" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="North" Height="6" VerticalAlignment="Top" Margin="14,0" Background="Transparent" Cursor="SizeNorthSouth" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="South" Height="6" VerticalAlignment="Bottom" Margin="14,0" Background="Transparent" Cursor="SizeNorthSouth" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="West" Width="6" HorizontalAlignment="Left" Margin="0,14" Background="Transparent" Cursor="SizeWestEast" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="East" Width="6" HorizontalAlignment="Right" Margin="0,14" Background="Transparent" Cursor="SizeWestEast" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="NorthWest" Width="14" Height="14" HorizontalAlignment="Left" VerticalAlignment="Top" Background="Transparent" Cursor="TopLeftCorner" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="NorthEast" Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Top" Background="Transparent" Cursor="TopRightCorner" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="SouthWest" Width="14" Height="14" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomLeftCorner" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="SouthEast" Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomRightCorner" PointerPressed="Grip_PointerPressed" />
     </Panel>
   </Panel>
 </Window>

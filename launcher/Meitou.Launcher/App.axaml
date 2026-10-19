@@ -15,9 +15,9 @@
       <Color x:Key="SystemAccentColorDark2">#5c482a</Color>
       <Color x:Key="SystemAccentColorDark3">#4a3a22</Color>
       <SolidColorBrush x:Key="Vignette" Color="#0d0a09" />
-      <SolidColorBrush x:Key="Plate" Color="#1c1714" />
+      <SolidColorBrush x:Key="Plate" Color="#110f0d" />
       <SolidColorBrush x:Key="PlateRim" Color="#1fafa68b" />
-      <SolidColorBrush x:Key="MetalEdge" Color="#0f0b0a" />
+      <SolidColorBrush x:Key="MetalEdge" Color="#070605" />
       <SolidColorBrush x:Key="Main" Color="#afa68b" />
       <SolidColorBrush x:Key="Quiet" Color="#8a8270" />
       <SolidColorBrush x:Key="PaperLight" Color="#d9ceb8" />
@@ -25,29 +25,30 @@
       <SolidColorBrush x:Key="Brass" Color="#816635" />
       <SolidColorBrush x:Key="BrassLight" Color="#c4a062" />
       <SolidColorBrush x:Key="BadBright" Color="#bf4834" />
-      <SolidColorBrush x:Key="Field" Color="#14100e" />
+      <SolidColorBrush x:Key="Field" Color="#0b0a09" />
       <LinearGradientBrush x:Key="PlateButton" StartPoint="0%,0%" EndPoint="0%,100%">
-        <GradientStop Offset="0" Color="#3a342f" />
-        <GradientStop Offset="0.12" Color="#2c2622" />
-        <GradientStop Offset="1" Color="#221d1a" />
+        <GradientStop Offset="0" Color="#2e2a27" />
+        <GradientStop Offset="0.5" Color="#24211e" />
+        <GradientStop Offset="1" Color="#1a1715" />
       </LinearGradientBrush>
       <LinearGradientBrush x:Key="PlateButtonHover" StartPoint="0%,0%" EndPoint="0%,100%">
-        <GradientStop Offset="0" Color="#4a433c" />
-        <GradientStop Offset="0.12" Color="#38312c" />
-        <GradientStop Offset="1" Color="#2b2521" />
+        <GradientStop Offset="0" Color="#3a3531" />
+        <GradientStop Offset="0.5" Color="#2e2a26" />
+        <GradientStop Offset="1" Color="#221f1c" />
       </LinearGradientBrush>
       <LinearGradientBrush x:Key="PlateButtonPressed" StartPoint="0%,0%" EndPoint="0%,100%">
-        <GradientStop Offset="0" Color="#120e0c" />
-        <GradientStop Offset="0.25" Color="#1c1714" />
-        <GradientStop Offset="1" Color="#241e1a" />
+        <GradientStop Offset="0" Color="#0f0d0c" />
+        <GradientStop Offset="1" Color="#1a1715" />
       </LinearGradientBrush>
       <LinearGradientBrush x:Key="PaperButton" StartPoint="0%,0%" EndPoint="0%,100%">
-        <GradientStop Offset="0" Color="#9c8f80" />
-        <GradientStop Offset="1" Color="#74685c" />
+        <GradientStop Offset="0" Color="#b8aa98" />
+        <GradientStop Offset="0.55" Color="#9a8d7e" />
+        <GradientStop Offset="1" Color="#7f7366" />
       </LinearGradientBrush>
       <LinearGradientBrush x:Key="PaperButtonHover" StartPoint="0%,0%" EndPoint="0%,100%">
-        <GradientStop Offset="0" Color="#ad9f8e" />
-        <GradientStop Offset="1" Color="#807366" />
+        <GradientStop Offset="0" Color="#c9bba8" />
+        <GradientStop Offset="0.55" Color="#a99c8c" />
+        <GradientStop Offset="1" Color="#8c7f71" />
       </LinearGradientBrush>
       <LinearGradientBrush x:Key="HeaderBar" StartPoint="0%,0%" EndPoint="0%,100%">
         <GradientStop Offset="0" Color="#8f8377" />
@@ -77,11 +78,11 @@
       <Setter Property="BorderBrush" Value="{StaticResource PlateRim}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="10" />
-      <Setter Property="BoxShadow" Value="0 6 14 0 #8C000000" />
+      <Setter Property="BoxShadow" Value="0 3 8 0 #B3000000" />
     </Style>
     <Style Selector="Border.header">
       <Setter Property="Background" Value="{StaticResource HeaderBar}" />
-      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="CornerRadius" Value="5" />
       <Setter Property="Padding" Value="14,6" />
       <Setter Property="BoxShadow" Value="inset 0 0 0 1 #66140806" />
     </Style>
@@ -109,7 +110,7 @@
 
     <!-- Text -->
     <Style Selector="TextBlock.title">
-      <Setter Property="FontSize" Value="24" />
+      <Setter Property="FontSize" Value="20" />
     </Style>
     <Style Selector="TextBlock.name">
       <Setter Property="FontSize" Value="16" />
@@ -136,11 +137,15 @@
       <Setter Property="Foreground" Value="{StaticResource Main}" />
       <Setter Property="BorderBrush" Value="{StaticResource MetalEdge}" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="CornerRadius" Value="4" />
       <Setter Property="Padding" Value="16,6" />
       <Setter Property="MinHeight" Value="32" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <!-- A raised plate: a lit top edge and a drop below; pressed or selected it sinks -->
+    <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter, ToggleButton /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="BoxShadow" Value="inset 0 1 0 0 #1Fffffff, 0 1 3 0 #CC000000" />
     </Style>
     <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter, ToggleButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{StaticResource PlateButtonHover}" />
@@ -149,6 +154,7 @@
     </Style>
     <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter, ToggleButton:checked /template/ ContentPresenter#PART_ContentPresenter, ToggleButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{StaticResource PlateButtonPressed}" />
+      <Setter Property="BoxShadow" Value="inset 0 2 4 0 #E6000000" />
       <Setter Property="BorderBrush" Value="{StaticResource MetalEdge}" />
       <Setter Property="Foreground" Value="{StaticResource PaperLight}" />
     </Style>
@@ -173,11 +179,19 @@
     <Style Selector="Button.paper">
       <Setter Property="Background" Value="{StaticResource PaperButton}" />
       <Setter Property="Foreground" Value="{StaticResource Secondary}" />
-      <Setter Property="BorderBrush" Value="#e6140806" />
-      <Setter Property="BorderThickness" Value="2" />
-      <Setter Property="FontSize" Value="17" />
-      <Setter Property="Padding" Value="40,6" />
-      <Setter Property="MinHeight" Value="38" />
+      <Setter Property="BorderBrush" Value="#E6140806" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="FontSize" Value="21" />
+      <Setter Property="Padding" Value="30,6,36,6" />
+      <Setter Property="MinHeight" Value="50" />
+      <Setter Property="MinWidth" Value="190" />
+    </Style>
+    <Style Selector="Button.paper /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="BoxShadow" Value="inset 0 1 0 0 #59ffffff, inset 0 -2 0 0 #33140806, 0 3 10 0 #CC000000" />
+    </Style>
+    <Style Selector="Button.paper Path">
+      <Setter Property="Fill" Value="{StaticResource Secondary}" />
     </Style>
     <Style Selector="Button.paper:pointerover /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{StaticResource PaperButtonHover}" />
@@ -186,6 +200,7 @@
     </Style>
     <Style Selector="Button.paper:pressed /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{StaticResource PaperButton}" />
+      <Setter Property="BoxShadow" Value="inset 0 2 4 0 #66140806" />
       <Setter Property="Foreground" Value="{StaticResource Secondary}" />
     </Style>
 
@@ -197,7 +212,7 @@
       <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="Foreground" Value="{StaticResource Main}" />
       <Setter Property="BorderBrush" Value="#3a332d" />
-      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="CornerRadius" Value="4" />
       <Setter Property="FontWeight" Value="Medium" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
@@ -217,7 +232,7 @@
       <Setter Property="Background" Value="{StaticResource PlateButton}" />
       <Setter Property="Foreground" Value="{StaticResource Main}" />
       <Setter Property="BorderBrush" Value="{StaticResource MetalEdge}" />
-      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="CornerRadius" Value="4" />
       <Setter Property="MinHeight" Value="32" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
     </Style>
@@ -266,14 +281,22 @@
 
     <!-- Title bar: the window's own minimise / maximise / close plates; close turns BadBright, as the game's Exit -->
     <Style Selector="Button.chrome">
-      <Setter Property="MinHeight" Value="28" />
-      <Setter Property="Width" Value="36" />
-      <Setter Property="Height" Value="28" />
+      <Setter Property="MinHeight" Value="30" />
+      <Setter Property="Width" Value="32" />
+      <Setter Property="Height" Value="30" />
       <Setter Property="Padding" Value="0" />
-      <Setter Property="FontSize" Value="13" />
     </Style>
-    <Style Selector="Button.close:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-      <Setter Property="Foreground" Value="{StaticResource BadBright}" />
+    <Style Selector="Button.chrome Path">
+      <Setter Property="Stroke" Value="{StaticResource Main}" />
+      <Setter Property="StrokeLineCap" Value="Round" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.chrome:pointerover Path">
+      <Setter Property="Stroke" Value="{StaticResource PaperLight}" />
+    </Style>
+    <Style Selector="Button.close:pointerover Path">
+      <Setter Property="Stroke" Value="{StaticResource BadBright}" />
     </Style>
   </Application.Styles>
 </Application>
