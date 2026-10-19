@@ -200,16 +200,40 @@ sealed class ObjectStreamer(WorldObjects objects, ObjectMeshCache meshes) : IDis
     /// </summary>
     public Vector3? Ahead { get; set; }
 
-    /// <summary>Distance from the nearer of <paramref name="eye"/> and <see cref="Ahead"/> to <paramref name="p"/>.</summary>
-    public float Near(Vector3 eye, Vector3 p) => Ahead is { } a ? MathF.Min(Vector3.Distance(eye, p), Vector3.Distance(a, p)) : Vector3.Distance(eye, p);
-    float NearZone(double x0, double z0, Vector3 eye) => Ahead is { } a ? MathF.Min(ZoneDistance(x0, z0, eye), ZoneDistance(x0, z0, a)) : ZoneDistance(x0, z0, eye);
+    /// <summary>Extra points (the player's characters, "Keep textures at characters") laid out, loaded and kept like the eye's surroundings, but ranked after them.</summary>
+    public IReadOnlyList<Vector3> Kept { get; set; } = [];
+
+    float NearKept(Vector3 p) { float d = float.PositiveInfinity; foreach (var k in Kept) d = MathF.Min(d, Vector3.Distance(k, p)); return d; }
+    float NearKeptZone(double x0, double z0) { float d = float.PositiveInfinity; foreach (var k in Kept) d = MathF.Min(d, ZoneDistance(x0, z0, k)); return d; }
+
+    /// <summary>Distance from the nearest of <paramref name="eye"/>, <see cref="Ahead"/> and <see cref="Kept"/> to <paramref name="p"/>.</summary>
+    public float Near(Vector3 eye, Vector3 p)
+    {
+        float d = MathF.Min(Vector3.Distance(eye, p), NearKept(p));
+        return Ahead is { } a ? MathF.Min(d, Vector3.Distance(a, p)) : d;
+    }
+    float NearZone(double x0, double z0, Vector3 eye)
+    {
+        float d = MathF.Min(ZoneDistance(x0, z0, eye), NearKeptZone(x0, z0));
+        return Ahead is { } a ? MathF.Min(d, ZoneDistance(x0, z0, a)) : d;
+    }
 
     /// <summary>
     /// The load order (smaller first): the distance from the eye, or during a flight from <see cref="Ahead"/>, what is near the eye (the flight path)
     /// coming after everything within <paramref name="lead"/> of the arrival, so the landing view loads first.
     /// </summary>
-    public float Rank(Vector3 eye, Vector3 p, float lead) => Ahead is { } a ? MathF.Min(Vector3.Distance(a, p), Vector3.Distance(eye, p) + lead) : Vector3.Distance(eye, p);
-    float RankZone(double x0, double z0, Vector3 eye, float lead) => Ahead is { } a ? MathF.Min(ZoneDistance(x0, z0, a), ZoneDistance(x0, z0, eye) + lead) : ZoneDistance(x0, z0, eye);
+    public float Rank(Vector3 eye, Vector3 p, float lead)
+    {
+        float d = Vector3.Distance(eye, p);
+        if (Kept.Count > 0) d = MathF.Min(d, NearKept(p) + lead);
+        return Ahead is { } a ? MathF.Min(Vector3.Distance(a, p), d + lead) : d;
+    }
+    float RankZone(double x0, double z0, Vector3 eye, float lead)
+    {
+        float d = ZoneDistance(x0, z0, eye);
+        if (Kept.Count > 0) d = MathF.Min(d, NearKeptZone(x0, z0) + lead);
+        return Ahead is { } a ? MathF.Min(ZoneDistance(x0, z0, a), d + lead) : d;
+    }
 
     /// <summary>Distance on the ground plane from <paramref name="eye"/> to a zone's square.</summary>
     public static float ZoneDistance(double x0, double z0, Vector3 eye)

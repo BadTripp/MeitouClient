@@ -209,6 +209,8 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
             result.Add(new(inGameTransitionSpeed.Label, "Higher values make the camera ascend and descend faster.", Slider: inGameTransitionSpeed));
             result.Add(new("Character flights", "A double click on a squad member far from the view (or a double tap of their number) flies the camera there in an arc instead of cutting.",
                 Toggle: new("Character flights", () => config.CharacterFlights, v => config.CharacterFlights = v, Remaster: true, OnOff: true)));
+            result.Add(new("Keep textures at characters", "Keeps the meshes and textures around every squad member loaded, not only around the camera, so a flight or jump to them lands on finished detail. Costs video memory.",
+                Toggle: new("Keep textures at characters", () => config.KeepTexturesAtCharacters, v => config.KeepTexturesAtCharacters = v, Remaster: true, OnOff: true)));
             result.Add(new(characterFlightTime.Label, "Seconds a character flight takes, and each hop of the squad tour (numpad /).", Slider: characterFlightTime));
             foreach (var action in values.Actions)
                 result.Add(new(action.Label, "Delete cached billboards; they are rebuilt when needed.", Run: () =>
@@ -419,6 +421,7 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
         config.MainMenuTransitionSpeed = 1.5f;
         config.InGameTransitionSpeed = 1.5f;
         config.CharacterFlights = false;
+        config.KeepTexturesAtCharacters = false;
         config.CharacterFlightSeconds = UserConfig.DefaultFlightSeconds;
         AttackSlotsSlider.Set(UserConfig.MeitouAttackSlots);
         config.LateDefences = true;

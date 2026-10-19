@@ -29,6 +29,14 @@ biome pairs and foliage layouts rank by distance from the arrival, and what is o
 (`WorldTextureCache.Urgent`, `BackgroundWork.RunUrgent`). The terrain height window and the grass pages still follow only the eye.
 The simulation focus moves to the landing character at once, so its towns populate during the flight.
 
+## Kept points
+
+Advanced "Keep textures at characters" (Meitou, default off, `UserConfig.KeepTexturesAtCharacters`): the host sets `WorldFrame` `Kept` to
+the drawn position of every squad bar member each frame. `ObjectStreamer.Near` / zone layout count the nearest of eye, `Ahead` and `Kept`,
+so object meshes and texture mips stay loaded round each character; terrain biome textures gather cells round each (ranked after the
+eye's). `Kept` ranks after the eye in the load order. Foliage and grass pages follow only the eye and `Ahead`. Costs video memory
+(the VRAM guard still applies). **Unknown**: the cost with a large squad; not measured.
+
 ## Batching and depth
 
 Batch compatible mesh/material/state instances; sort colour batches near-first when enabled.

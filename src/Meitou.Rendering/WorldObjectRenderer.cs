@@ -355,6 +355,9 @@ public sealed unsafe partial class WorldObjectRenderer : IDisposable
         set { if (value is not null && streamer.Ahead is null) lastMark = 0; streamer.Ahead = value; }
     }
 
+    /// <summary>Points kept loaded besides the eye's (<see cref="ObjectStreamer.Kept"/>).</summary>
+    public IReadOnlyList<Vector3> Kept { get => streamer.Kept; set => streamer.Kept = value; }
+
     public void Update(Vector3 eye) => Update(eye, BudgetMs);
 
     /// <summary>Colour draws of parts whose diffuse map was not resident (drawn grey) and, at the same moment, textures waiting for a finer image,
