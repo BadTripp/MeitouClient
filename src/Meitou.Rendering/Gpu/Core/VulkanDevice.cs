@@ -328,6 +328,12 @@ public sealed unsafe class VulkanDevice : IDisposable
         {
             extNames.Add("VK_KHR_surface");
         }
+        // macOS: the loader hides portability drivers (MoltenVK) from instances that do not opt in (VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR).
+        bool portability = OperatingSystem.IsMacOS();
+        if (portability && !extNames.Contains("VK_KHR_portability_enumeration"))
+        {
+            extNames.Add("VK_KHR_portability_enumeration");
+        }
 
         var appName = (byte*)SilkMarshal.StringToPtr("Meitou");
         var layerPtrs = ValidationEnabled ? (byte**)SilkMarshal.StringArrayToPtr(new[] { ValidationLayer }) : null;
@@ -361,6 +367,7 @@ public sealed unsafe class VulkanDevice : IDisposable
             var ci = new InstanceCreateInfo
             {
                 SType = StructureType.InstanceCreateInfo,
+                Flags = portability ? InstanceCreateFlags.EnumeratePortabilityBitKhr : 0,
                 PNext = settingCount > 0 ? &layerInfo : null,
                 PApplicationInfo = &app,
                 EnabledLayerCount = ValidationEnabled ? 1u : 0,
