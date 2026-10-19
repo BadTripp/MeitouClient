@@ -77,6 +77,7 @@ sealed partial class PlayerInterface
         if (e.Action.StartsWith("inventory-scroll-page:", StringComparison.Ordinal))
         { ScrollInventoryPage(e.Screen, float.Parse(e.Action[22..], CultureInfo.InvariantCulture)); return; }
         if (e.Screen == "editor") EditorAction(e);
+        else if (e.Screen == "file") FileDialogAction(e);
         else if (HandleFrontendAction(e)) UpdateMenuPause();
         else if (e.Screen == "stats" && e.Action == "select") selectedStat = e.Text;
         else if (e.Screen == "stats" && e.Action.StartsWith("stat:", StringComparison.Ordinal)) selectedStat = e.Action[5..];
@@ -100,6 +101,7 @@ sealed partial class PlayerInterface
         foreach (var button in layout.Widgets.Where(w => w.Type == "Button" && !w.Properties.ContainsKey("TemplateEvent"))) b.Disabled.Add(button.Name);
         if (BindFrontend(id, b)) return b;
         if (id == "editor") { BindEditor(b); return b; }
+        if (id == "file") { BindFileDialog(b); return b; }
         else if (id == "trader") BindTraderScreen(b);
         else if (id == "dialogue") BindDialogueScreen(b);
         else if (id == "build") BindBuildScreen(b);

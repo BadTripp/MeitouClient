@@ -72,7 +72,7 @@ which are descriptive (RTTI knows `MessageBoxManager::Box`; the constructor of a
 | MessageBox | 1406e70a0 | Kenshi_MessageBox | Info | message, buttons (Return = first, Esc = last) |
 | MessageRoller | 140724af0 | Kenshi_MessagePanel | Popup | rolling event messages |
 | Tutorial panel / list | 140975ca0 / 140977640 | Kenshi_TutorialPanel / Kenshi_TutorialsWindow | Window | tutorial text |
-| OpenSaveFileDialog | 1401a0b10 | Kenshi_OpenSaveFileDialog | Window | file dialog |
+| OpenSaveFileDialog | 1401a0b10 | Kenshi_OpenSaveFileDialog | Window | file dialog; Meitou uses it for the editor's IMPORT only ([characters](../characters.md#import-and-export)) |
 | InteriorModeButtonWindow | 14077a1f0 | Kenshi_InteriorMode | Back / Main / Window (several widgets) | interior mode toggle |
 
 ## 4. HUD (MainBarGUI)

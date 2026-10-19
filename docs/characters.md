@@ -136,7 +136,7 @@ exe decompile unless marked; Meitou: `CharacterDraft` (data), `EditCharacter` / 
   `target_opposite` (the editor shows the reverse). Meitou: no idle stance slider yet; women get no beard list (generator rule).
 - **Buttons**: RANDOMISE = current tab only; RANDOMISE ALL = every randomiser; RESET ALL = the appearance template's defaults (hair, beard,
   colours, `Posture`, idle stance `idle_stand_normal`; slider values **Unknown**, Meitou: XML mid, poses 0, Posture 20); CLOTHES toggles worn
-  clothing in the preview; IMPORT/EXPORT a `.bod2` in `data/character/bodies/export/` (Meitou: not yet). CONFIRM asks first when some
+  clothing in the preview; IMPORT/EXPORT: see [below](#import-and-export). CONFIRM asks first when some
   characters were never shown, closes, unpauses at speed 1; it charges nothing. No cancel widget; Esc **Unknown** (Meitou: Esc leaves a
   surgeon's editor unchanged and unpaid; the new game's must be confirmed).
 - **Preview**: a separate scene. **Verified** (install's compositor files): workspace `Kenshi_Character_Editor` = `GBuffer_Minimal` (characters only,
@@ -163,6 +163,17 @@ exe decompile unless marked; Meitou: `CharacterDraft` (data), `EditCharacter` / 
   (engine choice), the same race and gender, money > price, and takes the price. Head/hair/beard must be the race's, sliders and poses are
   clamped to the limits, the name to 30 characters. **Verified** by a scratch round trip on save 2: edit, capture, load gives the edited
   values with the original key set.
+
+### Import and export
+
+Folder `./data/character/bodies/export/` under the install, extension `.bod2` (`FUN_141539ad0`/`b10`). **Observed**: EXPORT (`FUN_1405ea410`)
+needs no dialog: it writes the edited appearance record to the folder as `<NameText>.bod2` and shows "Character '{1}' exported to file {2}".
+IMPORT opens `Kenshi_OpenSaveFileDialog` titled "Import character" on the folder (`FUN_1405f4dd0`); the chosen file must hold a type 66 record,
+else "Error loading appearance file '{1}'. The file is in an old format or invalid." (`FUN_1405f4280`), and its look replaces the editor's;
+what the original does with another race in mode 1 is **Unknown**. **Verified** (FcsReader + FcsWriter on the install's 12 exports): all are
+type 15, one record, id 1, `1--INGAME`, name `default` or `0`, and round-trip byte-exact. Meitou (`CharacterDraft.Import`/`Export`,
+`PlayerInterface.Editor`): export writes that layout, overwriting a file of the same name; import sanitizes the file for its race and refuses a
+race the editor doesn't offer (creation) or another race or sex (surgeon); the dialog lists the folder only (no browsing).
 
 ### Plastic surgeons
 

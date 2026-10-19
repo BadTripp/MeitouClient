@@ -95,6 +95,7 @@ sealed partial class PlayerInterface
 
     void CloseEditor()
     {
+        faithfulScreens.Close("file");
         faithfulScreens.Close("editor");
         editor = null;
         previews.Clear();
@@ -242,6 +243,14 @@ sealed partial class PlayerInterface
             case "ConfirmButton":
                 ConfirmEditor();
                 return;
+            case "ExportButton":
+                ExportLook(draft, data.InstallRoot);
+                return;
+            case "ImportButton":
+                importFiles = ExportedLooks(data.InstallRoot);
+                importChoice = importFiles.FirstOrDefault();
+                faithfulScreens.Open("file");
+                return;
         }
         if (e.Action.StartsWith("editor-slider:", StringComparison.Ordinal) && Control(e.Action[14..]) is { } slider)
             draft.Set(slider, CharacterGenerator.Round(slider.Min + e.Value * (slider.Max - slider.Min)));
@@ -307,6 +316,76 @@ sealed partial class PlayerInterface
         draft.Name = "Edited " + draft.Name;
         ConfirmEditor(asked: true);
     }
+    /// <summary>The body files IMPORT and EXPORT use, under the install (<c>FUN_141539ad0</c>), and their extension.</summary>
+    const string ExportFolder = "data/character/bodies/export/", BodyExtension = ".bod2";
+    IReadOnlyList<string> importFiles = [];
+    string? importChoice;
+
+    /// <summary>EXPORT (<c>FUN_1405ea410</c>): the look goes to the export folder under the name typed in NameText, replacing a file of that name.</summary>
+    void ExportLook(CharacterDraft draft, string installRoot)
+    {
+        string name = draft.Name.Trim();
+        if (name.Length == 0 || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) { Notice($"Can't export: '{name}' is not a valid file name.", true); return; }
+        string relative = ExportFolder + name + BodyExtension;
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(installRoot, ExportFolder));
+            Meitou.Data.Fcs.FcsWriter.WriteFile(draft.Export(), Path.Combine(installRoot, relative));
+            Notice($"Character '{name}' exported to file ./{relative}");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Notice($"Can't export '{name}': {e.Message}", true); }
+    }
+
+    /// <summary>The body files in the export folder, by name.</summary>
+    static IReadOnlyList<string> ExportedLooks(string installRoot)
+    {
+        try { return [.. Directory.EnumerateFiles(Path.Combine(installRoot, ExportFolder), "*" + BodyExtension).Order(StringComparer.OrdinalIgnoreCase)]; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return []; }
+    }
+
+    /// <summary>
+    /// IMPORT (<c>FUN_1405f4280</c>): the chosen file's look replaces the draft's, race and sex included. A file without an appearance record fails with the original's
+    /// message. Meitou: a file of a race the editor doesn't offer, or (at a surgeon, where race and sex are fixed) of another race or sex, is refused.
+    /// </summary>
+    void ImportLook(string path)
+    {
+        if (editor is not { } s || Draft(s.Current) is not { } draft || EditorData is not { } data) return;
+        string file = Path.GetFileNameWithoutExtension(path);
+        Meitou.Data.Fcs.FcsRecord appearance;
+        try { appearance = AppearanceFile.Read(path).Record; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or Meitou.Data.Fcs.FcsFormatException or InvalidDataException)
+        { Notice($"Error loading appearance file '{file}'. The file is in an old format or invalid.", true); return; }
+        bool female = appearance.Bools.TryGetValue("sex female", out var f) && f;
+        bool allowed = CharacterDraft.RaceOf(data.Db, appearance) is { } race && (s.Kind == EditKind.Creation
+            ? IndexOf(EditorRaces(data.Db), race) >= 0
+            : race.StringId == draft.Race.StringId && (female == draft.Female || race.GetBool("single gender")));
+        if (!allowed || !draft.Import(appearance)) { Notice($"Can't import '{file}': this character can't take that race or sex.", true); return; }
+        faithfulScreens.Close("file");
+    }
+
+    void FileDialogAction(MyGuiEvent e)
+    {
+        if (e.Widget == "ButtonCancel") faithfulScreens.Close("file");
+        else if (e.Widget == "ListFiles" && e.Action == "select") importChoice = e.Text;
+        else if (e.Widget == "ButtonOpenSave" && importChoice is { } path) ImportLook(path);
+    }
+
+    /// <summary>The import dialog (<c>Kenshi_OpenSaveFileDialog</c>, titled "Import character", <c>FUN_1405f4dd0</c>): the export folder's body files; no folder browsing.</summary>
+    void BindFileDialog(UiBindings b)
+    {
+        b.Text["Root"] = "Import character";
+        b.Text["ButtonOpenSave"] = "Import";
+        foreach (string name in new[] { "ButtonCancel", "ButtonOpenSave" }) { b.Disabled.Remove(name); b.Actions[name] = name; }
+        if (importChoice is null) b.Disabled.Add("ButtonOpenSave");
+        foreach (string name in new[] { "ButtonUp", "EditFileName" }) b.Hidden.Add(name);
+        b.Text["CurrentFolder"] = "./" + ExportFolder;
+        b.Disabled.Add("CurrentFolder");
+        var files = importFiles.ToArray();
+        b.Lists["ListFiles"] = [.. files.Select(p => new UiListItem(p, Path.GetFileNameWithoutExtension(p)))];
+        b.SelectedItems["ListFiles"] = Array.IndexOf(files, importChoice);
+        b.Properties["ButtonOpenSave"] = new Dictionary<string, string> { ["DefaultAction"] = "true" };
+    }
+
     /// <summary>Esc: a surgeon's or recruit's editor is left without changes; the new game's has to be confirmed.</summary>
     bool EditorEscape()
     {
@@ -340,8 +419,7 @@ sealed partial class PlayerInterface
             foreach (string name in new[] { "CharLeftArrow", "CharRightArrow", "CharIndexText", "lbChangeCharacter" }) b.Hidden.Add(name);
             foreach (var frame in faithfulScreens.Layout("editor").Widgets.Where(w => w.Children.Any(c => c.Name == "CharIndexText"))) b.HiddenWidgets.Add(frame);
         }
-        // Import and export (.bod2 files through the file dialog) have no backend yet.
-        foreach (string name in new[] { "ImportButton", "ExportButton" }) b.Disabled.Add(name);
+        foreach (string name in new[] { "ImportButton", "ExportButton" }) { b.Disabled.Remove(name); b.Actions[name] = name; }
         string tabButton = s.Tab switch { EditorTab.Face => "FaceTabButton", EditorTab.Hair => "HairTabButton", _ => "BodyTabButton" };
         b.Properties[tabButton] = new Dictionary<string, string> { ["Checked"] = "true" };
         b.Properties["ClothesButton"] = new Dictionary<string, string> { ["Checked"] = s.Clothes ? "true" : "false", ["StateSelected"] = s.Clothes ? "true" : "false" };

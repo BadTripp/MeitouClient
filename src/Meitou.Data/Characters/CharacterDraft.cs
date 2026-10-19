@@ -79,8 +79,35 @@ public sealed class CharacterDraft
         return copy;
     }
 
-    static GameRecord? RaceOf(GameDatabase db, FcsRecord record) =>
-        record.References.TryGetValue("race", out var refs) && refs.Count > 0 ? db.Find(refs[0].TargetStringId) : null;
+    /// <summary>The RACE an appearance record names, or null.</summary>
+    public static GameRecord? RaceOf(GameDatabase db, FcsRecord record) =>
+        record.References.TryGetValue("race", out var refs) && refs.Count > 0 && db.Find(refs[0].TargetStringId) is { Type: FcsRecordType.RACE } race ? race : null;
+
+    /// <summary>
+    /// IMPORT: takes a body file's whole look, race and sex included, made valid for its race (<see cref="Sanitize"/>); the draft keeps its own record id.
+    /// False (nothing changes) when the file names no known race.
+    /// </summary>
+    public bool Import(FcsRecord appearance)
+    {
+        if (RaceOf(db, appearance) is not { } race) return false;
+        var taken = Sanitize(db, installRoot, appearance, race);
+        (taken.Type, taken.Id, taken.Name, taken.StringId, taken.Flags) = (Record.Type, Record.Id, Record.Name, Record.StringId, Record.Flags);
+        Record = taken;
+        Race = race;
+        Limits = LimitsFor(race, Female);
+        Version++;
+        return true;
+    }
+
+    /// <summary>EXPORT: the look as a body file, laid out as the game's own exports are (type 15, one record, id 1, <c>1--INGAME</c>; docs/characters.md).</summary>
+    public FcsFile Export()
+    {
+        var record = Copy(Record);
+        (record.Id, record.StringId, record.Flags) = (1, "1--INGAME", 0);
+        var file = new FcsFile { FileType = FcsFileType.V15, NextId = 1 };
+        file.Records.Add(record);
+        return file;
+    }
 
     AppearanceLimits? LimitsFor(GameRecord race, bool female)
     {

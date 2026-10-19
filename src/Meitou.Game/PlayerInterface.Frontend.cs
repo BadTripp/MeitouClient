@@ -33,7 +33,7 @@ sealed partial class PlayerInterface
     public void ShowMainMenu() => ShowTitle();
     public void CloseFrontend()
     {
-        foreach (string id in new[] { "title", "menu", "new-game", "advanced", "save", "load", "message", "editor" }) faithfulScreens.Close(id);
+        foreach (string id in new[] { "title", "menu", "new-game", "advanced", "save", "load", "message", "editor", "file" }) faithfulScreens.Close(id);
         editor = null; previews.Clear();
         confirmation = null; UpdateMenuPause();
     }

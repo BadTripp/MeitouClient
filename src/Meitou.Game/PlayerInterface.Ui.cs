@@ -47,7 +47,7 @@ sealed partial class PlayerInterface
         faithfulScreens = new(uiResources);
         foreach (var (id, file, modal) in FaithfulScreenFiles)
             faithfulScreens.Register(id, MyGuiReader.ReadLayout(resolve(file + ".layout") ?? throw new FileNotFoundException(file)), modal,
-                centreRoot: id is "new-game" or "save" or "load");
+                centreRoot: id is "new-game" or "save" or "load" or "file");
         faithfulScreens.Activated += FaithfulAction;
         uiHost.Diagnostic += d => Console.Error.WriteLine($"ui        {d.Extension} {d.Operation}: {d.Error.Message}");
         uiRegistration = uiHost.Register(new PlayerUiExtension(ExecuteUiAction));
@@ -64,6 +64,7 @@ sealed partial class PlayerInterface
         ("bag", "Kenshi_InventoryGenericWindow", false), ("limbs", "Kenshi_LimbReplacementWindow", false), ("trader", "Kenshi_InventoryTraderWindow", false),
         ("building", "Kenshi_GenericBuildingWindow", false), ("bench", "Kenshi_InventoryResearchWindow", false),
         ("build", "Kenshi_BuildWindow", false), ("editor", "Kenshi_CharacterEditor", true), ("dialogue", "Kenshi_ConversationPanel", true),
+        ("file", "Kenshi_OpenSaveFileDialog", true),
     ];
 
     /// <summary>The expanded layout and the current bindings of the HUD (<c>"hud"</c>) or of a faithful screen, for the layout audit test.</summary>
