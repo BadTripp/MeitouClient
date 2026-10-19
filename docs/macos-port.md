@@ -315,7 +315,9 @@ four edges** (after the menu-bar/Dock overshoot clamp — see §5).
 profiler shows FSR's passes in `post`. Verified in The Hub (viewer), M1 Pro.
 
 Recipe — AMD ships `amd_fidelityfx_vk` only for Windows, but the FidelityFX SDK 1.1.4 builds for
-macOS arm64 with modest patches:
+macOS arm64 with modest patches; the patch series and build script are packaged at
+[fsr3-native-macos](https://github.com/SpaceCowboyServer/fsr3-native-macos) (`./build.sh` →
+`libamd_fidelityfx_vk.dylib`):
 
 - The Vulkan backend compiles GLSL with **glslang** (brew, invoked as a subprocess by the SDK's
   `ffx_shader_compiler` tool) — no DXC needed. The tool itself is portable C++ except `wmain`,
