@@ -71,8 +71,10 @@ Original formation details and off-screen arrival remain partly unknown.
 ## Own builder
 
 DotRecast: cells2,height1,tile48 cells,agent18/climb5,ground/water/door areas. Build asynchronously,
-cache tiles and gate population on readiness. Query A* through portal clearance2*radius and
-water/door costs. Unload of in-flight builds/cache invalidation remains imperfect; constraints
+cache tiles and gate population on readiness. Query A* through portal clearance (radius per wall end; tile-border, seam
+and area-change ends are open) and water/door costs. **Observed** (zone 18.39, `meitou-tools navmesh`): a Swamp Village
+shack's stair straddles the tile line x−62208 and its foot came out as 6..8-unit portals, so a 2*radius rule kept radius-4
+agents under the house; the west half's foot also meets the walkboard in a near-miss T (two edges against one, ~1.3 off line), unjoined. Unload of in-flight builds/cache invalidation remains imperfect; constraints
 are in [simulation](../simulation.md#open-questions-and-known-gaps). Original Havok tiles are
 reference evidence, not a runtime dependency or proof of DotRecast polygon parity.
 

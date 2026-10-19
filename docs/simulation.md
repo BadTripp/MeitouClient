@@ -265,7 +265,7 @@ Heights use the character's (or clicked) Y to pick stacked floors; long paths ha
 
 Own DotRecast builder/cache (`Meitou.Navigation`), not Havok runtime. Default cells 2, height 1,
 48-cell tiles, agent height 18/max climb 5; ground/water/door areas. A* checks portal clearance
-`2*radius` (default radius 4), water factor and doors. `NavAdapter` exposes simulation interfaces;
+(radius per wall end, default radius 4), water factor and doors. `NavAdapter` exposes simulation interfaces;
 `ZoneGate` holds population until ready. Collision and world placement rules:
 [collision.md](formats/collision.md), [pathfinding.md](game/pathfinding.md).
 Cache validation, asynchronous unload races and key omissions are listed under known gaps.

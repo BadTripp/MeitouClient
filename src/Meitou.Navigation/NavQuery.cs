@@ -3,7 +3,7 @@ using Meitou.Simulation;
 
 namespace Meitou.Navigation;
 
-/// <summary>Who is asking for a path: the footprint radius (clearance is 2 × radius across every portal) and what the ground costs them.</summary>
+/// <summary>Who is asking for a path: the footprint radius (a portal must leave the radius clear at each end on a wall) and what the ground costs them.</summary>
 public sealed record NavAgent
 {
     /// <summary>RACE <c>pathfind footprint radius</c> × the size factor (humans 4, Garru 7, Leviathan 40).</summary>
@@ -19,7 +19,7 @@ public sealed record NavAgent
 }
 
 /// <summary>
-/// Path queries over a <see cref="NavWorld"/>: A* over the polygons with a portal-width clearance of 2 × radius, the water cost factor and the door
+/// Path queries over a <see cref="NavWorld"/>: A* over the polygons with a portal clearance of the radius per wall end, the water cost factor and the door
 /// rules, then string pulling with the portals pulled in by the radius (docs/game/pathfinding.md, "Path queries" and "What our builder needs").
 /// </summary>
 public sealed class NavQuery(NavWorld world, NavDoors? doors = null)
@@ -136,9 +136,10 @@ public sealed class NavQuery(NavWorld world, NavDoors? doors = null)
             if (!target.Kept[to.Polygon]) return;
             byte area = target.Areas[to.Polygon];
             if (area == NavArea.Door && (agent.DoorsClosed || IsDoorClosed(target, to.Polygon))) return;
-            if (!Portal(from.Ref, edge, to, out var left, out var right)) return;
+            if (!Portal(from.Ref, edge, to, out var left, out var right, out bool leftWall, out bool rightWall)) return;
+            // Only an end on a wall takes the radius off the portal (as Pull insets it); a tile-border, seam or area-change end has walkable ground beyond.
             float width = Vector2.Distance(new(left.X, left.Z), new(right.X, right.Z));
-            if (width < 2 * agent.Radius) return;
+            if (width < ((leftWall ? 1 : 0) + (rightWall ? 1 : 0)) * agent.Radius) return;
             var mid = BestCrossing(from.Position, left, right, goalPoint);
             float g = from.G + Vector3.Distance(from.Position, mid) * factor;
             if (area == NavArea.Door) g += OpenDoorCost;
