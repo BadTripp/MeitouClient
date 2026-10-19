@@ -1,6 +1,3 @@
-| Avalonia, Avalonia.Desktop, Avalonia.Themes.Fluent 12.1.4 (with SkiaSharp and HarfBuzzSharp) | `launcher/Meitou.Launcher` (UI) | MIT |
-| Velopack 1.2.161 | `launcher/Meitou.Launcher` (install and self-update) | MIT |
-| Markdig 1.4.2 | `launcher/Meitou.Launcher` (news posts) | BSD-2-Clause |
 # Third-party notices
 
 MeitouClient is licensed under GPL-3.0-or-later (see [LICENSE](LICENSE)). Parts of it are derived
@@ -108,6 +105,9 @@ Used as packages (not copied into this repository); each is distributed under it
 | Silk.NET.Shaderc 2.23.0 | `src/Meitou.Rendering` (GLSL to SPIR-V at run time) | MIT |
 | Silk.NET.Shaderc.Native 2.23.0 (ships `shaderc_shared.dll`: Google's shaderc with glslang and SPIRV-Tools) | `src/Meitou.Rendering` | Apache-2.0 (shaderc, SPIRV-Tools); glslang under its own BSD-3-Clause / MIT-style terms |
 | StbTrueTypeSharp 1.26.12 | `tools/Meitou.ModelViewer` (key-list overlay text, from a system monospace font; no font is shipped) | Public domain |
+| Avalonia, Avalonia.Desktop, Avalonia.Themes.Fluent 12.1.4 (with SkiaSharp and HarfBuzzSharp) | `launcher/Meitou.Launcher` (UI) | MIT |
+| Velopack 1.2.161 | `launcher/Meitou.Launcher` (install and self-update) | MIT |
+| Markdig 1.4.2 | `launcher/Meitou.Launcher` (news posts) | BSD-2-Clause |
 
 The DDS reader and decoder (`src/Meitou.Data/Textures/`) are written from Microsoft's public DDS and
 block-compression documentation; no code is taken from other implementations.
