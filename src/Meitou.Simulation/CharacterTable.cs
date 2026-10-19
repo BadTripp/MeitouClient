@@ -235,6 +235,10 @@ public sealed class CharacterCold
     public List<Production.PermaJob> Jobs { get; } = [];
     /// <summary>The <see cref="Jobs"/> entry the current task was started from (-1: none, the task was ordered). Hashed with <see cref="Jobs"/>.</summary>
     public int JobIndex { get; set; } = -1;
+    /// <summary>The implicit job (a squad AI option, <see cref="SquadAi"/>) the current task was started from: 242 ditching, 153 going to bed, 275 sitting; null: none. Hashed only while set.</summary>
+    public Meitou.Data.Gameplay.Ai.TaskType? Implicit { get; set; }
+    /// <summary>The storage a <see cref="CharacterTask.Haul"/> trip ends at (a "Hauling to" job's, or the one an implicit ditch picked). Hashed with <see cref="HaulSite"/>.</summary>
+    public string? HaulTo { get; set; }
     /// <summary>The clip the operator plays while it works (the functionality's <c>animation</c>).</summary>
     public string? OperateClip { get; set; }
     /// <summary>The operator did work this tick (it plays <see cref="OperateClip"/>); derived, not hashed.</summary>
@@ -473,6 +477,8 @@ public sealed class CharacterTable
             if (k.BuildSite is { } site) { hasher.Add(0x4275696C); hasher.Add(Rng.StableHash(site)); hasher.Add(k.BuildBar); hasher.Add((int)k.ResumeTask); }
             if (k.OperateSite is { } machine) { hasher.Add(0x4F706572); hasher.Add(Rng.StableHash(machine)); }
             if (k.HaulSite is { } haul) { hasher.Add(0x4861756C); hasher.Add(Rng.StableHash(haul)); hasher.Add(Rng.StableHash(k.HaulFetch ?? "")); }
+            if (k.HaulTo is { } haulTo) hasher.Add(Rng.StableHash(haulTo));
+            if (k.Implicit is { } implicitJob) { hasher.Add(0x496D706C); hasher.Add((int)implicitJob); hasher.Add((int)k.ResumeTask); }
             if (k.Jobs.Count > 0)
             {
                 hasher.Add(0x4A6F6273);

@@ -323,10 +323,13 @@ public sealed class FirstAidSystem(GameConstants constants, BodyOptions options,
             if (next[i].Alive && next[i].Task == (byte)CharacterTask.Treat && table.TryResolveNext(table.Cold(i)!.TreatTarget, out int busy)) taken.Add(busy);
         for (int i = 0; i < table.HighWater; i++)
         {
-            if (!next[i].Alive || next[i].Task is not ((byte)CharacterTask.Idle or (byte)CharacterTask.Wander or (byte)CharacterTask.Follow)) continue;
+            if (!next[i].Alive) continue;
             var cold = table.Cold(i)!;
+            // Idle: no task, following, wandering, or an implicit job (the medic job ranks above them).
+            if (next[i].Task is not ((byte)CharacterTask.Idle or (byte)CharacterTask.Wander or (byte)CharacterTask.Follow) && cold.Implicit is null) continue;
             if (cold.Medical is not { Incapacitated: false } || cold.Race is null || cold.Stats is null || cold.Inventory is null || cold.InCombat) continue;
-            if (cold.IsPlayer ? !cold.MedicJob || !Orders.Has(cold, CharacterOrders.Jobs) : !Settings.AutoNpcs) continue;
+            // The medic job runs whether the Jobs switch is on or off (docs/game/ai-tasks.md "Perma-jobs", FUN_14050c1c0).
+            if (cold.IsPlayer ? !cold.MedicJob : !Settings.AutoNpcs) continue;
             bool organic = Best(cold.Inventory, ItemInfo.FirstAidKitFunction) is not null, robotic = Best(cold.Inventory, ItemInfo.RobotKitFunction) is not null;
             if (!organic && !robotic) continue;
             var squad = cold.SquadId >= 0 ? world.Squads.Find(cold.SquadId) : null;
@@ -350,7 +353,7 @@ public sealed class FirstAidSystem(GameConstants constants, BodyOptions options,
             }
             if (best < 0) continue;
             taken.Add(best);
-            var resume = next[i].Task is (byte)CharacterTask.Wander or (byte)CharacterTask.Follow ? (CharacterTask)next[i].Task : CharacterTask.Idle;
+            var resume = cold.Implicit is not null ? cold.ResumeTask : next[i].Task is (byte)CharacterTask.Wander or (byte)CharacterTask.Follow ? (CharacterTask)next[i].Task : CharacterTask.Idle;
             Begin(table, i, new CharacterId(best, next[best].Generation), resume);
         }
     }

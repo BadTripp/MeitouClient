@@ -234,6 +234,7 @@ sealed partial class PlayerInterface
         if (InventoryPointerDown(p)) return true;
         if (MapPointerDown(p)) return true;
         if (faithfulScreens.PointerDown(p)) { UpdateMenuPause(); return true; }
+        if (JobDragStart(controls, p)) return true;
         if (MyGuiPresentation.HitTest(controls, p.X, p.Y) is not { } c) return false;
         if (c.Action.StartsWith("faithful:", StringComparison.Ordinal))
         {

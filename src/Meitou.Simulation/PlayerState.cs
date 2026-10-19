@@ -29,6 +29,8 @@ public sealed class PlayerState
     /// Replaced, never changed in place, so a snapshot may hold it. Not hashed: it follows from positions and nothing in the simulation reads it.
     /// </summary>
     public TownKnowledge[] Towns { get; private set; } = [];
+    /// <summary>The squad AI options of the overview's AI tab that Meitou runs (<see cref="Simulation.SquadAi"/>); saved as CAMERA bools (<see cref="SquadAiKeys"/>).</summary>
+    public SquadAi SquadAi { get; set; } = SquadAi.Defaults;
 
     /// <summary>Adds <paramref name="flags"/> to a town's knowledge; true when that changed it.</summary>
     public bool Know(int site, TownKnowledge flags)
@@ -87,6 +89,7 @@ public sealed class PlayerState
         h.Add(Faction);
         h.Add(Money);
         h.Add(Squad);
+        if (SquadAi != SquadAi.Defaults) h.Add(0x53714169 + (int)SquadAi);
         h.Add(Selection.Count);
         foreach (var c in Selection)
         {
@@ -149,6 +152,9 @@ public sealed partial class PlayerSystem(PopulationData? data = null) : ITickSys
                         else if (Items.InventoryCommands.IsEquipmentSection(move.Item.Section) || Items.InventoryCommands.IsEquipmentSection(move.Section))
                             assembly?.RefreshEquipment(cold);
                     }
+                    break;
+                case SquadAiCommand option:
+                    player.SquadAi = option.On ? player.SquadAi | option.Option : player.SquadAi & ~option.Option;
                     break;
                 case OrdersCommand or RunSpeedCommand:
                     Orders.Apply(world, command);
@@ -221,6 +227,46 @@ public sealed partial class PlayerSystem(PopulationData? data = null) : ITickSys
         foreach (int site in sites) world.Player.Know(site, TownKnowledge.Discovered | TownKnowledge.Recent);
         inventory.RemoveOne(item);
         world.Post($"{sites.Count} location(s) added to the map.");
+    }
+}
+
+/// <summary>
+/// The squad AI options that start implicit jobs (docs/game/ai-tasks.md "Perma-jobs"): the original's squad toggles at <c>DAT_142134690</c> +0x117, +0x116 and +0x118, all on in a
+/// new game.
+/// </summary>
+[Flags]
+public enum SquadAi : byte
+{
+    None = 0,
+    /// <summary>Ditch items: idle characters put carried materials into storage (job 242).</summary>
+    Ditch = 1,
+    /// <summary>Sleep when injured: idle injured characters go to bed until healed (jobs 153 and 257).</summary>
+    Sleep = 2,
+    /// <summary>Sit when idle: idle characters at home sit on a free chair (job 275).</summary>
+    Sit = 4,
+    Defaults = Ditch | Sleep | Sit,
+}
+
+/// <summary>Turns a squad AI option on or off.</summary>
+public sealed record SquadAiCommand(SquadAi Option, bool On) : SimCommand;
+
+/// <summary>The squad AI options' CAMERA bools (<b>Verified</b>, the camera record writer <c>FUN_1403eb710</c>).</summary>
+public static class SquadAiKeys
+{
+    public static readonly (SquadAi Option, string Key)[] Keys = [(SquadAi.Ditch, "ditch"), (SquadAi.Sleep, "sleep"), (SquadAi.Sit, "sit")];
+
+    public static void Write(Meitou.Data.Fcs.FcsRecord camera, SquadAi options)
+    {
+        foreach (var (option, key) in Keys) camera.Bools[key] = (options & option) != 0;
+    }
+
+    /// <summary>The options a CAMERA record holds; an absent key stays on.</summary>
+    public static SquadAi Read(Meitou.Data.Fcs.FcsRecord camera)
+    {
+        var options = SquadAi.Defaults;
+        foreach (var (option, key) in Keys)
+            if (camera.Bools.TryGetValue(key, out bool on) && !on) options &= ~option;
+        return options;
     }
 }
 

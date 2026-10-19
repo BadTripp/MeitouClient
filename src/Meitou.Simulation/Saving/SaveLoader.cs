@@ -61,6 +61,7 @@ public static class SaveLoader
         int playerIndex = playerFaction is not null && data.FactionIndex(playerFaction.Id) is var pi and >= 0 ? pi : data.PlayerFaction;
         world.Player.Faction = playerIndex;
         world.Player.Money = camera.PlayerMoney;
+        world.Player.SquadAi = SquadAiKeys.Read(camera.Record);
         LoadTownKnowledge(save, data, world.Player);
         LoadUniques(camera.Record, data, world.Uniques);
 

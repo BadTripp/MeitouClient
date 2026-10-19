@@ -61,7 +61,8 @@ public sealed class BodySystem(GameConstants constants, BodyOptions? options = n
                 Seed = world.Seed,
                 CharacterKey = Rng.Key(table.IdOf(i)),
                 BodyTimeScale = BodyTimeScale,
-                Resting = n.Task == (byte)CharacterTask.Rest,
+                // Lying in a bed of the "Sleep when injured" option rests too.
+                Resting = n.Task == (byte)CharacterTask.Rest || n.Task == (byte)CharacterTask.Operate && cold.Implicit == Meitou.Data.Gameplay.Ai.TaskType.GO_HOME_AND_GO_TO_BED && cold.Operating,
             };
             // The combat system's own context (hits) reads the encumbrance from the fighter, so it matches the one used here.
             if (cold.Fighter is { } fighter) fighter.EncumbranceFactor = encumbrance;

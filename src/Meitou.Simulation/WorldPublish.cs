@@ -92,7 +92,7 @@ public sealed partial class World
             });
         }
         PreviousSnapshot = Snapshot;
-        Snapshot = new WorldSnapshot(Tick, list) { Projectiles = projectiles?.PublishProjectiles() ?? [], Trade = trades?.PublishTrade(), Conversation = dialogues?.PublishConversation(), Speech = dialogues?.PublishSpeech() ?? [], DialogueRequest = dialogues?.PublishRequest(), Towns = Player.Towns, Camps = Player.Camps,
+        Snapshot = new WorldSnapshot(Tick, list) { Projectiles = projectiles?.PublishProjectiles() ?? [], Trade = trades?.PublishTrade(), Conversation = dialogues?.PublishConversation(), Speech = dialogues?.PublishSpeech() ?? [], DialogueRequest = dialogues?.PublishRequest(), Towns = Player.Towns, Camps = Player.Camps, SquadAi = Player.SquadAi,
             Buildings = Buildings.Published(), BuildingsRevision = Buildings.Revision, GroundItems = GroundItems.Published(), GroundItemsRevision = GroundItems.Revision, UnlockedBuildings = Research.Unlocked, Doors = Fixtures.PublishedDoors(), InspectedBuilding = Fixtures.DetailOf(Player.InspectedBuilding),
             Machines = production is null ? [] : Machines.Published(production.Items), MachinesVersion = Machines.Version, Research = production?.ResearchView(this) ?? Production.ResearchSnapshot.Empty,
             Crafts = production?.CraftsView(this) ?? Snapshot.Crafts };

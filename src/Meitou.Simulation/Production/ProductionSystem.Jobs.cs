@@ -1,4 +1,7 @@
 using Meitou.Data.Gameplay.Ai;
+using System.Numerics;
+using Meitou.Data.Gameplay;
+using Meitou.Data.World;
 using Meitou.Simulation.Construction;
 
 namespace Meitou.Simulation.Production;
@@ -28,7 +31,25 @@ public sealed partial class ProductionSystem
         else if (cold.JobIndex > remove.Index) cold.JobIndex--;
     }
 
-    /// <summary>Once a tick (serial): characters due a look at their lists take the first job that can run, unless it is the one they are on.</summary>
+    void MoveJobTo(World world, MoveJob move)
+    {
+        if (!world.Characters.TryResolveNext(move.Character, out int slot) || world.Characters.Cold(slot) is not { } cold) return;
+        int count = cold.Jobs.Count;
+        if ((uint)move.From >= (uint)count || (uint)move.To >= (uint)count || move.From == move.To) return;
+        var job = cold.Jobs[move.From];
+        cold.Jobs.RemoveAt(move.From);
+        cold.Jobs.Insert(move.To, job);
+        // The job the character is on keeps pointing at it.
+        int k = cold.JobIndex;
+        if (k == move.From) cold.JobIndex = move.To;
+        else if (move.From < k && k <= move.To) cold.JobIndex--;
+        else if (move.To <= k && k < move.From) cold.JobIndex++;
+    }
+
+    /// <summary>
+    /// Once a tick (serial): characters due a look at their lists take the first job that can run, unless it is the one they are on; with none, an implicit job of the squad AI
+    /// options (<see cref="ImplicitPick"/>).
+    /// </summary>
     void PickJobs(World world)
     {
         var table = world.Characters;
@@ -39,18 +60,132 @@ public sealed partial class ProductionSystem
             var cold = table.Cold(i)!;
             var task = (CharacterTask)n.Task;
             // An order replaced the job's task.
-            if (cold.JobIndex >= 0 && task is not (CharacterTask.Operate or CharacterTask.Haul)) cold.JobIndex = -1;
-            if (cold.Jobs.Count == 0 || !cold.IsPlayer || (world.Tick + i) % JobCheckTicks != 0) continue;
+            if ((cold.JobIndex >= 0 || cold.Implicit is not null) && task is not (CharacterTask.Operate or CharacterTask.Haul))
+            {
+                cold.JobIndex = -1;
+                cold.Implicit = null;
+                cold.HaulTo = null;
+            }
+            if (!cold.IsPlayer || (world.Tick + i) % JobCheckTicks != 0) continue;
+            bool onJob = cold.JobIndex >= 0 || cold.Implicit is not null;
             // Idle as the medic job counts it: no task, or following or wandering.
-            if (cold.JobIndex < 0 && task is not (CharacterTask.Idle or CharacterTask.Wander or CharacterTask.Follow)) continue;
+            if (!onJob && task is not (CharacterTask.Idle or CharacterTask.Wander or CharacterTask.Follow)) continue;
             if (!Able(cold)) continue;
             int pick = -1;
             for (int k = 0; k < cold.Jobs.Count && pick < 0; k++)
                 if (Runnable(world, cold, k)) pick = k;
-            if (pick == cold.JobIndex) continue;
-            if (pick < 0) { if (cold.JobIndex >= 0) End(table, i); continue; }
-            StartJob(world, i, pick);
+            if (pick >= 0)
+            {
+                if (pick != cold.JobIndex) StartJob(world, i, pick);
+                continue;
+            }
+            if (ImplicitPick(world, i, onJob ? cold.ResumeTask : task) is { } chosen)
+            {
+                string? current = chosen.Type == TaskType.DITCH_ALL_RESOURCES ? cold.HaulTo : cold.OperateSite;
+                if (chosen.Type != cold.Implicit || chosen.Site != current) StartImplicit(world, i, chosen.Type, chosen.Site);
+                continue;
+            }
+            if (onJob) End(table, i);
         }
+    }
+
+    /// <summary>How far (X/Z) from where it idles a character sits down on a chair (engine choice: the original's sitter looks in its home town only).</summary>
+    public const float SeatRange = 600;
+
+    /// <summary>
+    /// The implicit job of a character whose list has none to run (docs/game/ai-tasks.md "Perma-jobs": the original's lowest keys, in this order), with the jobs switch on and not a
+    /// slave. <see cref="SquadAi.Ditch"/>: carried items a storage takes go there (242; only with no queued orders). <see cref="SquadAi.Sleep"/>: an injured character lies in a free
+    /// bed until healed (153, then 257). <see cref="SquadAi.Sit"/>: a free chair (275). The one it is on is kept while it holds. Distances are from where it idles, its squad
+    /// leader when it follows, so a follower gets up when the leader walks off.
+    /// </summary>
+    (TaskType Type, string Site)? ImplicitPick(World world, int slot, CharacterTask idle)
+    {
+        var table = world.Characters;
+        var cold = table.Cold(slot)!;
+        var options = world.Player.SquadAi;
+        if ((cold.Orders & CharacterOrders.Jobs) == 0 || cold.SlaveState != 0 || options == SquadAi.None) return null;
+        var at = table.Next[slot].Position;
+        if (idle == CharacterTask.Follow && cold.SquadId >= 0 && world.Squads.Find(cold.SquadId)?.Leader is { IsNone: false } leader && leader.Slot != slot && table.IsAlive(leader))
+            at = table.Next[leader.Slot].Position;
+        if ((options & SquadAi.Ditch) != 0)
+        {
+            if (cold.Implicit == TaskType.DITCH_ALL_RESOURCES && cold.HaulTo is { } keep) return (TaskType.DITCH_ALL_RESOURCES, keep);
+            if (cold.OrderQueue.Count == 0 && cold.Inventory is { } inv
+                && NearestSite(world, at, Settings.HaulRange, (_, m) => m.Data.IsStorage && m.Storage is not null && inv.All().Any(item => Takes(world, m, item))) is { } store)
+                return (TaskType.DITCH_ALL_RESOURCES, store);
+        }
+        if ((options & SquadAi.Sleep) != 0 && Injured(cold))
+        {
+            if (cold.Implicit == TaskType.GO_HOME_AND_GO_TO_BED && cold.OperateSite is { } bed && world.Buildings.Find(bed) is { } kept && Gap(kept.Position, at) <= Settings.HaulRange)
+                return (TaskType.GO_HOME_AND_GO_TO_BED, bed);
+            if (NearestSite(world, at, Settings.HaulRange, (s, m) => IsBed(m) && Free(world, cold, s, m)) is { } free) return (TaskType.GO_HOME_AND_GO_TO_BED, free);
+        }
+        if ((options & SquadAi.Sit) != 0)
+        {
+            if (cold.Implicit == TaskType.SIT_AROUND && cold.OperateSite is { } seat && world.Buildings.Find(seat) is { } kept && Gap(kept.Position, at) <= SeatRange)
+                return (TaskType.SIT_AROUND, seat);
+            if (NearestSite(world, at, SeatRange, (s, m) => IsSeat(m) && Free(world, cold, s, m)) is { } free) return (TaskType.SIT_AROUND, free);
+        }
+        return null;
+    }
+
+    /// <summary>BF_BED and the skeleton bed (6, 25).</summary>
+    static bool IsBed(Machine m) => m.Data.Function is TownBuildings.BedFunction or TownBuildings.SkeletonBedFunction;
+
+    /// <summary>BF_CHAIR and BF_THRONE (17, 24; docs/game/ai-tasks.md "Town goals").</summary>
+    static bool IsSeat(Machine m) => m.Data.Function is TownBuildings.ChairFunction or ThroneFunction;
+
+    const int ThroneFunction = 24;
+
+    /// <summary>Nobody else lies or sits on it.</summary>
+    static bool Free(World world, CharacterCold cold, BuildSite site, Machine m) => OperatorsOf(world, site.Id) - (cold.OperateSite == site.Id ? 1 : 0) < m.Data.MaxOperators;
+
+    /// <summary>A body part below full health (<b>engine choice</b>: the original's injury test is Unknown; its 257 is "get out of bed once healed").</summary>
+    static bool Injured(CharacterCold cold) => cold.Medical is { Dead: false } medical && medical.Parts.Any(p => p.Fraction is >= 0 and < 1);
+
+    /// <summary>The player's complete building nearest <paramref name="at"/> within <paramref name="range"/> whose machine passes <paramref name="ok"/> (ties: the lower site id).</summary>
+    string? NearestSite(World world, Vector3 at, float range, Func<BuildSite, Machine, bool> ok)
+    {
+        string? best = null;
+        float bestGap = float.MaxValue;
+        foreach (var m in world.Machines.All)
+        {
+            if (world.Buildings.Find(m.Site) is not { Complete: true } site || site.Owner != world.Player.Faction) continue;
+            float gap = Gap(site.Position, at);
+            if (gap > range || gap > bestGap || (gap == bestGap && string.CompareOrdinal(m.Site, best) > 0) || !ok(site, m)) continue;
+            best = m.Site;
+            bestGap = gap;
+        }
+        return best;
+    }
+
+    void StartImplicit(World world, int slot, TaskType type, string siteId)
+    {
+        var table = world.Characters;
+        var cold = table.Cold(slot)!;
+        var site = world.Buildings.Find(siteId)!;
+        var m = Ensure(world, site)!;
+        var resume = cold.JobIndex >= 0 || cold.Implicit is not null ? cold.ResumeTask : (CharacterTask)table.Next[slot].Task;
+        if (type == TaskType.DITCH_ALL_RESOURCES) StartHaulTrip(world, slot, site, m);
+        else
+        {
+            Begin(world, slot, site, m);
+            // A bed names no clip: the sleeper lies as on the floor (engine choice).
+            if (IsBed(m)) cold.OperateClip = AnimationLibrary.AnimalLyingRecord;
+        }
+        cold.JobIndex = -1;
+        cold.Implicit = type;
+        cold.ResumeTask = resume;
+    }
+
+    /// <summary>A sitter or sleeper at its chair or bed: on the seat's origin facing its way, as the original's <c>Task_OperateMachine</c> (docs/game/ai-tasks.md "Town goals").</summary>
+    static void Settle(ref CharacterHot n, CharacterCold cold, BuildSite site, Machine m)
+    {
+        n.Position = site.Position;
+        n.Yaw = TownBuildings.YawOf(site.Rotation);
+        n.Velocity = default;
+        m.Operators++;
+        cold.Operating = true;
     }
 
     /// <summary>A job of the list that may run now: Meitou runs its type, the jobs switch is on (or the type ignores it), and it is not blocked.</summary>
@@ -146,20 +281,25 @@ public sealed partial class ProductionSystem
         {
             if (cold.OperateSite != site.Id) Begin(world, slot, site, m);
         }
-        else
-        {
-            End(table, slot);
-            ref var n = ref table.Next[slot];
-            MovementSystem.Stop(table, slot);
-            n.Task = (byte)CharacterTask.Haul;
-            n.Mode = SpeedMode.Free;
-            n.TaskTime = 0;
-            // What it already carries for the storage goes there first; else it fetches.
-            bool carries = cold.Inventory is { } inv && inv.All().Any(i => Takes(world, m, i));
-            cold.HaulSite = carries ? site.Id : HaulSource(world, site, m);
-            sweep = true;
-        }
+        else StartHaulTrip(world, slot, site, m);
         cold.JobIndex = k;
+    }
+
+    /// <summary>A <see cref="CharacterTask.Haul"/> trip to a storage: what the character already carries for it goes there first; else it fetches a machine's output.</summary>
+    void StartHaulTrip(World world, int slot, BuildSite storage, Machine store)
+    {
+        var table = world.Characters;
+        var cold = table.Cold(slot)!;
+        End(table, slot);
+        ref var n = ref table.Next[slot];
+        MovementSystem.Stop(table, slot);
+        n.Task = (byte)CharacterTask.Haul;
+        n.Mode = SpeedMode.Free;
+        n.TaskTime = 0;
+        bool carries = cold.Inventory is { } inv && inv.All().Any(i => Takes(world, store, i));
+        cold.HaulSite = carries ? storage.Id : HaulSource(world, storage, store);
+        cold.HaulTo = storage.Id;
+        sweep = true;
     }
 
     /// <summary>A hauler at the end of a leg (serial): at the source it takes the output, then makes for the storage; at the storage it puts in what the storage takes and the job's trip ends.</summary>
@@ -168,7 +308,7 @@ public sealed partial class ProductionSystem
         var table = world.Characters;
         var cold = table.Cold(slot)!;
         ref var n = ref table.Next[slot];
-        if ((uint)cold.JobIndex >= (uint)cold.Jobs.Count || cold.Jobs[cold.JobIndex].Site is not { } storeId || cold.HaulSite is not { } at
+        if (cold.HaulTo is not { } storeId || cold.HaulSite is not { } at
             || world.Buildings.Find(storeId) is not { Complete: true } || world.Machines.Find(storeId) is not { Storage: not null } store
             || world.Buildings.Find(at) is not { Complete: true } atSite || world.Machines.Find(at) is not { } there || !Able(cold) || cold.Inventory is not { } inv)
         {

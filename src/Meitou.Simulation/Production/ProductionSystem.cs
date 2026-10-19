@@ -25,7 +25,7 @@ public sealed class ProductionSettings
     public Func<string, float>? Footprint { get; init; }
     /// <summary>A character gives or takes items from within this far (X/Z) of a building (engine choice; the original walks the character to it first).</summary>
     public float TransferReach { get; init; } = 200;
-    /// <summary>The game option "characters put excess materials into storage": operators empty a full output into storages and fill empty inputs from them (docs/simulation.md "Production").</summary>
+    /// <summary>Operators empty a full output into storages and fill empty inputs from them (docs/simulation.md "Production"; engine option: the original's wording "put any excess materials ... into storage" is the Ditch items squad AI option's, <see cref="SquadAi.Ditch"/>).</summary>
     public bool AutoHaul { get; init; } = true;
     /// <summary>How far (X/Z) from its machine an operator hauls (engine choice; the original's limit is Unknown).</summary>
     public float HaulRange { get; init; } = 3000;
@@ -185,6 +185,7 @@ public sealed partial class ProductionSystem : ITickSystem
                 }
                 case AddJob add: AddJobs(world, add); break;
                 case RemoveJob remove: RemoveJobAt(world, remove); break;
+                case MoveJob move: MoveJobTo(world, move); break;
                 case PutInMachine put: Put(world, put); break;
                 case TakeFromMachine take: Take(world, take); break;
                 case QueueResearch queue: Queue(world, queue.Research); break;
@@ -238,6 +239,8 @@ public sealed partial class ProductionSystem : ITickSystem
         cold.HaulFetch = null;
         cold.Operating = false;
         cold.JobIndex = -1;
+        cold.Implicit = null;
+        cold.HaulTo = null;
         if (!AtSite(n, site, m))
         {
             n.Goal = new Vector2(site.Position.X, site.Position.Z);
@@ -254,7 +257,7 @@ public sealed partial class ProductionSystem : ITickSystem
         {
             MovementSystem.Stop(table, slot);
             // A job's task goes back to the following or wandering it took the character from.
-            n.Task = (byte)(cold.JobIndex >= 0 && cold.ResumeTask is CharacterTask.Wander or CharacterTask.Follow ? cold.ResumeTask : CharacterTask.Idle);
+            n.Task = (byte)((cold.JobIndex >= 0 || cold.Implicit is not null) && cold.ResumeTask is CharacterTask.Wander or CharacterTask.Follow ? cold.ResumeTask : CharacterTask.Idle);
             n.TaskTime = 0;
         }
         cold.OperateSite = null;
@@ -262,6 +265,8 @@ public sealed partial class ProductionSystem : ITickSystem
         cold.HaulFetch = null;
         cold.Operating = false;
         cold.JobIndex = -1;
+        cold.Implicit = null;
+        cold.HaulTo = null;
     }
 
     public void Schedule(World world)
@@ -378,6 +383,8 @@ public sealed partial class ProductionSystem : ITickSystem
                 continue;
             }
             if (!AtSite(n, site, m)) continue;
+            // A chair or bed (an implicit job): sat or lain on, no work.
+            if (!m.Data.Operable) { Settle(ref n, cold, site, m); continue; }
             if (Settings.AutoHaul && StartHaul(world, cold, site, m)) continue;
             if (n.Velocity.X == 0 && n.Velocity.Z == 0) n.Yaw = MathF.Atan2(site.Position.X - n.Position.X, site.Position.Z - n.Position.Z);
             m.Operators++;

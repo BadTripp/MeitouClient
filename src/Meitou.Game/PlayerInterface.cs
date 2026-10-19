@@ -142,7 +142,7 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
     {
         mouse = p;
         EditorPointerUp(button);
-        if (button == MouseButton.Left) { InventoryPointerUp(p); faithfulScreens.PointerUp(); mapDrag = null; }
+        if (button == MouseButton.Left) { InventoryPointerUp(p); JobDragEnd(p); faithfulScreens.PointerUp(); mapDrag = null; }
         if (button == MouseButton.Middle) mapDrag = null;
         if (button == MouseButton.Right && MapRightUp(p)) return;
         if (button == MouseButton.Right) { ContextRelease(); SiteRelease(); }

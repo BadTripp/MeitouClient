@@ -14,6 +14,9 @@ public sealed record AddJob(IReadOnlyList<CharacterId> Characters, Meitou.Data.G
 /// <summary>Takes the job at <paramref name="Index"/> off a character's job list (the list's X button).</summary>
 public sealed record RemoveJob(CharacterId Character, int Index) : SimCommand;
 
+/// <summary>Moves a character's job from <paramref name="From"/> to <paramref name="To"/> in its list (the list's rows are dragged to reorder, the original's tutorial).</summary>
+public sealed record MoveJob(CharacterId Character, int From, int To) : SimCommand;
+
 /// <summary>
 /// A character puts an item of its own into a machine: <paramref name="Slot"/> k into recipe input k (as many units as the input still takes), -1 into the storage grid at
 /// (<paramref name="X"/>, <paramref name="Y"/>) (the whole stack). The character must stand within <see cref="ProductionSettings.TransferReach"/> of the building.

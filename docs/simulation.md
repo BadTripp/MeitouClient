@@ -238,9 +238,8 @@ relation/research semantics remain partly unknown. Picking/HUD are host responsi
 Passive/Hold/Block/Taunt/Jobs/medic/rescue state belongs to the player/character and relevant
 systems. Explicit player commands and automatic retaliation have different eligibility;
 Idle players self-defend unless Passive, and Hold prevents pursuit beyond attack reach.
-New player characters start with Jobs and Ranged enabled. Jobs gates automatic medic/rescue
-work; direct orders still run. Saved toggles override defaults, including explicit false values.
-Jobs uses the Meitou-only bool `meitou jobs enabled`; the original save key is **Unknown**.
+New player characters start with Jobs and Ranged enabled. Jobs gates the job list and automatic rescue (the medic job runs regardless, as the original); direct orders still run. Saved toggles override
+defaults, including explicit false values. Jobs is GAMESTATE_AI `jobs` ([perma-jobs](game/ai-tasks.md#perma-jobs)); Meitou's older `meitou jobs enabled` is read, not written.
 Sneak: sneaking speed cap and clips, quieter, smaller view factor; a hostile looker sees the sneaker only once its
 spot meter fills ([perception](game/perception.md#spotting-a-sneaker)); the exposure feeds stealth XP.
 Ranged (tooltip, **Verified** in `main.pot`, mainbar.cpp:1279: "prioritise ranged attacks, melee will be a last resort"): a
@@ -778,10 +777,19 @@ crafting benches, generators and batteries. Facts: [production](game/buildings-p
     farm with nothing ripe or dead; an empty input the operator cannot fill from its pack or a storage; a full output no storage takes).
   - 124 Hauling to (`CharacterTask.Haul`): the nearest player machine within `HaulRange` of the storage whose output the storage takes is
     emptied into the hauler's pack and carried there; items the hauler already carries that some machine makes go first. Blocked with neither.
-  - Engine choices: the check period; the medic and rescue buttons stay flags outside the list (the original's 58 and 148), and the medic stays
-    gated by the Jobs switch; no reordering by drag; kind-2 (turret) and implicit jobs are not run.
+  - Implicit jobs (`ImplicitPick`): with no list job to run, the switch on and not a slave, the squad AI options (`PlayerState.SquadAi`, the
+    overview's AI tab, all on by default) start, in this order: Ditch items (242: carried items some player machine makes go to the nearest
+    storage within `HaulRange` that takes them, as a Haul trip; only with no queued orders), Sleep when injured (153: a body part below full
+    health lies in the nearest free player bed within `HaulRange`, resting, until healed), Sit when idle (275: the nearest free player chair or
+    throne within `SeatRange` 600). The one running is kept while it holds; any list job preempts it. Distances are from the character, or its
+    squad leader while it follows, so it gets up when the leader walks off. Sitters and sleepers are put on the seat's origin facing its way;
+    the medic job counts them as idle.
+  - The list is reordered by dragging a row (`MoveJob`).
+  - Engine choices: the check period; the medic and rescue buttons stay flags outside the list (the original's 58 and 148); kind-2 (turret)
+    jobs are not run; the injury test, the ranges, a bed's clip (`sleeponfloor`) and a seat's facing (its own, not the table it faces).
   - Saves: GAMESTATE_AI `pjob<i>` / `pjobT<i>` / `jobs` as the original, plus `meitou pjob<i>` (the site id) for a building the handle cannot
-    name; Meitou's `meitou jobs enabled` is still written beside `jobs` and wins on load. A job's trip is not saved.
+    name; the older `meitou jobs enabled` is read, not written. The squad AI options are the CAMERA bools `ditch`, `sleep`, `sit`. A job's
+    trip is not saved.
 - **Saves** (`Saving/MachineSave`, `ResearchSave`). Each building's production and farm keys go into its
   GAMESTATE_BUILDING. Items go into an INVENTORY_STATE `<site>-inventory`, listed first by the building, with sections
   `in<k>`, `out` and `main`.

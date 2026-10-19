@@ -83,6 +83,7 @@ public static partial class SaveCapture
         camera.Version = SaveGame.GameVersion;
         camera.SetMods(options.DataFiles);
         if (data.PlayerFaction >= 0) camera.PlayerFactionName = data.Factions[data.PlayerFaction].Name;
+        SquadAiKeys.Write(camera.Record, world.Player.SquadAi);
         camera.Record.Strings[SaveLoader.SeedKey] = world.Seed.ToString(System.Globalization.CultureInfo.InvariantCulture);
         if (options.View is { } view)
         {

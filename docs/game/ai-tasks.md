@@ -649,7 +649,11 @@ A character's job list (the Orders menu's "Perma-Jobs"; class `OrdersReceiver`, 
      switch turns on (`FUN_140508210`, which also posts a UI event for a player character), and +0x10, when set, is appended as a second job on the
      same target with no checks (0x1f becomes 0x121 when character vfunc +0x248 returns non-null; that test is **Unknown**). Type 45 also stores
      the target at +0x18.
-  4. The planner is re-run (vfunc +0x18). The UI then posts the Wwise event `Permanent_Job` (`FUN_1407f5a90`, **Observed**).
+  4. The planner is re-run (vfunc +0x18).
+- **Ordering** (**Observed**, order dispatcher `FUN_1407fa650`): with Shift held (`DAT_142133449`) an order goes to `FUN_1407f5a90`, which adds it
+  as a job to each selected character, then posts the Wwise event `Permanent_Job`; without Shift it is a one-shot order. Orders 0x2d, 0x111 and 0xdf
+  are always added as jobs; Loot with Shift on a building adds 124 "Hauling to". The Medic and Rescue buttons dispatch 58 and 148 the same way:
+  one-shot, or list entries with Shift.
 - **Row fields** (**Verified**, `FUN_140319a60`; the 36 rows that set +4, all others leave it 0, **Observed**). +4 kind (2 = turret jobs), +8 several
   targets allowed, +0xc job type, +0x10 companion:
 
@@ -665,7 +669,6 @@ A character's job list (the Orders menu's "Perma-Jobs"; class `OrdersReceiver`, 
   | 98, 175, 261 → 153 (153 has no +4: the bed order stays one-shot) | 1 | 0 |
   | 58, 250, 57, 238, 16, 125, 106, 138, 187 (plain jobs) | 1 | 0 |
 
-  The medic and rescue buttons correspond to 58 and 148, so in the original they are list entries (**Observed** by row text only).
 - **Choosing** (**Verified**, decision pass `FUN_140510ef0`, job scoring `FUN_14050e5b0`, pick `FUN_140510650`): order list → jobs of kind 2 while
   the AI flag at +0xbc is set → urgent tier (3) → all jobs → tiers 2, 1 → idle. Within a job pass each job considered gets the key N+8, N+7, ...
   (N = list length) in list order, kept when its desire is above 0. The pick takes the highest key above 0. **So the first job that can run wins,
@@ -673,8 +676,14 @@ A character's job list (the Orders menu's "Perma-Jobs"; class `OrdersReceiver`, 
   type is not 16, 31, 45, 57, 58 or 250 (`FUN_14050c1c0`: these run regardless, so the medic job ignores the switch and rescue does not); the
   planner finds an unmet list-B state and the row has no effect (row +0x14 clear; `FUN_14060f940`); its list A holds (done; `FUN_14060f570`,
   `FUN_14050c8e0`); or desire × target finder is 0. Type 187 (Obedient Slave) has a slave-state branch of its own.
-- **Implicit jobs** (**Verified**, same function, after the list, switch on and not a slave): lowest keys for squad toggles at `DAT_142134690`
-  +0x117 → 242 "Ditching resources" (only with an empty task queue), +0x116 → 153 and 257, +0x118 → 275.
+- **Implicit jobs** (**Verified**, `FUN_14050e5b0` after the list, only for a character with a squad (+0x250), the switch on and not a slave
+  (`FUN_1405c9750`)): lowest keys for the squad AI options at `DAT_142134690` (the overview's AI tab), each kept when its task's desire is above 0:
+  +0x117 "Ditch items" → 242 "Ditching resources" (only with an empty task queue +0x60); then, unless three tests hold (`FUN_1402b2b90` on the
+  character's +0x450, its byte +0x348, `FUN_1407f4d20`, a set lookup; meanings **Unknown**), +0x116 "Sleep when injured" → 257 "Getting out of
+  bed once healed" above 153 "Go home and go to bed", and +0x118 "Sit when idle" → 275 "Sitting around" (its task is built with a float 0.5 where the others pass 1, meaning **Unknown**).
+  Tooltips (**Verified**, `FUN_140005e11`): ditch puts excess carried materials into storage when idle; sleep goes to bed when injured and idle;
+  sit takes chairs and benches at home. The injury threshold of 153 is **Unknown**. Saved as CAMERA bools ([save](../formats/save.md)).
+  Same panel: +0x110 Heal Allies, +0x111 Help Allies, +0x112 Rescue Allies, +0x114 Feed Animals, +0x115 Share Food, +0x11a Shoot first.
 - **Save** (**Verified**, `OrdersReceiver` vfunc 1 / 2; 4122 GAMESTATE_AI records of the owner's saves, 199 jobs, types 187 and 57 only): record
   `ai` (GAMESTATE_AI); bool `jobs` = the switch; per job i from 0, int `pjob<i>` (type) and handle `pjobT<i>`. The loader re-adds each job
   through the add function (so companions and the switch are re-run) until `pjob<i>` is missing, then reads `jobs`. `AITaskSytem` vfunc 1 / 2

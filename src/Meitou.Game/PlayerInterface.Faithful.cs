@@ -79,7 +79,7 @@ sealed partial class PlayerInterface
         else if (e.Screen == "stats" && e.Action.StartsWith("stat:", StringComparison.Ordinal)) selectedStat = e.Action[5..];
         else if (e.Screen == "build") BuildAction(e);
         else if (e.Screen == "dialogue") DialogueAction(e);
-        else if (e.Screen == "overview") { MapAction(e.Widget); ResearchAction(e); CraftAction(e); }
+        else if (e.Screen == "overview") { MapAction(e.Widget); ResearchAction(e); CraftAction(e); AiAction(e); }
         else if (e.Screen is "building" or "bench") MachineAction(e);
         else if (e.Screen == "trader" && e.Widget == "ArrangeButton") Say(new Meitou.Simulation.Trading.ArrangeStock { Tick = session.World.Tick });
         else if (e.Screen is "inventory" or "bag")
@@ -179,7 +179,7 @@ sealed partial class PlayerInterface
         if (id == "dialogue") { AddDialogueChoices(controls); return; }
         if (id is "building" or "bench") { AddMachineContent(id, controls); return; }
         AddMapContent(id, controls);
-        if (id == "overview") { AddResearchContent(controls); AddCraftContent(controls); }
+        if (id == "overview") { AddResearchContent(controls); AddCraftContent(controls); AddAiContent(controls); }
         if (id == "trader") { ArrangeTraderWindow(controls); AddTraderContent(controls); return; }
         if (id is not ("inventory" or "bag" or "limbs") || Selected().FirstOrDefault() is not { ItemGrid: { } grid } lead) return;
         string gridSection = id == "bag" ? "backpack_content" : "main";
@@ -263,6 +263,33 @@ sealed partial class PlayerInterface
             controls.Add(new($"{row.Name}-remove", "Button", new(row.Bounds.X + row.Bounds.Width - size - 2, row.Bounds.Y + 2, size, size), "", "meitou:job-remove",
                 "Kenshi_CloseButtonSkin", true, new Dictionary<string, string>(), Vector4.Zero, Argument: row.Argument, Clip: row.Clip));
         }
+    }
+
+    /// <summary>The job row (its list index) pressed and being dragged to a new place in the list; null: none.</summary>
+    int? jobDrag;
+
+    /// <summary>The job-list index of the jobs row under a point (not its X), or null.</summary>
+    static int? JobRowAt(IReadOnlyList<UiControl> controls, Vector2 p)
+    {
+        if (controls.Any(c => c.Action == "meitou:job-remove" && c.Bounds.Contains(p.X, p.Y))) return null;
+        var row = controls.FirstOrDefault(c => c.Properties.GetValueOrDefault("ListOwner") == "JobsPanel" && c.Bounds.Contains(p.X, p.Y));
+        return row is not null && row.Argument.StartsWith("job:", StringComparison.Ordinal) && int.TryParse(row.Argument.AsSpan(4), NumberStyles.None, CultureInfo.InvariantCulture, out int i) ? i : null;
+    }
+
+    /// <summary>A press on a job row starts dragging it (true: taken).</summary>
+    bool JobDragStart(IReadOnlyList<UiControl> controls, Vector2 p)
+    {
+        jobDrag = JobRowAt(controls, p);
+        return jobDrag is not null;
+    }
+
+    /// <summary>The button let go: a dragged job dropped on another row of the list moves there.</summary>
+    void JobDragEnd(Vector2 p)
+    {
+        if (jobDrag is not { } from) return;
+        jobDrag = null;
+        if (JobRowAt(ArrangeUi(), p) is { } to && to != from && (Selected().FirstOrDefault() ?? Lead()) is { IsPlayer: true } lead)
+            Say(new Meitou.Simulation.Production.MoveJob(lead.Id, from, to) { Tick = session.World.Tick });
     }
 
     /// <summary>Takes a job (the jobs list's row id) off the lead whose list shows it.</summary>

@@ -431,6 +431,77 @@ public class ProductionTests
         Assert.Equal((1, 0), (rig.Count(farmer, Crop), tank.Items.Count(i => i.Record == Crop)));
     }
 
+    // ------------------------------------------------------------------ job lists
+
+    [Fact]
+    public void A_job_list_runs_the_first_job_that_can_run_and_goes_back_to_a_higher_one()
+    {
+        using var rig = new Rig(Database(), Constants, [Well, Well]);
+        var w = rig.Add(0, StatsEnumerated.Labouring, Unit);
+        rig.World.RunTick();
+        rig.World.Commands.Enqueue(new AddJob([w], Meitou.Data.Gameplay.Ai.TaskType.OPERATE_MACHINERY, rig.Sites[0]) { Tick = rig.World.Tick });
+        rig.World.Commands.Enqueue(new AddJob([w], Meitou.Data.Gameplay.Ai.TaskType.OPERATE_MACHINERY, rig.Sites[1]) { Tick = rig.World.Tick });
+        var cold = rig.World.Characters.Cold(w.Slot)!;
+        void Look() => rig.World.RunTicks(2 * ProductionSystem.JobCheckTicks);
+        Look();
+        Assert.Equal((rig.Sites[0], 0), (cold.OperateSite, cold.JobIndex));
+        // A full output with no storage blocks A: on to B; emptied, A takes over again.
+        rig.Machine(0).Output!.Count = 10;
+        Look();
+        Assert.Equal((rig.Sites[1], 1), (cold.OperateSite, cold.JobIndex));
+        rig.Machine(0).Output!.Count = 0;
+        Look();
+        Assert.Equal((rig.Sites[0], 0), (cold.OperateSite, cold.JobIndex));
+        // An order takes it off its job; idle again, the list takes over.
+        rig.World.Commands.Enqueue(new MoveOrder([w], At + new Vector3(0, 0, 150)) { Tick = rig.World.Tick });
+        rig.World.RunTicks(2);
+        Assert.Equal(-1, cold.JobIndex);
+        for (int t = 0; t < 3000 && rig.World.Characters.Next[w.Slot].Task != (byte)CharacterTask.Idle; t++) rig.World.RunTick();
+        Look();
+        Assert.Equal((rig.Sites[0], 0), (cold.OperateSite, cold.JobIndex));
+        // Removing the job it is on: the next one runs.
+        rig.World.Commands.Enqueue(new RemoveJob(w, 0) { Tick = rig.World.Tick });
+        Look();
+        Assert.Equal((rig.Sites[1], 0, 1), (cold.OperateSite, cold.JobIndex, cold.Jobs.Count));
+    }
+
+    [Fact]
+    public void Adding_a_job_follows_the_originals_rows()
+    {
+        using var rig = new Rig(Database(), Constants, [Well, Tank]);
+        var cold = new CharacterCold();
+        var (a, b) = (rig.Sites[0], rig.Sites[1]);
+        // 25 (first aid) becomes the medic job 58; 152 brings its companion 124 on the same target; the switch turns on.
+        Assert.True(PermaJobs.Add(cold, Meitou.Data.Gameplay.Ai.TaskType.FIRST_AID_ORDER, new PermaJob(Meitou.Data.Gameplay.Ai.TaskType.FIRST_AID_ORDER, null, Meitou.Data.Save.Hand.Null)));
+        Assert.True(PermaJobs.Add(cold, Meitou.Data.Gameplay.Ai.TaskType.OPERATE_AUTOMATIC_MACHINERY, new PermaJob(Meitou.Data.Gameplay.Ai.TaskType.OPERATE_AUTOMATIC_MACHINERY, a)));
+        Assert.Equal([(58, (string?)null), (152, a), (124, a)], cold.Jobs.Select(j => ((int)j.Type, j.Site)));
+        Assert.True((cold.Orders & CharacterOrders.Jobs) != 0);
+        // The same target twice, and a single-target type twice, are refused; 98 (sleeping) is no job.
+        Assert.False(PermaJobs.Add(cold, Meitou.Data.Gameplay.Ai.TaskType.OPERATE_AUTOMATIC_MACHINERY, new PermaJob(Meitou.Data.Gameplay.Ai.TaskType.OPERATE_AUTOMATIC_MACHINERY, a)));
+        Assert.False(PermaJobs.Add(cold, Meitou.Data.Gameplay.Ai.TaskType.FIRST_AID_ORDER, new PermaJob(Meitou.Data.Gameplay.Ai.TaskType.FIRST_AID_ORDER, b)));
+        Assert.True(PermaJobs.Add(cold, Meitou.Data.Gameplay.Ai.TaskType.OPERATE_AUTOMATIC_MACHINERY, new PermaJob(Meitou.Data.Gameplay.Ai.TaskType.OPERATE_AUTOMATIC_MACHINERY, b)));
+        Assert.Null(PermaJobs.JobOf(Meitou.Data.Gameplay.Ai.TaskType.USE_BED));
+    }
+
+    [Fact]
+    public void A_job_list_saves_its_switch_off_and_reads_back_without_doubling_companions()
+    {
+        using var rig = new Rig(Database(), Constants, [Well, Tank]);
+        var cold = new CharacterCold();
+        PermaJobs.Add(cold, Meitou.Data.Gameplay.Ai.TaskType.OPERATE_AUTOMATIC_MACHINERY, new PermaJob(Meitou.Data.Gameplay.Ai.TaskType.OPERATE_AUTOMATIC_MACHINERY, rig.Sites[0]));
+        cold.Orders &= ~CharacterOrders.Jobs;
+        var ai = new FcsRecord { Type = (int)FcsRecordType.GAMESTATE_AI, Name = "ai" };
+        Meitou.Simulation.Saving.PermaJobSave.Write(ai, cold, rig.World.Buildings, new Dictionary<string, FcsRecord>());
+        Assert.Equal((152, 124, false), (ai.Ints["pjob0"], ai.Ints["pjob1"], ai.Bools["jobs"]));
+        var quick = new Meitou.Data.Save.SaveFile();
+        quick.Data.Records.Add(new FcsRecord { Type = (int)FcsRecordType.CAMERA, StringId = "1051", Name = "camera" });
+        var back = new CharacterCold { Orders = Orders.PlayerDefaults };
+        Meitou.Simulation.Saving.PermaJobSave.Read(ai, null, back, rig.World.Buildings, new Meitou.Data.Save.SaveGame(quick).BuildHandles(), new Dictionary<FcsRecord, string>());
+        // Re-adding 152 brings 124 again and the saved 124 is then refused as a duplicate; the switch is read last.
+        Assert.Equal(cold.Jobs.Select(j => (j.Type, j.Site)), back.Jobs.Select(j => (j.Type, j.Site)));
+        Assert.True((back.Orders & CharacterOrders.Jobs) == 0);
+    }
+
     [Fact, Slow]
     public void The_installed_weapon_and_armour_benches_offer_the_documented_crafts()
     {
