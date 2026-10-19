@@ -1,0 +1,94 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:l="using:Meitou.Launcher"
+        x:Class="Meitou.Launcher.MainWindow"
+        Title="Meitou Launcher" Width="760" Height="560" MinWidth="560" MinHeight="420">
+  <DockPanel Margin="8">
+    <!-- Bottom bar: version to start, Play, status. -->
+    <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+      <Button x:Name="PlayButton" DockPanel.Dock="Right" Content="Play" Click="Play_Click" Margin="8,0,0,0" />
+      <ComboBox x:Name="VersionBox" DockPanel.Dock="Right" MinWidth="140" PlaceholderText="No version installed" />
+      <TextBlock x:Name="StatusText" VerticalAlignment="Center" TextWrapping="Wrap" />
+    </DockPanel>
+
+    <TabControl>
+      <TabItem Header="Mods">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Right" Spacing="4" Margin="8,0,0,0" Width="200">
+            <Button Content="Up" Click="Up_Click" HorizontalAlignment="Stretch" />
+            <Button Content="Down" Click="Down_Click" HorizontalAlignment="Stretch" />
+            <Button Content="Select all" Click="SelectAll_Click" HorizontalAlignment="Stretch" />
+            <Button Content="Select none" Click="SelectNone_Click" HorizontalAlignment="Stretch" />
+            <Button Content="Refresh list" Click="RefreshMods_Click" HorizontalAlignment="Stretch" />
+            <Button Content="Save mod list" Click="SaveMods_Click" HorizontalAlignment="Stretch" />
+            <TextBlock Text="Presets" Margin="0,12,0,0" />
+            <ComboBox x:Name="PresetBox" HorizontalAlignment="Stretch" />
+            <Button Content="Apply preset" Click="ApplyPreset_Click" HorizontalAlignment="Stretch" />
+            <Button Content="Delete preset" Click="DeletePreset_Click" HorizontalAlignment="Stretch" />
+            <TextBox x:Name="PresetName" PlaceholderText="New preset name" />
+            <Button Content="Save as preset" Click="SavePreset_Click" HorizontalAlignment="Stretch" />
+          </StackPanel>
+          <TextBlock x:Name="ModDetails" DockPanel.Dock="Bottom" TextWrapping="Wrap" Margin="0,8,0,0" MinHeight="48" />
+          <ListBox x:Name="ModListBox" SelectionChanged="ModListBox_SelectionChanged">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="l:ModRow">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <CheckBox IsChecked="{Binding Enabled}" />
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding Source}" VerticalAlignment="Center" Opacity="0.6" />
+                  <TextBlock Text="{Binding Notes}" VerticalAlignment="Center" Foreground="DarkOrange" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </TabItem>
+
+      <TabItem Header="Versions">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <Button Content="Check for releases" Click="RefreshReleases_Click" />
+            <CheckBox x:Name="PrereleaseBox" Content="Include pre-releases" IsCheckedChanged="Prerelease_Changed" />
+          </StackPanel>
+          <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,8,0,0">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button x:Name="InstallButton" Content="Install" Click="Install_Click" />
+              <Button Content="Uninstall" Click="Uninstall_Click" />
+              <Button Content="Open release page" Click="OpenReleasePage_Click" />
+            </StackPanel>
+            <ProgressBar x:Name="DownloadProgress" Minimum="0" Maximum="1" IsVisible="False" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,8,*">
+            <ListBox x:Name="ReleaseListBox" SelectionChanged="ReleaseListBox_SelectionChanged">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="l:ReleaseRow">
+                  <TextBlock Text="{Binding Text}" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBox x:Name="ReleaseNotes" Grid.Column="2" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" />
+          </Grid>
+        </DockPanel>
+      </TabItem>
+
+      <TabItem Header="Settings">
+        <StackPanel Spacing="6">
+          <TextBlock Text="Kenshi folder (the one with data/gamedata.base)" />
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Content="Find" Click="DetectKenshi_Click" Margin="4,0,0,0" />
+            <Button DockPanel.Dock="Right" Content="Browse" Click="BrowseKenshi_Click" Margin="4,0,0,0" />
+            <TextBox x:Name="KenshiPathBox" LostFocus="KenshiPath_LostFocus" />
+          </DockPanel>
+          <TextBlock x:Name="KenshiStatus" Opacity="0.7" />
+          <TextBlock Text="Launch arguments (e.g. --faithful, --windowed)" Margin="0,8,0,0" />
+          <TextBox x:Name="ArgumentsBox" LostFocus="Arguments_LostFocus" />
+          <TextBlock x:Name="DataFolderText" Margin="0,8,0,0" Opacity="0.7" TextWrapping="Wrap" />
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+            <TextBlock x:Name="LauncherVersionText" VerticalAlignment="Center" />
+            <Button x:Name="LauncherUpdateButton" Click="LauncherUpdate_Click" IsVisible="False" />
+          </StackPanel>
+        </StackPanel>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</Window>

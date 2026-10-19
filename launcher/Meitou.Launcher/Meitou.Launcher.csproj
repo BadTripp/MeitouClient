@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The Meitou launcher: installs game releases from GitHub, edits the mod list (data/mods.cfg) and starts the game. docs/launcher.md. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>meitou-launcher</AssemblyName>
+    <RootNamespace>Meitou.Launcher</RootNamespace>
+    <Version>0.1.0</Version>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Meitou.Core\Meitou.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+  </ItemGroup>
+</Project>
