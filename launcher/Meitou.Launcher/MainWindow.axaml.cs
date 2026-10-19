@@ -1,6 +1,9 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Meitou.Content;
@@ -9,30 +12,49 @@ namespace Meitou.Launcher;
 
 public sealed partial class MainWindow : Window
 {
-    readonly LauncherConfig config = LauncherConfig.Load();
+    readonly LauncherConfig config;
     readonly Releases releases = new(Releases.CreateClient());
     readonly ObservableCollection<ModRow> mods = [];
     List<Release> allReleases = [];
     GameInstall? install;
-    bool busy;
+    CancellationTokenSource? download;
+    ModRow? dragged;
 
     static string LauncherVersion => typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
 
-    public MainWindow()
+    public MainWindow() : this(LauncherConfig.Load(), GameInstall.Locate()) { }
+
+    public MainWindow(LauncherConfig config, GameInstall? found)
     {
+        this.config = config;
         InitializeComponent();
         ModListBox.ItemsSource = mods;
-        PrereleaseBox.IsChecked = config.IncludePrereleases;
+        ModListBox.AddHandler(PointerMovedEvent, ModList_PointerMoved, RoutingStrategies.Bubble, handledEventsToo: true);
+        ModListBox.AddHandler(PointerReleasedEvent, ModList_PointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
+        ModListBox.AddHandler(PointerCaptureLostEvent, (_, _) => EndDrag(), RoutingStrategies.Direct | RoutingStrategies.Bubble, handledEventsToo: true);
         ArgumentsBox.Text = config.LaunchArguments;
-        DataFolderText.Text = $"Versions and game settings are kept in {LauncherConfig.DataDirectory}";
-        LauncherVersionText.Text = $"Launcher {LauncherVersion} ({Releases.Rid})";
+        ShowPrereleaseToggle();
+        DataFolderText.Text = $"Installed versions and the game's settings: {LauncherConfig.DataDirectory}";
+        LauncherVersionText.Text = $"v{LauncherVersion} · {Releases.Rid}";
+        LauncherAbout.Text = $"Version {LauncherVersion} for {Releases.Rid}.";
         RefreshPresets();
         RefreshInstalled();
-        UseKenshi(config.KenshiPath is { } saved && GameInstall.IsValid(saved) ? GameInstall.Open(saved) : GameInstall.Locate());
+        UseKenshi(found);
         Opened += async (_, _) => await RefreshReleasesAsync();
     }
 
     void Status(string text) => StatusText.Text = text;
+
+    // ---- Pages ----
+
+    void Nav_Click(object? sender, RoutedEventArgs e)
+    {
+        foreach (var (nav, page) in new (ToggleButton, Control)[] { (NavMods, ModsPage), (NavVersions, VersionsPage), (NavSettings, SettingsPage) })
+        {
+            nav.IsChecked = nav == sender;
+            page.IsVisible = nav == sender;
+        }
+    }
 
     // ---- Kenshi folder ----
 
@@ -40,7 +62,9 @@ public sealed partial class MainWindow : Window
     {
         install = found;
         KenshiPathBox.Text = found?.Root ?? config.KenshiPath ?? "";
-        KenshiStatus.Text = found is null ? "Kenshi not found: browse to its folder." : $"Kenshi found{(found.WorkshopDirectory is null ? "" : ", with Steam workshop mods")}.";
+        KenshiStatus.Text = found is null ? "Not found: browse to the folder with data/gamedata.base."
+            : found.WorkshopDirectory is null ? "The folder with data/gamedata.base." : "The folder with data/gamedata.base; Steam workshop mods found.";
+        KenshiBadge.Text = found is null ? "Kenshi not found: set its folder in Settings" : found.Root;
         if (found is not null && config.KenshiPath != found.Root)
         {
             config.KenshiPath = found.Root;
@@ -76,16 +100,39 @@ public sealed partial class MainWindow : Window
         config.Save();
     }
 
+    void ShowPrereleaseToggle()
+    {
+        PrereleaseToggle.IsChecked = config.IncludePrereleases;
+        PrereleaseToggle.Content = config.IncludePrereleases ? "On" : "Off";
+    }
+
+    void Prerelease_Click(object? sender, RoutedEventArgs e)
+    {
+        config.IncludePrereleases = PrereleaseToggle.IsChecked == true;
+        config.Save();
+        ShowPrereleaseToggle();
+        ShowReleases();
+    }
+
+    async void OpenDataFolder_Click(object? sender, RoutedEventArgs e)
+    {
+        Directory.CreateDirectory(LauncherConfig.DataDirectory);
+        await this.Launcher.LaunchUriAsync(new Uri(LauncherConfig.DataDirectory + Path.DirectorySeparatorChar));
+    }
+
     // ---- Mods ----
 
     void LoadMods()
     {
         mods.Clear();
-        if (install is null) return;
-        foreach (var entry in ModList.LauncherOrder(install, ModList.Discover(install)))
-            mods.Add(new ModRow(entry.Mod, entry.Enabled));
-        Status($"{mods.Count} mods found, {mods.Count(m => m.Enabled)} enabled.");
+        if (install is not null)
+            foreach (var entry in ModList.LauncherOrder(install, ModList.Discover(install)))
+                mods.Add(new ModRow(entry.Mod, entry.Enabled));
+        foreach (var row in mods) row.PropertyChanged += (_, _) => ShowModCount();
+        ShowModCount();
     }
+
+    void ShowModCount() => ModCount.Text = mods.Count == 0 ? "No mods found" : $"{mods.Count(m => m.Enabled)} of {mods.Count} enabled";
 
     bool SaveMods()
     {
@@ -113,35 +160,82 @@ public sealed partial class MainWindow : Window
 
     void SelectNone_Click(object? sender, RoutedEventArgs e) { foreach (var m in mods) m.Enabled = false; }
 
-    void Up_Click(object? sender, RoutedEventArgs e) => MoveSelected(-1);
-
-    void Down_Click(object? sender, RoutedEventArgs e) => MoveSelected(1);
-
-    void MoveSelected(int by)
+    // Alt+Up / Alt+Down move the selected mod, as dragging does.
+    void ModListBox_KeyDown(object? sender, KeyEventArgs e)
     {
-        int i = ModListBox.SelectedIndex, j = i + by;
-        if (i < 0 || j < 0 || j >= mods.Count) return;
-        mods.Move(i, j);
-        ModListBox.SelectedIndex = j;
+        if (e.KeyModifiers != KeyModifiers.Alt || e.Key is not (Key.Up or Key.Down)) return;
+        int i = ModListBox.SelectedIndex, j = i + (e.Key == Key.Up ? -1 : 1);
+        if (i >= 0 && j >= 0 && j < mods.Count)
+        {
+            mods.Move(i, j);
+            ModListBox.SelectedIndex = j;
+        }
+        e.Handled = true;
+    }
+
+    // Dragging a row's handle moves the row live under the pointer; the list holds the pointer capture, so rows can be
+    // re-created underneath without ending the drag.
+    void DragHandle_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control { DataContext: ModRow row } || !e.GetCurrentPoint(ModListBox).Properties.IsLeftButtonPressed) return;
+        dragged = row;
+        ModListBox.SelectedItem = row;
+        e.Pointer.Capture(ModListBox);
+        MarkDragged(true);
+        e.Handled = true;
+    }
+
+    void ModList_PointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (dragged is null) return;
+        double y = e.GetPosition(ModListBox).Y;
+        int from = mods.IndexOf(dragged), to = from;
+        for (int i = 0; i < mods.Count; i++)
+        {
+            if (ModListBox.ContainerFromIndex(i) is not Control item || item.TranslatePoint(new Point(0, 0), ModListBox) is not { } top) continue;
+            if (y >= top.Y && y < top.Y + item.Bounds.Height) { to = i; break; }
+        }
+        if (to == from) return;
+        MarkDragged(false);
+        mods.Move(from, to);
+        ModListBox.SelectedItem = dragged;
+        ModListBox.UpdateLayout(); // the next hit test needs the rows where they are now
+        MarkDragged(true);
+    }
+
+    void ModList_PointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (dragged is null) return;
+        e.Pointer.Capture(null);
+        EndDrag();
+    }
+
+    void EndDrag()
+    {
+        if (dragged is null) return;
+        MarkDragged(false);
+        dragged = null;
+    }
+
+    void MarkDragged(bool on)
+    {
+        if (dragged is not null && ModListBox.ContainerFromItem(dragged) is { } item)
+            item.Classes.Set("dragging", on);
     }
 
     void ModListBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (ModListBox.SelectedItem is not ModRow row) { ModDetails.Text = ""; return; }
         var header = row.Mod.Header;
-        var lines = new List<string> { $"{row.Name}  ({row.Source}: {row.Mod.Folder})" };
-        if (header is not null)
+        var parts = new List<string>();
+        if (header is { Description.Length: > 0 }) parts.Add(header.Description.ReplaceLineEndings(" "));
+        if (header is { Dependencies.Count: > 0 })
         {
-            if (header.Author.Length > 0) lines.Add($"Author: {header.Author}");
-            if (header.Description.Length > 0) lines.Add(header.Description);
-            if (header.Dependencies.Count > 0)
-            {
-                var missing = header.Dependencies.Where(d => !IsAvailableBefore(d, row)).ToList();
-                lines.Add($"Needs: {string.Join(", ", header.Dependencies)}" + (missing.Count > 0 ? $"  (not enabled above it: {string.Join(", ", missing)})" : ""));
-            }
+            var missing = header.Dependencies.Where(d => !IsAvailableBefore(d, row)).ToList();
+            parts.Add($"Needs {string.Join(", ", header.Dependencies)}" + (missing.Count > 0 ? $" (not enabled above it: {string.Join(", ", missing)})" : ""));
         }
-        if (row.Mod.HasNativePlugin) lines.Add("RE_Kenshi plugin mod: its data loads in Meitou, its DLLs do not (docs/formats/rekenshi.md).");
-        ModDetails.Text = string.Join("\n", lines);
+        parts.Add(row.Mod.Folder);
+        ModDetails.Text = string.Join(" · ", parts);
     }
 
     // A dependency is met by a core file or by an enabled mod earlier in the list.
@@ -190,6 +284,7 @@ public sealed partial class MainWindow : Window
         foreach (var row in mods.Where(m => byName.ContainsKey(m.Name))) { row.Enabled = false; ordered.Add(row); }
         mods.Clear();
         foreach (var row in ordered) mods.Add(row);
+        ShowModCount();
         Status($"Preset '{preset.Name}' applied (not saved yet)." + (missing.Count > 0 ? $" Not on disk: {string.Join(", ", missing)}." : ""));
     }
 
@@ -220,53 +315,59 @@ public sealed partial class MainWindow : Window
         if (allReleases.Where(r => r.Kind == ReleaseKind.Launcher && !r.Prerelease)
                 .FirstOrDefault(r => System.Version.TryParse(r.Version, out var v) && v > System.Version.Parse(LauncherVersion)) is { } update)
         {
-            LauncherUpdateButton.Content = $"Launcher {update.Version} is available: open its page";
+            LauncherUpdateButton.Content = $"Get launcher {update.Version}";
             LauncherUpdateButton.Tag = update.PageUrl;
             LauncherUpdateButton.IsVisible = true;
         }
-        Status(problem ?? $"{allReleases.Count(r => r.Kind == ReleaseKind.Game)} game releases on GitHub.");
+        Status(problem ?? "");
     }
 
     void ShowReleases()
     {
         var installed = Releases.Installed();
-        ReleaseListBox.ItemsSource = allReleases
+        var rows = allReleases
             .Where(r => r.Kind == ReleaseKind.Game && (config.IncludePrereleases || !r.Prerelease))
             .Select(r => new ReleaseRow(r, installed.Contains(r.Version)))
             .ToList();
+        ReleaseListBox.ItemsSource = rows;
+        VersionCount.Text = $"{rows.Count} releases · {installed.Count} installed";
     }
 
     async void RefreshReleases_Click(object? sender, RoutedEventArgs e) => await RefreshReleasesAsync();
 
-    void Prerelease_Changed(object? sender, RoutedEventArgs e)
-    {
-        config.IncludePrereleases = PrereleaseBox.IsChecked == true;
-        config.Save();
-        ShowReleases();
-    }
-
     void ReleaseListBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         var release = (ReleaseListBox.SelectedItem as ReleaseRow)?.Release;
-        ReleaseNotes.Text = release?.Notes ?? "";
-        InstallButton.IsEnabled = release?.Asset is not null;
+        ReleaseNotes.Text = PlainNotes(release?.Notes ?? "");
+        if (download is null) InstallButton.IsEnabled = release?.Asset is not null;
     }
 
+    // Release notes are Markdown; shown as text without heading marks and code ticks.
+    static string PlainNotes(string markdown) =>
+        string.Join("\n", markdown.ReplaceLineEndings("\n").Split('\n').Select(l => l.TrimStart('#').TrimStart().Replace("`", "")));
+
+    // Install, or Cancel while a download runs.
     async void Install_Click(object? sender, RoutedEventArgs e)
     {
-        if (busy || ReleaseListBox.SelectedItem is not ReleaseRow { Release: var release }) return;
-        busy = true;
+        if (download is not null) { download.Cancel(); return; }
+        if (ReleaseListBox.SelectedItem is not ReleaseRow { Release: var release }) return;
+        using var cts = download = new CancellationTokenSource();
+        InstallButton.Content = "Cancel";
         DownloadProgress.Value = 0;
         DownloadProgress.IsVisible = true;
         Status($"Downloading {release.Title}...");
         try
         {
-            await releases.InstallAsync(release, new Progress<double>(p => DownloadProgress.Value = p));
+            await releases.InstallAsync(release, new Progress<double>(p => DownloadProgress.Value = p), cts.Token);
             config.SelectedVersion = release.Version;
             config.Save();
             RefreshInstalled();
             ShowReleases();
             Status($"{release.Title} installed.");
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            Status($"Download of {release.Title} cancelled.");
         }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException)
         {
@@ -274,14 +375,15 @@ public sealed partial class MainWindow : Window
         }
         finally
         {
+            download = null;
+            InstallButton.Content = "Install";
             DownloadProgress.IsVisible = false;
-            busy = false;
         }
     }
 
     void Uninstall_Click(object? sender, RoutedEventArgs e)
     {
-        if (busy || ReleaseListBox.SelectedItem is not ReleaseRow { Release: var release }) return;
+        if (download is not null || ReleaseListBox.SelectedItem is not ReleaseRow { Release: var release }) return;
         var dir = Releases.VersionDirectory(release.Version);
         if (!Directory.Exists(dir)) { Status($"{release.Title} is not installed."); return; }
         try
@@ -315,10 +417,11 @@ public sealed partial class MainWindow : Window
     {
         if (install is null) { Status("Set the Kenshi folder first (Settings)."); return; }
         if (VersionBox.SelectedItem is not string version) { Status("Install a version first (Versions)."); return; }
+        if (Releases.FindGame(Releases.VersionDirectory(version)) is not { } exe) { Status($"Meitou {version} is not installed any more."); return; }
         if (!SaveMods()) return;
         config.SelectedVersion = version;
         config.Save();
-        var start = new ProcessStartInfo(Path.Combine(Releases.VersionDirectory(version), Releases.GameExecutable))
+        var start = new ProcessStartInfo(exe)
         {
             WorkingDirectory = LauncherConfig.DataDirectory,
             UseShellExecute = false,

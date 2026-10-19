@@ -20,7 +20,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="meitou-viewer" />
-    <InternalsVisibleTo Include="meitou" />
+    <InternalsVisibleTo Include="MeitouClient" />
     <InternalsVisibleTo Include="Meitou.Tests" />
   </ItemGroup>
 

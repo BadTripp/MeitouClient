@@ -15,7 +15,7 @@ Website: [meitou.martinvlcek.sk](https://meitou.martinvlcek.sk/).
 
 ## Download and requirements
 
-[Windows releases](https://github.com/VlcekM/MeitouClient/releases): unzip and run meitou.exe
+[Windows releases](https://github.com/VlcekM/MeitouClient/releases): unzip and run MeitouClient.exe
 (game) or meitou-viewer.exe (debug world viewer); prebuilt packages need no separate .NET install.
 Windows10/11, Vulkan1.3 GPU with required descriptor-indexing/indirect-draw features, and Kenshi.
 Other platforms are untested; optional ray-query GI falls back on unsupported GPUs.

@@ -16,8 +16,15 @@ items); the launcher never downloads or hosts mods.
   `releases-cache.json`, so an unchanged list is a 304 that costs no quota. Downloads use the asset URLs, which don't count
   against the quota.
 - A download is checked against the asset's `digest` (`sha256:<hex>`) when GitHub lists one. The zip's single top folder becomes
-  `versions/<version>/`. On Unix the game executable (`meitou`) gets its execute bits.
+  `versions/<version>/`. The game is `MeitouClient[.exe]` since 0.15 (`meitou[.exe]` before; the launcher takes either); on Unix
+  it gets its execute bits. Cancelling a download removes the partial zip and unpacked folder.
 - A newer non-pre-release `launcher-v*` shows a button to its page. The launcher does not update itself yet.
+- **Velopack** (MIT; checked 2026-10-19 against its `GithubSource`/`GitBase` source): fits, with one change. `GitBase` merges the
+  feed (`releases.<channel>.json`) of every listed release that has one and skips the rest, so game releases in between are
+  harmless. But `GithubSource` reads only the newest 10 releases (`per_page=10`, page 1), so launcher releases older than 10 game
+  releases go unseen: subclass it and override `GetReleases` to list `launcher-v*` tags (or 100 per page). Packages: Windows
+  Setup + portable, Linux an AppImage (built on any OS), macOS a `.app`/`.pkg` that must be built on a Mac. Needs
+  `VelopackApp.Build().Run()` first in `Main`.
 
 ## Game zips per runtime
 

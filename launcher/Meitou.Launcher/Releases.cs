@@ -30,7 +30,12 @@ public sealed class Releases(HttpClient http)
     /// <summary>The platform part of asset names, e.g. <c>win-x64</c>, <c>linux-x64</c>, <c>osx-arm64</c>.</summary>
     public static string Rid => RuntimeInformation.RuntimeIdentifier;
 
-    public static string GameExecutable => OperatingSystem.IsWindows() ? "meitou.exe" : "meitou";
+    /// <summary>The game's executable names, newest first: <c>MeitouClient</c> since 0.15, <c>meitou</c> before (<c>.exe</c> on Windows).</summary>
+    static readonly string[] GameExecutables = OperatingSystem.IsWindows() ? ["MeitouClient.exe", "meitou.exe"] : ["MeitouClient", "meitou"];
+
+    /// <summary>The game's executable in <paramref name="directory"/>, or null.</summary>
+    public static string? FindGame(string directory) =>
+        GameExecutables.Select(name => Path.Combine(directory, name)).FirstOrDefault(File.Exists);
 
     static string VersionsDirectory => Path.Combine(LauncherConfig.DataDirectory, "versions");
     static string CacheFile => Path.Combine(LauncherConfig.DataDirectory, "releases-cache.json");
@@ -101,7 +106,7 @@ public sealed class Releases(HttpClient http)
     {
         if (!Directory.Exists(VersionsDirectory)) return [];
         return [.. Directory.EnumerateDirectories(VersionsDirectory)
-            .Where(d => File.Exists(Path.Combine(d, GameExecutable)))
+            .Where(d => FindGame(d) is not null)
             .Select(Path.GetFileName).OfType<string>()
             .OrderByDescending(v => System.Version.TryParse(v.Split('-')[0], out var n) ? n : new System.Version())];
     }
@@ -118,6 +123,8 @@ public sealed class Releases(HttpClient http)
         var downloads = Path.Combine(LauncherConfig.DataDirectory, "downloads");
         Directory.CreateDirectory(downloads);
         var zip = Path.Combine(downloads, asset.Name);
+        var target = VersionDirectory(release.Version);
+        var staging = target + ".partial";
         try
         {
             using (var response = await http.GetAsync(asset.Url, HttpCompletionOption.ResponseHeadersRead, ct))
@@ -142,25 +149,22 @@ public sealed class Releases(HttpClient http)
                     throw new InvalidDataException($"{asset.Name} is damaged: SHA-256 {hash}, GitHub lists {digest[7..]}.");
             }
 
-            var target = VersionDirectory(release.Version);
-            var staging = target + ".partial";
             if (Directory.Exists(staging)) Directory.Delete(staging, true);
             await ZipFile.ExtractToDirectoryAsync(zip, staging, ct);
             var root = staging;
-            if (!File.Exists(Path.Combine(root, GameExecutable)) && Directory.GetFiles(root).Length == 0 && Directory.GetDirectories(root) is [var only])
+            if (FindGame(root) is null && Directory.GetFiles(root).Length == 0 && Directory.GetDirectories(root) is [var only])
                 root = only;
-            var exe = Path.Combine(root, GameExecutable);
-            if (!File.Exists(exe))
-                throw new InvalidDataException($"{asset.Name} has no {GameExecutable}.");
+            var exe = FindGame(root) ?? throw new InvalidDataException($"{asset.Name} has no {GameExecutables[0]}.");
             if (!OperatingSystem.IsWindows())
                 File.SetUnixFileMode(exe, File.GetUnixFileMode(exe) | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute);
             if (Directory.Exists(target)) Directory.Delete(target, true);
             Directory.Move(root, target);
-            if (Directory.Exists(staging)) Directory.Delete(staging, true);
         }
         finally
         {
+            // Also on failure or cancel: no half download or half unpacked version is left behind.
             File.Delete(zip);
+            if (Directory.Exists(staging)) Directory.Delete(staging, true);
         }
     }
 

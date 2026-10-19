@@ -1,8 +1,262 @@
+<!-- The Meitou UI look (docs/meitou-ui.md, tokens in docs/meitou-ui/tokens.json) drawn without the game's textures: dark plates with a
+     faint rim, charcoal plate buttons, one paper action, brass accents, Exo 2 from the Kenshi install (KenshiFonts). -->
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Meitou.Launcher.App"
-             RequestedThemeVariant="Default">
+             RequestedThemeVariant="Dark">
+  <Application.Resources>
+    <ResourceDictionary>
+      <!-- Tokens -->
+      <Color x:Key="SystemAccentColor">#816635</Color>
+      <Color x:Key="SystemAccentColorLight1">#9a7c45</Color>
+      <Color x:Key="SystemAccentColorLight2">#b08f55</Color>
+      <Color x:Key="SystemAccentColorLight3">#c4a062</Color>
+      <Color x:Key="SystemAccentColorDark1">#6f5730</Color>
+      <Color x:Key="SystemAccentColorDark2">#5c482a</Color>
+      <Color x:Key="SystemAccentColorDark3">#4a3a22</Color>
+      <SolidColorBrush x:Key="Vignette" Color="#0d0a09" />
+      <SolidColorBrush x:Key="Plate" Color="#1c1714" />
+      <SolidColorBrush x:Key="PlateRim" Color="#1fafa68b" />
+      <SolidColorBrush x:Key="MetalEdge" Color="#0f0b0a" />
+      <SolidColorBrush x:Key="Main" Color="#afa68b" />
+      <SolidColorBrush x:Key="Quiet" Color="#8a8270" />
+      <SolidColorBrush x:Key="PaperLight" Color="#d9ceb8" />
+      <SolidColorBrush x:Key="Secondary" Color="#140806" />
+      <SolidColorBrush x:Key="Brass" Color="#816635" />
+      <SolidColorBrush x:Key="BrassLight" Color="#c4a062" />
+      <SolidColorBrush x:Key="BadBright" Color="#bf4834" />
+      <SolidColorBrush x:Key="Field" Color="#14100e" />
+      <LinearGradientBrush x:Key="PlateButton" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#3a342f" />
+        <GradientStop Offset="0.12" Color="#2c2622" />
+        <GradientStop Offset="1" Color="#221d1a" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="PlateButtonHover" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#4a433c" />
+        <GradientStop Offset="0.12" Color="#38312c" />
+        <GradientStop Offset="1" Color="#2b2521" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="PlateButtonPressed" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#120e0c" />
+        <GradientStop Offset="0.25" Color="#1c1714" />
+        <GradientStop Offset="1" Color="#241e1a" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="PaperButton" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#9c8f80" />
+        <GradientStop Offset="1" Color="#74685c" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="PaperButtonHover" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#ad9f8e" />
+        <GradientStop Offset="1" Color="#807366" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="HeaderBar" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#8f8377" />
+        <GradientStop Offset="1" Color="#776b60" />
+      </LinearGradientBrush>
+    </ResourceDictionary>
+  </Application.Resources>
+
   <Application.Styles>
     <FluentTheme />
+
+    <Style Selector="Window">
+      <Setter Property="Background" Value="{StaticResource Vignette}" />
+      <Setter Property="Foreground" Value="{StaticResource Main}" />
+      <Setter Property="FontFamily" Value="fonts:Kenshi#Exo 2, $Default" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontSize" Value="14" />
+    </Style>
+    <Style Selector="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource Main}" />
+    </Style>
+
+    <!-- Surfaces -->
+    <Style Selector="Border.plate">
+      <Setter Property="Background" Value="{StaticResource Plate}" />
+      <Setter Property="BorderBrush" Value="{StaticResource PlateRim}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="BoxShadow" Value="0 6 14 0 #8C000000" />
+    </Style>
+    <Style Selector="Border.header">
+      <Setter Property="Background" Value="{StaticResource HeaderBar}" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Padding" Value="14,6" />
+      <Setter Property="BoxShadow" Value="inset 0 0 0 1 #66140806" />
+    </Style>
+    <Style Selector="Border.header TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource Secondary}" />
+      <Setter Property="FontSize" Value="20" />
+    </Style>
+    <Style Selector="Border.header TextBlock.aside">
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.rule">
+      <Setter Property="Background" Value="{StaticResource PlateRim}" />
+      <Setter Property="Height" Value="1" />
+    </Style>
+    <Style Selector="Border.vrule">
+      <Setter Property="Background" Value="{StaticResource PlateRim}" />
+      <Setter Property="Width" Value="1" />
+    </Style>
+    <Style Selector="Border.row">
+      <Setter Property="BorderBrush" Value="{StaticResource PlateRim}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+      <Setter Property="Padding" Value="0,6,0,8" />
+    </Style>
+
+    <!-- Text -->
+    <Style Selector="TextBlock.title">
+      <Setter Property="FontSize" Value="24" />
+    </Style>
+    <Style Selector="TextBlock.name">
+      <Setter Property="FontSize" Value="16" />
+    </Style>
+    <Style Selector="TextBlock.desc">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="Medium" />
+      <Setter Property="Foreground" Value="{StaticResource Quiet}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="TextBlock.caps">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="LetterSpacing" Value="1" />
+      <Setter Property="Foreground" Value="{StaticResource Quiet}" />
+    </Style>
+    <Style Selector="TextBlock.warn">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="{StaticResource BrassLight}" />
+    </Style>
+
+    <!-- Plate buttons (Button, ToggleButton) -->
+    <Style Selector="Button, ToggleButton">
+      <Setter Property="Background" Value="{StaticResource PlateButton}" />
+      <Setter Property="Foreground" Value="{StaticResource Main}" />
+      <Setter Property="BorderBrush" Value="{StaticResource MetalEdge}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="Padding" Value="16,6" />
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter, ToggleButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PlateButtonHover}" />
+      <Setter Property="BorderBrush" Value="{StaticResource MetalEdge}" />
+      <Setter Property="Foreground" Value="{StaticResource PaperLight}" />
+    </Style>
+    <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter, ToggleButton:checked /template/ ContentPresenter#PART_ContentPresenter, ToggleButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PlateButtonPressed}" />
+      <Setter Property="BorderBrush" Value="{StaticResource MetalEdge}" />
+      <Setter Property="Foreground" Value="{StaticResource PaperLight}" />
+    </Style>
+    <Style Selector="ToggleButton:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PlateButtonPressed}" />
+      <Setter Property="Foreground" Value="{StaticResource PaperLight}" />
+    </Style>
+    <Style Selector="Button:disabled /template/ ContentPresenter#PART_ContentPresenter, ToggleButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PlateButton}" />
+      <Setter Property="Foreground" Value="#777777" />
+      <Setter Property="Opacity" Value="0.6" />
+    </Style>
+
+    <!-- Navigation: plate toggles in the left column -->
+    <Style Selector="ToggleButton.nav">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="MinHeight" Value="36" />
+    </Style>
+
+    <!-- The one paper action (Play) -->
+    <Style Selector="Button.paper">
+      <Setter Property="Background" Value="{StaticResource PaperButton}" />
+      <Setter Property="Foreground" Value="{StaticResource Secondary}" />
+      <Setter Property="BorderBrush" Value="#e6140806" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="FontSize" Value="17" />
+      <Setter Property="Padding" Value="40,6" />
+      <Setter Property="MinHeight" Value="38" />
+    </Style>
+    <Style Selector="Button.paper:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PaperButtonHover}" />
+      <Setter Property="BorderBrush" Value="#e6140806" />
+      <Setter Property="Foreground" Value="{StaticResource Secondary}" />
+    </Style>
+    <Style Selector="Button.paper:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PaperButton}" />
+      <Setter Property="Foreground" Value="{StaticResource Secondary}" />
+    </Style>
+
+    <!-- Fields -->
+    <Style Selector="TextBox">
+      <Setter Property="Background" Value="{StaticResource Field}" />
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Padding" Value="10,5" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Foreground" Value="{StaticResource Main}" />
+      <Setter Property="BorderBrush" Value="#3a332d" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="FontWeight" Value="Medium" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="{StaticResource Field}" />
+      <Setter Property="BorderBrush" Value="#5a4e40" />
+    </Style>
+    <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+      <Setter Property="Background" Value="{StaticResource Field}" />
+      <Setter Property="BorderBrush" Value="{StaticResource BrassLight}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="TextBox:pointerover, TextBox:focus">
+      <Setter Property="Foreground" Value="{StaticResource PaperLight}" />
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="Background" Value="{StaticResource PlateButton}" />
+      <Setter Property="Foreground" Value="{StaticResource Main}" />
+      <Setter Property="BorderBrush" Value="{StaticResource MetalEdge}" />
+      <Setter Property="CornerRadius" Value="7" />
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ComboBox:pointerover /template/ Border#Background">
+      <Setter Property="Background" Value="{StaticResource PlateButtonHover}" />
+      <Setter Property="BorderBrush" Value="{StaticResource MetalEdge}" />
+    </Style>
+    <Style Selector="ComboBox /template/ Border#PopupBorder">
+      <Setter Property="Background" Value="{StaticResource Plate}" />
+      <Setter Property="BorderBrush" Value="{StaticResource PlateRim}" />
+    </Style>
+    <Style Selector="ProgressBar">
+      <Setter Property="Foreground" Value="{StaticResource BrassLight}" />
+      <Setter Property="Background" Value="{StaticResource MetalEdge}" />
+      <Setter Property="Height" Value="6" />
+      <Setter Property="CornerRadius" Value="3" />
+    </Style>
+
+    <!-- Lists: rows separated by hairlines, the selected one lifted -->
+    <Style Selector="ListBox">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBoxItem">
+      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="BorderBrush" Value="{StaticResource PlateRim}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+    </Style>
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#0fafa68b" />
+    </Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#1fafa68b" />
+    </Style>
+    <Style Selector="ListBoxItem.dragging /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#33c4a062" />
+    </Style>
+    <Style Selector="TextBlock.handle">
+      <Setter Property="Foreground" Value="{StaticResource Quiet}" />
+      <Setter Property="Cursor" Value="SizeNorthSouth" />
+      <Setter Property="FontSize" Value="16" />
+    </Style>
   </Application.Styles>
 </Application>

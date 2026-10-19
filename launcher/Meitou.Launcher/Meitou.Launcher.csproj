@@ -5,8 +5,12 @@
     <AssemblyName>meitou-launcher</AssemblyName>
     <RootNamespace>Meitou.Launcher</RootNamespace>
     <Version>0.1.0</Version>
+    <ApplicationIcon>../../assets/branding/meitou.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="../../assets/branding/meitou.ico" Link="Assets/meitou.ico" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Meitou.Core\Meitou.Core.csproj" />
   </ItemGroup>
