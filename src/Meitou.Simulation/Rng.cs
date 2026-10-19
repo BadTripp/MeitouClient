@@ -37,6 +37,8 @@ public enum RngPurpose : uint
     Farm = 18,
     /// <summary>Crafting: the critical (one tier better) roll of each craft, keyed by the bench.</summary>
     Craft = 19,
+    /// <summary>The random name of a <c>named</c> character at its spawn, keyed like its spawn rolls.</summary>
+    Name = 20,
 }
 
 /// <summary>

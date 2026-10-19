@@ -108,6 +108,14 @@ checks `human_male.mesh`):
 | CONTAINER backpacks | 2 levels at 400 |
 | LIMB_REPLACEMENT, WEAPON (`mesh`, `bare sword`, `sheath`) | none |
 
+## Names
+
+**Observed** (character setup `FUN_14062b210`, pool loader `@ 140641d80`): CHARACTER `named` false → the record's name; true → a uniform pick
+from the look's sex's list (appearance `sex female`): `data/namesM.txt` (men) or `data/namesF.txt` (women), with `data/namesMF.txt` appended to
+both. Lines are trimmed, blank ones skipped; each file is optional. An empty list gives a fixed fallback string (**Unknown**; Meitou: the record
+name). 135 of 639 merged CHARACTERs are `named`, among them most start-squad members (Wanderer, Nobody, start slave; not Citizen, Exile).
+Meitou: `NamePool`, rolled at spawn (`PopulationSystem.SpawnName`, `RngPurpose.Name`); files read from the install, not mods.
+
 ## Character editor
 
 `CharacterEditWindow` (constructor `FUN_1405f4dd0(chars, mode, forceRaces)`, layout `Kenshi_CharacterEditor`). Facts **Observed** from the

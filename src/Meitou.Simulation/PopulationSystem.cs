@@ -430,7 +430,7 @@ public sealed partial class PopulationSystem : ITickSystem, IDisposable
             };
             var cold = new CharacterCold
             {
-                Name = record?.Name ?? plan.RecordId,
+                Name = SpawnName(world, record, member.Appearance, squad.Id, plan.Index) ?? record?.Name ?? plan.RecordId,
                 Faction = squad.Faction,
                 Appearance = member.Appearance,
                 RecordId = plan.RecordId,
@@ -454,6 +454,12 @@ public sealed partial class PopulationSystem : ITickSystem, IDisposable
         world.Squads.Add(squad);
         return squad;
     }
+
+    /// <summary>A <c>named</c> CHARACTER's random name from its look's sex's list (docs/characters.md "Names"); null: the record's name.</summary>
+    string? SpawnName(World world, GameRecord? record, CharacterAppearance? look, int squadId, int index) =>
+        record is not null && record.GetBool("named") && data.Appearances is { } source
+            ? source.RandomName(look?.Female ?? false, Rng.Hash(world.Seed, (ulong)squadId << 8 | (uint)index, RngPurpose.Name))
+            : null;
 
 
     /// <summary>

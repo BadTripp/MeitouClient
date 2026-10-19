@@ -18,6 +18,9 @@ public interface IAppearanceSource
     /// <summary>The look of a CHARACTER record drawn from a given loadout (a saved character's appearance and worn items); nothing is rolled. Null: no look.</summary>
     CharacterAppearance? Create(string recordId, Loadout loadout) => null;
 
+    /// <summary>A random name for a <c>named</c> CHARACTER of the sex (<see cref="NamePool"/>); null: none (no lists).</summary>
+    string? RandomName(bool female, ulong roll) => null;
+
     /// <summary>A proposed CHARACTER_APPEARANCE made valid for <paramref name="race"/> (<see cref="CharacterDraft.Sanitize"/>, which needs the install's editor limits). Null: not checked.</summary>
     FcsRecord? Sanitize(FcsRecord proposed, GameRecord race) => null;
 }
@@ -48,6 +51,9 @@ public sealed class GeneratedAppearances(GameDatabase db, string installRoot) : 
 
 
     public FcsRecord? Sanitize(FcsRecord proposed, GameRecord race) => CharacterDraft.Sanitize(db, installRoot, proposed, race);
+
+    readonly Lazy<NamePool> names = new(() => NamePool.Load(installRoot));
+    public string? RandomName(bool female, ulong roll) => names.Value.Pick(female, roll);
     public CharacterAppearance? Create(string recordId, Loadout loadout)
     {
         try
