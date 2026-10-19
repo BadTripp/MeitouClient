@@ -60,7 +60,7 @@ sealed partial class PlayerInterface
     void BindSquadsTab(UiBindings b)
     {
         var limits = SquadLimits?.Invoke();
-        b.Text["FactionSizeText"] = $"{PlayerCharacters().Count}/{limits?.MaxFactionSize ?? 30}";
+        b.Text["FactionSizeText"] = $"{LivingPlayerCharacters()}/{limits?.MaxFactionSize ?? 30}";
         b.Text["NewSquadButton"] = "ADD SQUAD";
         b.Text["lbSquadsDismiss"] = "DISMISS";
         b.Actions["NewSquadButton"] = "squad-new";
@@ -142,6 +142,9 @@ sealed partial class PlayerInterface
         }
     }
 
+    /// <summary>The player's characters alive (what the faction's count and the dismiss rule count, <see cref="SquadManagement.FactionHeads"/>).</summary>
+    int LivingPlayerCharacters() => session.CurrentSnapshot.Characters.Count(c => c.IsPlayer && c.Body is not { Dead: true });
+
     static string SquadNameBox(int squad) => "squad-name-" + squad.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>One portrait cell as <c>Kenshi_SquadsPanel_PortraitCharacter</c> lays it out: the grey back, the portrait, the name along the bottom, the frame (checked when selected).</summary>
@@ -168,8 +171,8 @@ sealed partial class PlayerInterface
     {
         if (!SquadsShown || faithfulScreens.HitTest(p) is not { Screen: "overview" } hit) return false;
         var c = hit.Control;
-        if (c.Properties.TryGetValue("SquadPortrait", out var at) && PortraitAt(at) is { } member) { portraitDrag = (member, p); return true; }
-        if (c.Properties.TryGetValue("SquadBox", out var box) && int.TryParse(box, NumberStyles.None, CultureInfo.InvariantCulture, out int squad)) { squadBoxDrag = (squad, p); return true; }
+        if (c.Properties.TryGetValue("SquadPortrait", out var at) && PortraitAt(at) is { } member) { faithfulScreens.Blur(); portraitDrag = (member, p); return true; }
+        if (c.Properties.TryGetValue("SquadBox", out var box) && int.TryParse(box, NumberStyles.None, CultureInfo.InvariantCulture, out int squad)) { faithfulScreens.Blur(); squadBoxDrag = (squad, p); return true; }
         return false;
     }
 
@@ -218,7 +221,7 @@ sealed partial class PlayerInterface
     /// <summary>Dismiss: refused for the faction's last character, else asked first ("Dismiss character '{1}'?").</summary>
     void AskDismiss(CharacterId id)
     {
-        if (PlayerCharacters().Count <= 1) { Confirm("Dismiss character", "Cannot dismiss the only remaining character in the faction.", () => { }, "OK"); return; }
+        if (LivingPlayerCharacters() <= 1) { Confirm("Dismiss character", "Cannot dismiss the only remaining character in the faction.", () => { }, "OK"); return; }
         string name = session.CurrentSnapshot.Characters.FirstOrDefault(c => c.Id == id)?.Name ?? "";
         Confirm("Dismiss character", $"Dismiss character '{name}'?", () => Say(new DismissCommand(id) { Tick = session.World.Tick }));
     }
