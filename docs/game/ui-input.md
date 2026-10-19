@@ -30,7 +30,7 @@ While a selected character sneaks, an NPC that is up gets the verb "Stealth KO (
 that instead of an attack ([combat](combat.md#stealth-knock-out)); the first sneaking selected character goes.
 
 Original strategy camera actions/zoom flags are in [camera](../formats/camera.md). Engine defaults:
-Space pause,F2/F3/F4=1/2/5,F5 save,F9 load; Tab is the original's change_squad (a no-op with one squad tab; the settings open from the Esc menu, ToggleSettings is unbound by default); current complete keys in [viewer](../viewer.md)
+Space pause,F2/F3/F4=1/2/5,F5 save,F9 load; Tab is the original's change_squad (the settings open from the Esc menu, ToggleSettings is unbound by default); current complete keys in [viewer](../viewer.md)
 and [engine](../engine.md). User bindings and viewer/cinematic bindings have separate lifetimes.
 Settings-tab labels/type/ranges/restart semantics: [settings](../formats/settings.md).
 
@@ -115,6 +115,10 @@ identified; pause 0x12 is only blocked by the second). While the MainBar object 
 | 7 | toggle the visibility of one GUI window (FUN_1406e1f20; taken to be the Tutorials window, **Unknown** which) |
 | any other id | forwarded to the orders panel handler FUN_1407226e0, which acts on 0x17..0x21 (orders buttons) and ignores the rest |
 | 8 | not in the hotkey function: handled in the action switch by FUN_1406e2a20, which flips the GUI-hidden flag at GUI+0x330 ("toggle whole GUI") |
+
+Squad events (**Observed**): select_0..9 (100..109, `FUN_1407f90b0`) and select_all 0x22 (`FUN_1407f8d00`) act on the active squad's members
+([squad tabs](ui-screens.md#4-hud-mainbargui)); change_squad 0x23 (`FUN_1407f6380`) with more than one squad makes the next one in order (wrapping) that has
+members active, and leaves the selection alone.
 
 Meitou's first aid and rest bindings (2026-10-13, `PlayerInterface`, engine choices; simulation side in [simulation.md](../simulation.md#bodies)). The original's own: `medic` (NUM7, event 0x1f) and `rescue` (NUM8, 0x20) are
 orders-panel toggles forwarded to FUN_1407226e0 (the Medic and Rescue buttons of the panel, [ui-screens.md](ui-screens.md#4-hud-mainbargui)), which dispatch orders 58 and 148: one-shot, or a job with Shift ([perma-jobs](ai-tasks.md#perma-jobs), **Observed**); the targeted order is the context menu
@@ -280,7 +284,7 @@ in order (task numbers are [ai-tasks](ai-tasks.md) taskTypes):
 - No order while every selected character is unconscious ("Your selected character is unconscious", `FUN_1407f6f50`).
 - Holding the command button 0.2 s on the same target opens the context menu instead (`FUN_1407a6bc0`). It opens on the press, without the
   hold, for a building whose function is 8 (BF_CAGE), or 22 (BF_DOOR) whose (first) door is locked and not the player's faction's, unless
-  `DAT_142133449` is set (**Unknown** what it is).
+  `DAT_142133449` (Shift held, [ai-tasks.md](ai-tasks.md)) is set.
 
 **Selection** (`FUN_1407f9000`, `FUN_1407f7f20`, **Observed**). A building does not join the squad selection (+0x208): it goes into the one
 object slot +0x248 (saved as `selected_gui_object`, [save](../formats/save.md)) that also holds an inspected character of another faction.
@@ -320,7 +324,7 @@ its exact name, else the shortest name containing the text. Replaces the game's 
 - What exactly the version-below-1 branch of the controls loader does with its action set.
 - Identity of the widget behind FUN_1406e1fd0 (GUI+0x20) and of PlayerInterface+0x2f0, which gate most game events.
 - Which window event 7 toggles (taken to be Tutorials); targets of events 1 and 2 inferred from the action names.
-- Building selection: the meaning of slot 107 (+0x198) and `FUN_14004a0cf` in the loot branch, `DAT_142133449`, the lockpick tooltip text,
+- Building selection: the meaning of slot 107 (+0x198) and `FUN_14004a0cf` in the loot branch, the lockpick tooltip text,
   whether the renderer marks the selected building, and what clears the selection when the building is destroyed.
 - Press versus release timing of the command button, and the exact rotation marker condition.
 - Whether a held, steering right click shows it again each order.

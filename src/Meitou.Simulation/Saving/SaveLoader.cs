@@ -116,6 +116,12 @@ public static class SaveLoader
         foreach (var h in selected)
             if (!h.IsNull && handles.Character(h) is { } c && bySource.TryGetValue(c, out var id) && !world.Player.Selection.Contains(id))
                 world.Player.Selection.Add(id);
+        // The squad bar shows the selected character's squad, else the first in order with members.
+        if (world.Player.Selection.Count > 0 && world.Characters.Cold(world.Player.Selection[0].Slot) is { } first && world.Squads.Find(first.SquadId) is { PlatoonId: < 0 } shown
+            && shown.Faction == playerIndex)
+            world.Player.Squad = shown.Id;
+        else if (SquadManagement.PlayerSquads(world) is { Count: > 0 } squads)
+            world.Player.Squad = (squads.FirstOrDefault(s => s.Members.Count > 0) ?? squads[0]).Id;
         return loaded;
     }
 
@@ -189,7 +195,10 @@ public static class SaveLoader
         {
             Id = world.Squads.NextId(),
             TemplateId = platoon.SquadTemplate,
-            Name = platoon.Name,
+            // The record's name is what the squad tabs show (a renamed squad's, the original's `platoon->+0x78->+0x18`, Observed); its string id names the file.
+            Name = platoon.Record.Name is { Length: > 0 } shown ? shown : platoon.Name,
+            Index = platoon.Record.Ints.GetValueOrDefault("squad index"),
+            SaveName = platoon.Name,
             Faction = playerIndex,
             Position = platoon.Position,
             HomeCentre = new Vector2(platoon.Position.X, platoon.Position.Z),

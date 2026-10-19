@@ -44,6 +44,8 @@ sealed partial class PlayerInterface
         if (key == Meitou.Engine.Input.Key.Enter && faithfulScreens.Submit()) return true;
         if (DialogueKey(key)) return true;
         if (faithfulScreens.HasModal) return true;
+        // change_squad (Tab): the squad bar shows the next squad with members (docs/game/ui-input.md section 6).
+        if (key == Meitou.Engine.Input.Key.Tab && !TitleOpen && !EditorOpen) { Say(new ActiveSquadCommand(-1) { Tick = session.World.Tick }); return true; }
         if (ReservedKeys.Contains(key)) return false;
         if (key is Meitou.Engine.Input.Key.I or Meitou.Engine.Input.Key.C) { ExecuteUiAction(key == Meitou.Engine.Input.Key.I ? "inventory" : "stats", ""); return true; }
         // toggle_map / toggle_research / toggle_crafting (M / T / Y) ask for overview tabs 0 / 2 / 3 (docs/game/ui-input.md section 6); toggle_faction (tab 1) is unbound.
@@ -64,6 +66,7 @@ sealed partial class PlayerInterface
         ArrangeUi();
         if (InventoryWheel(p, steps)) return true;
         if (MapWheel(p, steps)) return true;
+        if (SquadsWheel(p, steps)) return true;
         return EditorWheel(p, steps) || faithfulScreens.Wheel(p, steps);
     }
     void FaithfulAction(MyGuiEvent e)
@@ -79,7 +82,7 @@ sealed partial class PlayerInterface
         else if (e.Screen == "stats" && e.Action.StartsWith("stat:", StringComparison.Ordinal)) selectedStat = e.Action[5..];
         else if (e.Screen == "build") BuildAction(e);
         else if (e.Screen == "dialogue") DialogueAction(e);
-        else if (e.Screen == "overview") { MapAction(e.Widget); ResearchAction(e); CraftAction(e); AiAction(e); }
+        else if (e.Screen == "overview") { MapAction(e.Widget); ResearchAction(e); CraftAction(e); AiAction(e); SquadsAction(e); }
         else if (e.Screen is "building" or "bench") MachineAction(e);
         else if (e.Screen == "trader" && e.Widget == "ArrangeButton") Say(new Meitou.Simulation.Trading.ArrangeStock { Tick = session.World.Tick });
         else if (e.Screen is "inventory" or "bag")
@@ -135,10 +138,9 @@ sealed partial class PlayerInterface
             foreach (var tab in layout.Widgets.Where(w => w.Type == "TabItem")) b.Properties[tab.Name] = new Dictionary<string, string> { ["Visible"] = "true" };
             b.Text["FactionNameText"] = "Player";
             b.Disabled.Add("FactionNameText");
-            b.Text["FactionSizeText"] = PlayerCharacters().Count.ToString(CultureInfo.InvariantCulture);
             b.Text["MessagesTextBox"] = string.Join('\n', uiMessages);
             b.Properties["MessagesTextBox"] = new Dictionary<string, string> { ["Static"] = "true", ["WordWrap"] = "true", ["TextAlign"] = "Left Top" };
-            b.Lists["SquadsPanel"] = session.CurrentSnapshot.Characters.Where(c => c.IsPlayer).Select(c => new UiListItem(c.Id.ToString(), c.Name)).ToArray();
+            BindSquadsTab(b);
             BindResearchTab(b);
             BindCraftTab(b);
             // Editor preview markers are unrelated to the current camera and orders.
@@ -179,7 +181,7 @@ sealed partial class PlayerInterface
         if (id == "dialogue") { AddDialogueChoices(controls); return; }
         if (id is "building" or "bench") { AddMachineContent(id, controls); return; }
         AddMapContent(id, controls);
-        if (id == "overview") { AddResearchContent(controls); AddCraftContent(controls); AddAiContent(controls); }
+        if (id == "overview") { AddResearchContent(controls); AddCraftContent(controls); AddAiContent(controls); AddSquadsContent(controls); }
         if (id == "trader") { ArrangeTraderWindow(controls); AddTraderContent(controls); return; }
         if (id is not ("inventory" or "bag" or "limbs") || Selected().FirstOrDefault() is not { ItemGrid: { } grid } lead) return;
         string gridSection = id == "bag" ? "backpack_content" : "main";

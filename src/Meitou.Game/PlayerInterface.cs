@@ -39,6 +39,18 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
     IReadOnlyList<CharacterId> PlayerCharacters() =>
         [.. session.CurrentSnapshot.Characters.Where(c => c.IsPlayer).Select(c => c.Id)];
 
+    /// <summary>
+    /// The active squad's members in squad order, the first leading (the squad bar's; the number keys and select_all pick from them, the original's <c>UiSelectSquadMember</c> /
+    /// <c>UiSelectAllInSquad</c>). Every player character when there is no squad list (a world without a player squad).
+    /// </summary>
+    IReadOnlyList<CharacterId> ActiveSquadMembers()
+    {
+        var snapshot = session.CurrentSnapshot;
+        if (snapshot.PlayerSquads.FirstOrDefault(s => s.Id == snapshot.ActiveSquad) is not { } squad) return PlayerCharacters();
+        var present = PlayerCharacters().ToHashSet();
+        return [.. squad.Members.Where(present.Contains)];
+    }
+
     // ---- commands ----
 
     void Say(SimCommand command)
@@ -142,7 +154,7 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
     {
         mouse = p;
         EditorPointerUp(button);
-        if (button == MouseButton.Left) { InventoryPointerUp(p); JobDragEnd(p); faithfulScreens.PointerUp(); mapDrag = null; }
+        if (button == MouseButton.Left) { InventoryPointerUp(p); JobDragEnd(p); SquadPointerUp(p, shift); faithfulScreens.PointerUp(); mapDrag = null; }
         if (button == MouseButton.Middle) mapDrag = null;
         if (button == MouseButton.Right && MapRightUp(p)) return;
         if (button == MouseButton.Right) { ContextRelease(); SiteRelease(); }
@@ -218,7 +230,7 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
     /// <summary>Selects the squad's <paramref name="index"/>th member (<paramref name="shift"/> adds); the second press within half a second centres the camera on it and follows.</summary>
     void SelectMember(int index, bool shift, bool doubleTap)
     {
-        var members = PlayerCharacters();
+        var members = ActiveSquadMembers();
         if (index < 0 || index >= members.Count) return;
         Select([members[index]], shift);
         if (!doubleTap) SkipFlight?.Invoke(members[index]);
@@ -252,7 +264,7 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
         else if (key == Meitou.Engine.Input.Key.B && !session.Camera.IsFree && !TitleOpen && !EditorOpen) ToggleBuildMode();
         // focus_char (F): put the pivot on the lead selected character without following it (the free camera's F is its down key).
         else if (key == Meitou.Engine.Input.Key.F && !session.Camera.IsFree && Selected().FirstOrDefault() is { } lead) CentreOn(lead.Id, follow: false);
-        else if (key == Meitou.Engine.Input.Key.Grave) Select(PlayerCharacters(), shift);
+        else if (key == Meitou.Engine.Input.Key.Grave) Select(ActiveSquadMembers(), shift);
         else if (key == Meitou.Engine.Input.Key.R && !session.Camera.IsFree) Say(new StopCommand(SelectedIds()) { Tick = session.World.Tick });
         else if (key == Meitou.Engine.Input.Key.H && !session.Camera.IsFree) Say(new Meitou.Simulation.FirstAid.MedicJobCommand(SelectedIds(), shift) { Tick = session.World.Tick });
         else if (key == Meitou.Engine.Input.Key.L && !session.Camera.IsFree) Say(new Meitou.Simulation.FirstAid.RestOrder(SelectedIds()) { Tick = session.World.Tick });

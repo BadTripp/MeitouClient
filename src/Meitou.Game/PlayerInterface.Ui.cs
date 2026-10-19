@@ -43,6 +43,7 @@ sealed partial class PlayerInterface
             ?? (Meitou.Content.GameInstall.Locate() is { } install ? Path.Combine(install.Root, "locale/en_GB/LC_MESSAGES/main.pot") : null));
         uiResources = MyGuiResources.Load("kenshi_init.xml", resolve, "kenshi_fonts.xml");
         faithfulHud = MyGuiTemplates.Expand(MyGuiReader.ReadLayout(resolve("Kenshi_MainPanel.layout") ?? throw new FileNotFoundException("Kenshi_MainPanel.layout not found.")), uiResources);
+        squadBoxLayout = resolve("Kenshi_SquadBox.layout") is { } squadBox ? MyGuiTemplates.Expand(MyGuiReader.ReadLayout(squadBox), uiResources) : null;
         faithfulScreens = new(uiResources);
         foreach (var (id, file, modal) in FaithfulScreenFiles)
             faithfulScreens.Register(id, MyGuiReader.ReadLayout(resolve(file + ".layout") ?? throw new FileNotFoundException(file)), modal,
@@ -156,9 +157,7 @@ sealed partial class PlayerInterface
             b.Properties["HealthText"] = new Dictionary<string, string> { ["TextAlign"] = "Center", ["TextColour"] = bad ? BadColour : MyGuiColours.InkText };
         }
         BindJobs(b, own);
-        // The squad bar has one tab per squad of the player's; Meitou has one squad, so the first page shows, captioned with its name.
-        foreach (var widget in faithfulHud.Find("SquadPanel")?.Children.Where(w => w.Type == "TabItem").Skip(1) ?? []) b.HiddenWidgets.Add(widget);
-        b.Text["SquadPanel@tab0"] = SquadTabCaption(own);
+        BindSquadTabs(b);
         if (lead is null && !buildingFocus) b.Hidden.Add("InformationPanel");
         if (lead is null && !buildingFocus) b.Hidden.Add("MedicalPanel");
         // Buttons without a backend are disabled, except those the original never greys out (the build and floor buttons look live there in the open).
@@ -166,17 +165,6 @@ sealed partial class PlayerInterface
         if (Selected().Count == 0)
             foreach (string name in new[] { "OrdersMedicButton", "OrdersRescueButton", "medic", "rescue", "stop" }) b.Disabled.Add(name);
         return b;
-    }
-
-    /// <summary>
-    /// The squad tab's caption. The original captions a tab with its squad's name, which for the player's first squad reads like <c>Nameless_0</c>: the faction's
-    /// name and the squad's number (<b>Observed</b>; where the original makes it is <b>Unknown</b>). Meitou's player squad keeps its start's template name, so the
-    /// tab shows the faction's name and 0.
-    /// </summary>
-    string SquadTabCaption(Meitou.Simulation.CharacterSnapshot? lead)
-    {
-        string? faction = FactionName?.Invoke(lead?.Faction ?? session.World.Player.Faction);
-        return string.IsNullOrEmpty(faction) ? "Squad 1" : faction + "_0";
     }
 
     IReadOnlyList<UiControl> ArrangeUi()
@@ -233,9 +221,11 @@ sealed partial class PlayerInterface
         var controls = ArrangeUi();
         if (InventoryPointerDown(p)) return true;
         if (MapPointerDown(p)) return true;
+        if (SquadPointerDown(p)) return true;
         if (faithfulScreens.PointerDown(p)) { UpdateMenuPause(); return true; }
         if (JobDragStart(controls, p)) return true;
         if (MyGuiPresentation.HitTest(controls, p.X, p.Y) is not { } c) return false;
+        if (SquadTabClick(c)) return true;
         if (c.Action.StartsWith("faithful:", StringComparison.Ordinal))
         {
             faithfulScreens.Open("overview");
@@ -263,7 +253,7 @@ sealed partial class PlayerInterface
         else if (action is "floor-up" or "floor-down") Floor?.Step(action == "floor-up" ? 1 : -1);
         else if (action == "build") ToggleBuildMode();
         else if (action == "context") ContextAction(argument);
-        else if (action == "squad") Select(PlayerCharacters(), false);
+        else if (action == "squad") Select(ActiveSquadMembers(), false);
         else if (action == "member")
         {
             // A portrait click selects, a double click centres and follows (docs/game/ui-input.md section 7).

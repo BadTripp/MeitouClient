@@ -193,8 +193,11 @@ to Jobs, independent of the saved `chase mode` flag whose relationship is **Unkn
 - Inspecting another faction's character (**Observed** in the original, not traced in the code): a left click on a character that is not yours fills the information and medical panels with that character (name, faction, state, stats, extended stats, medical rows). Meitou keeps this as display state, `PlayerState.Inspected` set by `InspectCommand` (not hashed, not saved); your selection is kept (Meitou: someone is always selected, `PlayerState.Prune` picks the first living character of yours when every selected one is gone or dead); a click on your own character or the ground clears the inspection.
 - Money panel: `MoneyLabelText` is set to "Money" (without the layout's colon; 25 % opacity when the amount would overlap it), `DayText` "Day: {1,num}", `TimeText` HH:MM (**Verified**). A "1x"
   seen next to the clock in a player's screenshot is not written by the vanilla code (**Observed**; most likely a mod).
-- Squad tabs: one per player squad with members, captioned with the squad's name unchanged (**Verified**); the first player squad reads `Nameless_0`
-  (**Observed**; where the name is made is **Unknown**). Tab width min(header width / tabs, ButtonWidth × UI scale), in the skin's `HeaderPlace`.
+- Squad tabs: one per player squad with members, captioned with the squad's name unchanged (**Verified**); the first player squad reads `Nameless_0`,
+  its platoon's name (the faction's name and its platoon counter; **Observed**). Tab width min(header width / tabs, ButtonWidth × UI scale), in the skin's
+  `HeaderPlace`. The bar shows the active squad (`FUN_1407f5520`: a cached platoon at player interface +0x2a8, else the selection's, else the faction's
+  first; **Observed**); a tab makes its squad active. Meitou: selecting a character of another squad makes its squad active (engine reading of the cache).
+  Editing squads: [Squads tab](#squads-tab).
 - `FloorPanel` stays as laid out and `FloorText` is "Floor {1,num}" of the viewed floor each frame; `BuildPanel` is always shown (**Verified** /
   **Observed**).
 - Orders panel (FUN_14072b540): buttons Block, Hold, Chase (`OrdersChaseButton`), Passive, Jobs, Ranged, Taunt,
@@ -347,6 +350,30 @@ decompile unless marked; Meitou's adapter is `PlayerInterface.Map.cs`.
 - **Roads:** `1404931d0` would draw the level's road network (`4-roadlist`) as polylines (hidden roads `#a0a0a0`), but its only caller `1404939f0` is
   never referenced in the exe: the base game shows no roads (**Verified**, xrefs and a raw pointer scan). Meitou draws none.
 - **Unknown:** where `NewDiscovered` sits on the marker (Meitou: the top-right corner, half size).
+
+### Squads tab
+
+Overview tab 4 (`SquadsTab`), class `SquadManagementScreen` (RTTI; constructor `FUN_14049b7c0`, box `FUN_1404a15c0`). **Observed** (decompile, 2026-10-19)
+unless marked; Meitou: `PlayerInterface.Squads.cs`, commands in `SquadManagement`.
+- `SquadsPanel` lists one `Kenshi_SquadBox.layout` per player squad, in the faction's platoon order (+0x210/+0x218; a platoon's place is its +0x1f2, saved
+  as `squad index`), each the list's width less a scroll bar (`Kenshi_ScrollBarV` width, else 17 × UI scale) and 0.28 of its height. Box parts:
+  `SquadNameText` (editable, at most 32 characters; the text goes into the platoon's record name), `SquadSizeText` "{1,num}/{2,num}" against
+  `max squad size` (another colour when full, **Unknown** which; Meitou: Bad), `SquadRemoveButton`, `PortraitsPanel` with a
+  `Kenshi_SquadsPanel_PortraitCharacter` cell per member (Meitou shrinks cells to fit one row). `FactionSizeText`: Meitou shows the faction's count
+  against `max faction size` (what the original writes is **Unknown**: the constructor sets it empty).
+- The constructor upper-cases the translated captions: `NewSquadButton` "ADD SQUAD", `SquadRemoveButton` "DELETE", `lbSquadsDismiss` "DISMISS" (the layout's
+  "NEW SQUAD" / "DRAG HERE TO DISMISS" are replaced).
+- ADD SQUAD (`FUN_140491b50`): below `max squads` boxes a new empty platoon of "blank squad" at the player interface's node position (`FUN_1407f4910`; Meitou:
+  the camera's focus), else "Maximum number of squads reached.". DELETE (`FUN_140491d20`): "The squad needs to be empty before it can be removed.";
+  the last squad: "You must have at least one squad.".
+- Portrait drop (`FUN_14049b050`, accept test `FUN_14048caf0`; Shift = `DAT_142133449`): into another squad only below `max squad size` unless Shift is held;
+  on a member with Shift the two swap places (`FUN_140792e60` within a squad); otherwise the character goes in at that place, at the end on empty space
+  (`FUN_140796620`). The squad's first member is its leader (role 2; whoever led before gets role 0). A squad box dropped in the list takes that place
+  (`FUN_140493cb0` → `FUN_1407f3440`, which renumbers +0x1f2).
+- Dropped on `DismissCharPanel`: with one character in the faction "Cannot dismiss the only remaining character in the faction." (title "Dismiss
+  character"), else "Dismiss character '{1}'?". Yes (`FUN_14048fa30`): deselected, faction `1233-gamedata.base` (Tech Hunters; else `nofac`), a new
+  persistent platoon of `5006-squad.mod` ("Wandering Squad") whose AI packages it runs. Meitou's dismissed squad is not written to saves yet (it has no town).
+- Meitou: a portrait clicked without dragging selects the character (engine choice); a box is dragged by its frame.
 
 ## 6. Inventory, trade, dialogue, build
 

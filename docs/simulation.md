@@ -232,6 +232,8 @@ loot, stances and squad toggles are commands. Resolve empty-ID orders against cu
 New-game start data seeds squad/appearance/gear/money; the start's characters are then remade in the
 character editor while `PlayerState.InCreation` ([characters](characters.md#character-editor)); original start
 relation/research semantics remain partly unknown. Picking/HUD are host responsibilities, never simulation input.
+Squads: `SquadManagement` orders the player's squads (`Squad.Index`), keeps `PlayerState.Squad` the active one and applies the squads screen's
+commands with the original's limits ([Squads tab](game/ui-screens.md#squads-tab)); the snapshot's `PlayerSquads` lists them for the UI.
 
 ### Order toggles
 

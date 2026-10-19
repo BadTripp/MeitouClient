@@ -30,7 +30,7 @@ Loaded zones near player drive active squad membership. **Observed** active plat
 countdown held4s while relevant,5s without zone; release members outside zone or within600 of
 an outside-zone leader when irrelevant. Unloaded squads update abstract travel/AI, not detailed
 character rendering. Zone timers, player focus and hibernation are separate concepts.
-CONSTANTS max squads10/max squad size20/max faction size30 are data facts; enforcement not decoded.
+CONSTANTS max squads10/max squad size20/max faction size30 are data facts, enforced by the squads screen and recruiting ([ui-screens](ui-screens.md#squads-tab)).
 Autosave/control timing is real, not the same as game-hour simulation.
 
 ### Frame callbacks

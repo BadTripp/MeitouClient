@@ -62,6 +62,9 @@ public sealed class MyGuiScreenHost(MyGuiResources resources)
     public void SetText(string id, string widget, string text) { screens[id].Text[widget] = text; if (focus == (id, widget)) edit?.Set(text); }
     public string GetText(string id, string widget) => screens[id].Text.GetValueOrDefault(widget) ?? "";
     public int GetTab(string id, string widget) => screens[id].Tabs.GetValueOrDefault(widget);
+    /// <summary>The edit box being typed in (also one a screen's decoration added): its screen, name, caret and selection; null: none.</summary>
+    public (string Screen, string Widget, int Caret, int SelectionStart, int SelectionLength)? Focus =>
+        focus is { } f && edit is not null ? (f.Screen, f.Widget, edit.Caret, edit.SelectionStart, edit.SelectionLength) : null;
 
     public IReadOnlyList<MyGuiScreenFrame> Arrange(int width, int height, Func<string, UiBindings> bind, Action<string, List<UiControl>>? decorate = null)
     {

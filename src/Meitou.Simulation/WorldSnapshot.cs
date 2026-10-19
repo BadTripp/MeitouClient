@@ -169,6 +169,10 @@ public sealed record WorldSnapshot(long Tick, IReadOnlyList<CharacterSnapshot> C
     public IReadOnlyList<CampView> Camps { get; init; } = [];
     /// <summary>The squad AI options (<see cref="PlayerState.SquadAi"/>).</summary>
     public SquadAi SquadAi { get; init; } = SquadAi.Defaults;
+    /// <summary>The player's squads in order (<see cref="SquadManagement.PlayerSquads"/>), each with its members in squad order (the first leads).</summary>
+    public IReadOnlyList<SquadView> PlayerSquads { get; init; } = [];
+    /// <summary>The active squad's id (<see cref="PlayerState.Squad"/>; -1 none): the squad bar shows it.</summary>
+    public int ActiveSquad { get; init; } = -1;
     /// <summary>Player-built buildings and construction sites, in creation order (docs/simulation.md "Buildings").</summary>
     public IReadOnlyList<Construction.BuildingSnapshot> Buildings { get; init; } = [];
     /// <summary>Bumped when a building is added, completed, destroyed or removed (not on progress): the host diffs <see cref="Buildings"/> by id when it changes.</summary>
@@ -213,3 +217,6 @@ public interface IProjectileSource
     /// <summary>The projectiles after the tick (a new list; empty when none).</summary>
     IReadOnlyList<ProjectileSnapshot> PublishProjectiles();
 }
+
+/// <summary>One of the player's squads as the squad tabs and the squads screen show it.</summary>
+public sealed record SquadView(int Id, string Name, IReadOnlyList<CharacterId> Members);

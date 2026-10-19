@@ -240,25 +240,33 @@ public static partial class SaveCapture
         var spawned = loaded?.SpawnedSlots ?? [];
         var seen = new HashSet<(string Platoon, int Slot)>();
 
-        foreach (var squad in world.Squads.All)
+        // The player's squads in order (their `squad index`), then any other squad holding characters of a loaded platoon (a prisoner or slave kept in it).
+        var order = SquadManagement.PlayerSquads(world);
+        var kept = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var squad in order.Concat(world.Squads.All.Where(s => s.PlatoonId < 0 && !order.Contains(s))))
         {
-            if (squad.PlatoonId >= 0) continue;   // a roaming or saved NPC platoon's squad (WriteSavedNpcs, WriteFreshNpcs)
             // A member of a loaded platoon is written whoever owns it (a prisoner or slave kept in the squad is not the player's but is in the file); only the
             // resident squads the population system made, which have no link, are left out by the player test.
             var alive = squad.Members.Where(m => table.IsAlive(m) && (table.Cold(m.Slot)!.IsPlayer || table.Cold(m.Slot)!.Save is not null)).ToList();
-            if (alive.Count == 0) continue;
+            int index = order.IndexOf(squad);
+            // A player's squad is written even when empty: the original keeps empty squads (the squads screen removes them).
+            if (alive.Count == 0 && index < 0) continue;
             squads++;
 
-            string? name = alive.Select(m => table.Cold(m.Slot)!.Save?.PlatoonName).FirstOrDefault(n => n is not null);
-            var platoon = name is null ? null : game.Platoons.FirstOrDefault(p => p.Name == name);
+            // The squad's own platoon, by the file it was loaded from (never by its members: a character moved between squads would carry the platoon with it).
+            string? name = squad.SaveName ?? (index < 0 ? alive.Select(m => table.Cold(m.Slot)!.Save?.PlatoonName).FirstOrDefault(n => n is not null) : null);
+            var platoon = name is null || kept.Contains(name) ? null : game.Platoons.FirstOrDefault(p => p.Name == name);
+            var at = alive.Count > 0 ? table.Previous[alive[0].Slot].Position : squad.Position;
             if (platoon is null)
-            {
-                var at = table.Previous[alive[0].Slot].Position;
                 platoon = builder.AddPlatoon(FreshName(game, playerState, playerFactionName), playerFactionName, playerFactionId, squad.TemplateId, at);
-            }
             else
+                platoon.Position = at;
+            kept.Add(platoon.Name);
+            if (index >= 0)
             {
-                platoon.Position = table.Previous[alive[0].Slot].Position;
+                // The name the tabs show is the record's name; the string id stays the file's (Observed: rename writes the record's name, docs/formats/save.md).
+                if (squad.Name.Length > 0) platoon.Record.Name = squad.Name;
+                platoon.Record.Ints["squad index"] = index;
             }
 
             foreach (var id in alive)
@@ -287,6 +295,10 @@ public static partial class SaveCapture
             var sc = platoon?.Characters.FirstOrDefault(c => c.Handle.I == slot);
             if (platoon is not null && sc is not null) builder.RemoveCharacter(platoon, sc);
         }
+        // A loaded player squad removed since (DELETE on the squads screen): its platoon goes, as the original destroys it (FUN_1406ba9d0).
+        foreach (var lp in loaded?.PlayerPlatoons ?? [])
+            if (!kept.Contains(lp.Platoon.Name) && world.Squads.Find(lp.Squad.Id) is null && game.Platoons.FirstOrDefault(p => p.Name == lp.Platoon.Name) is { } gone)
+                builder.RemovePlatoon(gone);
 
         game.Camera.Squads = squads;
         game.Camera.Members = members;

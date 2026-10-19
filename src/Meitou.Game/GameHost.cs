@@ -207,6 +207,7 @@ sealed partial class GameHost(GameInstall install, WorldScene scene, AssetLocato
         player.ClosedBuildingHit = (origin, direction, distance) => gpu.Objects?.ClosedBuildingHit(origin, direction, distance);
         player.BuildHost = MakeBuildServices(heights);
         player.FactionName = faction => popData is { } d && faction >= 0 && faction < d.Factions.Count ? d.Factions[faction].Name : null;
+        player.SquadLimits = () => popData?.Bodies.Constants;
         player.HostileFaction = faction => popData is not { } d || session.World.Player.Faction is not (>= 0 and var mine) || !d.Relations.Contains(faction) || d.Relations.IsHostile(mine, faction);
         player.MapTowns = () => popData?.Sites ?? [];
         player.MapFactionOf = id =>

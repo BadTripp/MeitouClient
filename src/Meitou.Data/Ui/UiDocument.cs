@@ -23,6 +23,8 @@ public sealed class UiBindings
     /// <summary>Parent-relative runtime geometry, including anonymous layout panels.</summary>
     public Dictionary<MyGuiWidget, UiRect> RelativePositions { get; } = [];
     public Dictionary<string, int> SelectedTabs { get; } = new(StringComparer.Ordinal);
+    /// <summary>A TabControl whose buttons are made at run time (one per player squad): their captions; the selected button shows the first page (MyGUI adds TabItems so).</summary>
+    public Dictionary<string, IReadOnlyList<string>> TabCaptions { get; } = new(StringComparer.Ordinal);
     public Dictionary<string, float> Progress { get; } = new(StringComparer.Ordinal);
     public Dictionary<string, string> States { get; } = new(StringComparer.Ordinal);
     public Dictionary<string, IReadOnlyDictionary<string, string>> Properties { get; } = new(StringComparer.Ordinal);
@@ -73,18 +75,20 @@ public static class MyGuiPresentation
             if (w.Type == "TabControl")
             {
                 var pages = w.Children.Where(c => c.Type == "TabItem" && !bindings.Hidden.Contains(c.Name) && !bindings.HiddenWidgets.Contains(c)).ToArray();
-                int selected = Math.Clamp(bindings.SelectedTabs.GetValueOrDefault(w.Name), 0, Math.Max(0, pages.Length - 1));
+                var captions = bindings.TabCaptions.GetValueOrDefault(w.Name);
+                int buttons = captions?.Count ?? pages.Length;
+                int selected = Math.Clamp(bindings.SelectedTabs.GetValueOrDefault(w.Name), 0, Math.Max(0, buttons - 1));
                 foreach (var child in w.Children.Where(c => c.Type != "TabItem")) Visit(child, bounds, childClip, enabled, alpha);
                 // The buttons go in the skin's HeaderPlace (MyGUI's TabControl part), ButtonWidth wide unless ButtonAutoWidth.
                 var header = result.LastOrDefault(c => c.Properties.GetValueOrDefault("TemplateOwner") == w.Name && c.Properties.GetValueOrDefault("TemplatePart") == "HeaderPlace")?.Bounds
                     ?? new UiRect(bounds.X, bounds.Y, bounds.Width, 30);
-                float tabWidth = pages.Length == 0 ? 0 : props.GetValueOrDefault("ButtonAutoWidth") == "false" && float.TryParse(props.GetValueOrDefault("ButtonWidth"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fixedWidth)
-                    ? Math.Min(fixedWidth, header.Width / pages.Length) : header.Width / pages.Length;
-                for (int i = 0; i < pages.Length; i++)
+                float tabWidth = buttons == 0 ? 0 : props.GetValueOrDefault("ButtonAutoWidth") == "false" && float.TryParse(props.GetValueOrDefault("ButtonWidth"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fixedWidth)
+                    ? Math.Min(fixedWidth, header.Width / buttons) : header.Width / buttons;
+                for (int i = 0; i < buttons; i++)
                     result.Add(new(w.Name + "@tab" + i, "Button", new(header.X + i * tabWidth, header.Y, tabWidth, header.Height),
-                        bindings.Text.GetValueOrDefault(w.Name + "@tab" + i) ?? pages[i].Properties.GetValueOrDefault("Caption") ?? pages[i].Name, $"mygui:tab:{w.Name}:{i}", "Kenshi_SquadTabButton1Skin", enabled,
+                        captions?[i] ?? bindings.Text.GetValueOrDefault(w.Name + "@tab" + i) ?? pages[i].Properties.GetValueOrDefault("Caption") ?? pages[i].Name, $"mygui:tab:{w.Name}:{i}", "Kenshi_SquadTabButton1Skin", enabled,
                         new Dictionary<string, string> { ["State"] = i == selected ? "normal_checked" : "normal", ["FontName"] = "Kenshi_PaintedTextFont_Medium", ["TextAlign"] = "Center" }, default, Clip: clip));
-                if (pages.Length > 0) Visit(pages[selected], bounds, childClip, enabled, alpha);
+                if (pages.Length > 0) Visit(pages[captions is null ? selected : 0], bounds, childClip, enabled, alpha);
             }
             else foreach (var child in w.Children) Visit(child, bounds, childClip, enabled, alpha);
             if (bindings.Lists.TryGetValue(w.Name, out var items))

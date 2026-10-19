@@ -14,7 +14,10 @@ public sealed class PlayerState
     public long Money { get; set; }
     /// <summary>The selected characters, in the order they were selected.</summary>
     public List<CharacterId> Selection { get; } = [];
-    /// <summary>The player's squad (the one the start created).</summary>
+    /// <summary>
+    /// The active squad (the original's cached squad, <c>FUN_1407f5520</c>): the one the squad bar shows and recruits join. The start's squad at first; the squad tabs, Tab
+    /// (<see cref="ActiveSquadCommand"/>) and selecting a character of another squad change it (<see cref="SquadManagement"/>).
+    /// </summary>
     public int Squad { get; set; } = -1;
     /// <summary>The new game's character editor is open: the start's characters may still be remade, race and gender too (<see cref="Editing.EditCharacter"/>). Not saved.</summary>
     public bool InCreation { get; set; }
@@ -118,6 +121,12 @@ public sealed partial class PlayerSystem(PopulationData? data = null) : ITickSys
                     if (!select.Additive) player.Selection.Clear();
                     foreach (var id in selectable)
                         if (!player.Selection.Contains(id)) player.Selection.Add(id);
+                    // Selecting someone of another squad shows that squad (engine reading of the original's cached squad).
+                    if (!select.Additive && table.TryResolveNext(selectable[0], out int first) && world.Squads.Find(table.Cold(first)!.SquadId) is { } theirs
+                        && theirs.Faction == player.Faction) player.Squad = theirs.Id;
+                    break;
+                case SquadCommand squadCommand:
+                    SquadManagement.Apply(world, data, squadCommand);
                     break;
                 case SeenDiscoveriesCommand:
                     player.SeeDiscoveries();
@@ -182,6 +191,7 @@ public sealed partial class PlayerSystem(PopulationData? data = null) : ITickSys
     public void SlowWorld(World world)
     {
         world.Player.Prune(world.Characters);
+        SquadManagement.KeepActive(world);
         PickUpWorkers(world);
     }
 

@@ -1,5 +1,4 @@
 using System.Numerics;
-using Meitou.Data.Fcs;
 using Meitou.Data.Gameplay;
 
 namespace Meitou.Simulation.Dialogue;
@@ -8,7 +7,7 @@ public sealed partial class DialogueSystem
 {
     /// <summary>
     /// DA_JOIN_SQUAD_WITH_EDIT (3) / DA_JOIN_SQUAD_FAST (18) with the player character as the target (docs/game/dialogue.md "Recruiting"): the speaker leaves its squad and joins the
-    /// player's active squad (the selection's, else the player's squad, else the talker's) as a player character; when that squad already holds CONSTANTS <c>max squad size</c>
+    /// player's active squad (<see cref="PlayerState.Squad"/>, else the selection's, else the talker's) as a player character; when that squad already holds CONSTANTS <c>max squad size</c>
     /// members, a new squad of the "blank squad" template takes it. At the faction's head cap (<c>max faction size</c>) the conversation ends with "It looks like your squad is a
     /// little full." and the line's remaining effects are skipped (false). DA 3 then opens the character editor on the recruit (engine: the conversation ends for it).
     /// </summary>
@@ -27,8 +26,9 @@ public sealed partial class DialogueSystem
             return false;
         }
         var selected = world.Player.Selection.Select(id => Cold(world, id)).FirstOrDefault(s => s is { IsPlayer: true });
-        if ((world.Squads.Find(selected?.SquadId ?? -1) ?? world.Squads.Find(world.Player.Squad) ?? world.Squads.Find(tc.SquadId)) is not { } squad) return true;
-        if (squad.Members.Count >= limits.MaxSquadSize) squad = NewPlayerSquad(world, table.Next[slot].Position);
+        if ((world.Squads.Find(world.Player.Squad) ?? world.Squads.Find(selected?.SquadId ?? -1) ?? world.Squads.Find(tc.SquadId)) is not { } squad) return true;
+        if (squad.Members.Count >= limits.MaxSquadSize)
+            squad = SquadManagement.NewSquad(world, data.Db, table.Next[slot].Position, data.Factions[world.Player.Faction].Name is { Length: > 0 } f ? f : "Nameless");
 
         if (world.Squads.Find(mc.SquadId) is { } old)
         {
@@ -59,22 +59,5 @@ public sealed partial class DialogueSystem
             request = new DialogueRequest(++requestId, DialogueRequestKind.RecruitEditor, me, me);
         }
         return true;
-    }
-
-    /// <summary>A new, empty squad of the player's faction at <paramref name="at"/>, of the SQUAD_TEMPLATE named "blank squad" (the original's fallback platoon).</summary>
-    Squad NewPlayerSquad(World world, Vector3 at)
-    {
-        var template = data.Db.OfType(FcsRecordType.SQUAD_TEMPLATE).FirstOrDefault(r => r.Name == "blank squad");
-        var squad = new Squad
-        {
-            Id = world.Squads.NextId(),
-            TemplateId = template?.StringId ?? "blank squad",
-            Faction = world.Player.Faction,
-            Position = at,
-            HomeCentre = new Vector2(at.X, at.Z),
-            HomeRadius = 100,
-        };
-        world.Squads.Add(squad);
-        return squad;
     }
 }

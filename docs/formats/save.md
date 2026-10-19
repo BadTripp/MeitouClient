@@ -209,6 +209,14 @@ item, becomes a stump; 2 with an item fits it; 3 is kept. Meitou: `SaveLimbs` (d
 A removed prosthetic in an inventory keeps its `dam`, `wear`, `stun` floats (`SaveItem.Damage`/`Wear`/`Stun`; written when non-zero or
 already in the record, an engine choice: whether vanilla writes them for every item is **Unknown**).
 
+### Player platoons (Meitou mapping)
+
+One PLATOON per player squad, `squad index` its place in the squad order (**Observed**: 0 on the samples' one player platoon). Its `platoon stringID`
+(also the record's string id and the file's name) stays the faction's name and counter (`Nameless_0`); a rename writes the record's name (the squad box
+copies its text into the platoon's record name, `FUN_14048df00`, **Observed**; 962 PLATOON records of two saves all have name = `platoon stringID`, none
+renamed). Meitou keeps each loaded squad on its own file (`Squad.SaveName`) and writes a squad made since as a new platoon, empty squads included; a
+character that changed squads is written anew in its new platoon and leaves the old file; a removed squad's platoon is deleted.
+
 ### NPC platoons (Meitou mapping)
 
 Every saved NPC platoon with a `basetown` naming a placed town is restored (a characterless town-bound one is skipped); town-bound ones (template does not travel) are pinned to their town, and a town holding any
