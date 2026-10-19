@@ -147,7 +147,7 @@ sealed partial class PlayerInterface
         if (UiSound is null || e.Action.StartsWith("inventory-scroll", StringComparison.Ordinal)) return;
         switch (e.Screen)
         {
-            case "title" or "menu" or "new-game" or "advanced" or "save" or "load" or "message": Sound("General_Click"); break;
+            case "title" or "menu" or "new-game" or "advanced" or "save" or "load" or "message" or "file": Sound("General_Click"); break;
             case "inventory" or "bag" or "trader": if (e.Widget == "ArrangeButton") Sound("General_Click"); break;
             case "build":
                 if (e.Widget is "CategoriesList" or "BuildingsList" or "BuldingTypePrevButton" or "BuldingTypeNextButton") Sound("Building_Navigate");
