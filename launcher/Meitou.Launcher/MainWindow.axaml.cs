@@ -71,7 +71,8 @@ public sealed partial class MainWindow : Window
         NewsPanel.Children.Clear();
         foreach (var post in posts) NewsPanel.Children.Add(PostCard(post));
         if (posts.Count == 0) NewsPanel.Children.Add(new TextBlock { Classes = { "desc" }, Text = problem ?? "No news yet." });
-        NewsCount.Text = posts.Count == 0 ? "" : problem is not null ? "Offline: saved posts" : posts.Count == 1 ? "1 post" : $"{posts.Count} posts";
+        NewsCount.Text = NewsFeed.LocalFolder is not null ? $"Debug: local news/, {posts.Count} posts"
+            : posts.Count == 0 ? "" : problem is not null ? "Offline: saved posts" : posts.Count == 1 ? "1 post" : $"{posts.Count} posts";
     }
 
     Control PostCard(NewsPost post)

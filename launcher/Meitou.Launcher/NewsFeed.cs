@@ -25,8 +25,28 @@ public sealed class NewsFeed(HttpClient http)
     static string CacheDirectory => Path.Combine(LauncherConfig.DataDirectory, "news-cache");
 
     /// <summary>The newest posts first (by file name, which starts with the date).</summary>
+    /// <summary>
+    /// Debug builds show the checkout's own <c>news/</c> (found above the executable, next to <c>MeitouClient.slnx</c>), so a post can be
+    /// previewed before it is pushed; null in Release builds or outside a checkout.
+    /// </summary>
+    public static string? LocalFolder { get; } =
+#if DEBUG
+        FindCheckoutNews();
+#else
+        null;
+#endif
+
+    static string? FindCheckoutNews()
+    {
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+            if (File.Exists(Path.Combine(dir.FullName, "MeitouClient.slnx")) && Directory.Exists(Path.Combine(dir.FullName, Folder)))
+                return Path.Combine(dir.FullName, Folder);
+        return null;
+    }
+
     public async Task<(List<NewsPost> Posts, string? Problem)> FetchAsync(CancellationToken ct = default)
     {
+        if (LocalFolder is { } local) return (await ReadLocalAsync(local, ct), null);
         Directory.CreateDirectory(CacheDirectory);
         var listFile = Path.Combine(CacheDirectory, "list.json");
         var etagFile = Path.Combine(CacheDirectory, "list.etag");
@@ -88,6 +108,19 @@ public sealed class NewsFeed(HttpClient http)
         return (posts, problem);
     }
 
+    static async Task<List<NewsPost>> ReadLocalAsync(string folder, CancellationToken ct)
+    {
+        var posts = new List<NewsPost>();
+        foreach (var dir in Directory.EnumerateDirectories(folder).OrderByDescending(d => d, StringComparer.Ordinal).Take(MaxPosts))
+        {
+            var name = Path.GetFileName(dir);
+            var file = Path.Combine(dir, PostFile);
+            if (name.Length > 10 && DateOnly.TryParse(name[..10], out _) && File.Exists(file))
+                posts.Add(Parse(name, await File.ReadAllTextAsync(file, ct), new Uri(dir + Path.DirectorySeparatorChar).ToString()));
+        }
+        return posts;
+    }
+
     /// <summary>Front matter (<c>---</c> lines around <c>key: value</c> lines: title, date, image), then Markdown.</summary>
     static NewsPost Parse(string file, string text, string baseUrl)
     {
@@ -114,6 +147,11 @@ public sealed class NewsFeed(HttpClient http)
     /// <summary>An image's bytes, from the disk cache or downloaded once; null when it cannot be had.</summary>
     public async Task<byte[]?> ImageAsync(string url, CancellationToken ct = default)
     {
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.IsFile) // a local post's picture (Debug)
+        {
+            try { return await File.ReadAllBytesAsync(uri.LocalPath, ct); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
+        }
         var cached = Path.Combine(CacheDirectory, Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(url)))[..32] + ".img");
         try
         {
