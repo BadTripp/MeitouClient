@@ -268,7 +268,7 @@ public sealed partial class MainWindow : Window
             ShowReleases();
             Status($"{release.Title} installed.");
         }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException)
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException)
         {
             Status($"Install failed: {ex.Message}");
         }

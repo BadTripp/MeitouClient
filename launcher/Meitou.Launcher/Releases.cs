@@ -37,7 +37,7 @@ public sealed class Releases(HttpClient http)
 
     public static HttpClient CreateClient()
     {
-        var client = new HttpClient();
+        var client = new HttpClient { Timeout = Timeout.InfiniteTimeSpan }; // a big download may take minutes; callers cancel instead
         client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("meitou-launcher", typeof(Releases).Assembly.GetName().Version?.ToString(3) ?? "0"));
         return client;
     }
@@ -50,19 +50,21 @@ public sealed class Releases(HttpClient http)
         string? body = cached?.Body;
         try
         {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(TimeSpan.FromSeconds(20));
             using var request = new HttpRequestMessage(HttpMethod.Get, $"https://api.github.com/repos/{Repository}/releases?per_page=100");
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
             if (cached?.ETag is { } etag) request.Headers.TryAddWithoutValidation("If-None-Match", etag);
-            using var response = await http.SendAsync(request, ct);
+            using var response = await http.SendAsync(request, timeout.Token);
             if (response.StatusCode == HttpStatusCode.NotModified) { }
             else if (response.IsSuccessStatusCode)
             {
-                body = await response.Content.ReadAsStringAsync(ct);
+                body = await response.Content.ReadAsStringAsync(timeout.Token);
                 WriteCache(new Cache(response.Headers.ETag?.ToString(), body));
             }
             else problem = $"GitHub answered {(int)response.StatusCode} {response.ReasonPhrase}" + (body is null ? "" : "; showing the last list");
         }
-        catch (HttpRequestException e)
+        catch (Exception e) when (e is HttpRequestException or OperationCanceledException or IOException)
         {
             problem = $"GitHub not reachable ({e.Message})" + (body is null ? "" : "; showing the last list");
         }
