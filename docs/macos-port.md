@@ -202,7 +202,8 @@ Limits: timestampPeriod=1ns ...
 | Dynamic rendering, sync2, timeline semaphores | works | hard requirements met |
 | `drawIndirectCount` | **false** | GPU grass disabled by `FoliageGrassGpu.Supported`; falls back to CPU-recorded grass draws (by design, cosmetic) |
 | Ray query GI | false | `--gi` off; the log prints the reason and continues (degradation path works) |
-| DLSS / Streamline | absent | falls back to TAA; log reports it cleanly. **Note: AMD FSR is plausibly testable on macOS** — vendor DLLs are the blocker for DLSS only; FSR is shader-based (untested so far) |
+| DLSS / Streamline | absent | falls back to TAA; log reports it cleanly |
+| **AMD FSR 3.1** | **works (round 4)** | macOS-built `libamd_fidelityfx_vk.dylib` loads through the game's own `MEITOU_FFX_PATH` integration — see "FSR on macOS" below |
 | Push descriptors | works (clamped to 16 for large sets) | see §2.4 |
 
 Runtime behaviours worth flagging:
@@ -307,7 +308,44 @@ Round-3 code change (in addition to §3): the `WindowPointer` GLFW shim above �
 `WindowPointer.cs`, `unsafe` method, `using Silk.NET.GLFW`. **Verified: edge scroll pans on all
 four edges** (after the menu-bar/Dock overshoot clamp — see §5).
 
-## 9. Decisions worth making upstream (input from this tester)
+## 9. FSR on macOS (round 4)
+
+**FSR 3.1 runs natively** — first known FidelityFX-under-MoltenVK build. The game's own
+`MEITOU_FFX_PATH` integration loads it unmodified; the title bar shows `fsr 3.1 1512x856` and the
+profiler shows FSR's passes in `post`. Verified in The Hub (viewer), M1 Pro.
+
+Recipe — AMD ships `amd_fidelityfx_vk` only for Windows, but the FidelityFX SDK 1.1.4 builds for
+macOS arm64 with modest patches:
+
+- The Vulkan backend compiles GLSL with **glslang** (brew, invoked as a subprocess by the SDK's
+  `ffx_shader_compiler` tool) — no DXC needed. The tool itself is portable C++ except `wmain`,
+  Windows paths and the HLSL compilers (dxc/fxc), which the VK build never touches.
+- Build order: the `ffx_shader_compiler` tool → its output drives pre-compiling all shader
+  permutations (headers with SPIR-V blobs) → `ffx-api/CMakeLists.txt` with
+  `FFX_API_BACKEND=VK_X64` produces the shared library.
+- SDK patches (all `#ifdef _WIN32`-shaped, no Windows behaviour change):
+  portable UTF/path helpers in `ffx_sc` (`wmain`→`main` shim, `mkdir` loop, manual UTF-8↔UTF-16 —
+  `std::wstring_convert` is gone from libc++); MSVC CRT shims (`_countof`, `wcscpy_s`, `strcpy_s`,
+  `sprintf_s`) in `ffx_util.h`; `FFX_API_ENTRY` → `__attribute__((visibility("default")))`;
+  `CMAKE_GENERATOR_PLATFORM` derivation for non-MSVC generators; the Windows toolchain/
+  `CMAKE_SYSTEM_NAME=WINDOWS` block skipped on other hosts; the frame-interpolation component and
+  its VK swapchain (Windows presentation integration) excluded, with the 16 frame-generation entry
+  points stubbed to `FFX_ERROR_INVALID_VERSION` — **upscale paths are untouched**; private context
+  buffers packed larger on arm64 than the Windows layout (`FFX_SDK_DEFAULT_CONTEXT_SIZE` 128→256
+  K×4B, asserted in the components); an error-string parser that built a string from a `npos`
+  iterator (crash on any glslang error, MSVC-tolerated); and a genuine portability finding —
+  macOS's `/bin/sh` **brace-expands `{0,1}`**, so the shader compiler sees a permutation option as
+  two conflicting plain defines ("Macro redefined"); fixed by re-merging duplicate `-D` macros of
+  the same name back into the brace form inside `ffx_sc`.
+- Game-side (`FsrUpscaler.cs`): the macOS library name and `libvulkan.1.dylib` for
+  `vkGetDeviceProcAddr`; nothing else — the game hands FFX its own MoltenVK device.
+
+Measured: full-resolution (1512×856 render + FSR passes) ≈ 24 fps / GPU 40.5 ms, versus TAA at the
+same full resolution ≈ 21 fps — FSR at 1:1 is not the use case; at render scale 0.5 the context
+recreates at half size and the usual upscaler trade applies. Include the built dylib next to the
+executable (or set `MEITOU_FFX_PATH`) and pick FSR in the Tab panel.
+
+## 10. Decisions worth making upstream (input from this tester)
 
 1. **Bindless floor** (§2.5): keep the static `8192` on macOS, or expose `MEITOU_BINDLESS_LIMIT`?
    MoltenVK accepted 4096-slot 2D arrays quietly; a driver update could conceivably start
@@ -321,8 +359,9 @@ four edges** (after the menu-bar/Dock overshoot clamp — see §5).
    would remove a small surprise (screenshots landing in a literal `C:\Temp` folder). The
    `.\data\...` texture warnings turned out to be faithful-missing `_HI` assets (see §4), not a
    path bug — no action needed there.
-6. **FSR on macOS**: if the vendor-file pipeline allows it, FSR could be the upscaler that
-   actually does something on Mac — untested here, low-effort experiment, potentially big win.
+6. **FSR on macOS**: done (round 4) — see the section below. AMD ships the FidelityFX runtime only
+   for Windows, but the SDK builds for macOS with modest patches; upstreaming the portability
+   guards (or AMD shipping a macOS dylib) would make it a copy-in dependency for any Mac build.
 
 ---
 
