@@ -4,14 +4,14 @@
         x:Class="Meitou.Launcher.MainWindow"
         Title="Meitou Launcher" Icon="avares://meitou-launcher/Assets/meitou.ico"
         WindowDecorations="None" TransparencyLevelHint="Transparent"
-        Width="1040" Height="700" MinWidth="760" MinHeight="540">
+        Width="1200" Height="900" MinWidth="760" MinHeight="540">
   <!-- No system frame: the plate floats on a transparent window with its own title bar; the margin holds its shadow and the resize grips. -->
   <Panel>
     <Border x:Name="Plate" Classes="plate" Margin="8" Padding="16,0,16,12">
     <DockPanel>
       <!-- Title bar: drag to move, double-click to maximise -->
       <DockPanel x:Name="TitleBar" DockPanel.Dock="Top" Height="46" Background="Transparent" PointerPressed="TitleBar_PointerPressed">
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
           <Button Classes="chrome" Click="Minimize_Click" ToolTip.Tip="Minimise"><Path Data="M0,0 H10" StrokeThickness="1.6" /></Button>
           <Button x:Name="MaximizeButton" Classes="chrome" Click="Maximize_Click" ToolTip.Tip="Maximise"><Path x:Name="MaximizeIcon" Data="M0,0 H10 V10 H0 Z" StrokeThickness="1.4" /></Button>
           <Button Classes="chrome close" Click="Close_Click" ToolTip.Tip="Close"><Path Data="M0,0 L10,10 M10,0 L0,10" StrokeThickness="1.8" /></Button>
@@ -23,7 +23,7 @@
       </DockPanel>
       <Border DockPanel.Dock="Top" Classes="rule" Margin="0,0,0,12" />
 
-      <!-- Footer: status left, the version to start and the one paper action right -->
+      <!-- Footer: launcher version and status left, the version to start and the one paper action right -->
       <StackPanel DockPanel.Dock="Bottom">
         <Border Classes="rule" Margin="0,12,0,10" />
         <DockPanel>
@@ -34,16 +34,16 @@
             </StackPanel>
           </Button>
           <ComboBox x:Name="VersionBox" DockPanel.Dock="Right" MinWidth="150" PlaceholderText="No version installed" VerticalAlignment="Center" />
-          <TextBlock x:Name="StatusText" Classes="desc" VerticalAlignment="Center" Margin="4,0,16,0" />
+          <StackPanel DockPanel.Dock="Left" Spacing="4" Margin="4,0,0,0" VerticalAlignment="Center">
+            <TextBlock Classes="caps" Text="MEITOU LAUNCHER" />
+            <TextBlock x:Name="LauncherVersionText" Classes="desc" />
+          </StackPanel>
+          <TextBlock x:Name="StatusText" Classes="desc" VerticalAlignment="Center" Margin="24,0,16,0" />
         </DockPanel>
       </StackPanel>
 
       <!-- Navigation -->
       <DockPanel DockPanel.Dock="Left" Width="176">
-        <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="8,0,0,4">
-          <TextBlock Classes="caps" Text="MEITOU LAUNCHER" />
-          <TextBlock x:Name="LauncherVersionText" Classes="desc" />
-        </StackPanel>
         <StackPanel Spacing="8">
           <ToggleButton x:Name="NavHome" Classes="nav" Content="Home" Click="Nav_Click" IsChecked="True" />
           <ToggleButton x:Name="NavMods" Classes="nav" Content="Mods" Click="Nav_Click" />

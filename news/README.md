@@ -15,9 +15,10 @@ news/2026-10-19-meitou-launcher/
 ---
 title: Post title
 date: 2026-10-19
+author: VlcekM
 image: cover.png
 ---
 ```
 
-`image` is an optional cover; images in the text (`![alt](screenshot.png)`) and links are relative to the article's folder.
+`author` shows next to the date; `image` is an optional cover; images in the text (`![alt](screenshot.png)`) and links are relative to the article's folder.
 Articles appear once they are on `master`.

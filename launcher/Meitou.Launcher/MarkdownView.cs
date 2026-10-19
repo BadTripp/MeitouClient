@@ -6,6 +6,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using System.Runtime.CompilerServices;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 
@@ -18,6 +19,7 @@ namespace Meitou.Launcher;
 static class MarkdownView
 {
     static readonly FontFamily Mono = new("Cascadia Mono, Consolas, Menlo, DejaVu Sans Mono, monospace");
+    static readonly ConditionalWeakTable<Span, string> LinkUrls = new();
 
     public static Control Render(NewsPost post, NewsFeed feed, Action<string> open)
     {
@@ -108,11 +110,47 @@ static class MarkdownView
     {
         var text = new TextBlock { TextWrapping = TextWrapping.Wrap, FontWeight = FontWeight.Medium, FontSize = 14, LineHeight = 21, Inlines = [] };
         if (container is not null)
-            foreach (var inline in container) Add(text.Inlines!, inline, post, open);
+            foreach (var inline in container) Add(text.Inlines!, inline, post);
+        // Links are runs in the text (so they sit on its baseline); the pointer finds them by hit-testing the layout.
+        text.PointerMoved += (_, e) =>
+        {
+            var url = LinkAt(text, e.GetPosition(text));
+            text.Cursor = url is null ? Cursor.Default : new Cursor(StandardCursorType.Hand);
+            ToolTip.SetTip(text, url);
+        };
+        text.PointerPressed += (_, e) =>
+        {
+            if (LinkAt(text, e.GetPosition(text)) is not { } url) return;
+            open(url);
+            e.Handled = true;
+        };
         return text;
     }
 
-    static void Add(InlineCollection target, Markdig.Syntax.Inlines.Inline inline, NewsPost post, Action<string> open)
+    static string? LinkAt(TextBlock text, Point point)
+    {
+        var hit = text.TextLayout.HitTestPoint(point);
+        if (!hit.IsInside || text.Inlines is null) return null;
+        int index = hit.IsTrailing ? hit.TextPosition - 1 : hit.TextPosition, offset = 0;
+        return Find(text.Inlines, null);
+
+        string? Find(InlineCollection inlines, string? url)
+        {
+            foreach (var inline in inlines)
+            {
+                if (inline is Run run)
+                {
+                    int length = run.Text?.Length ?? 0;
+                    if (index >= offset && index < offset + length) return url;
+                    offset += length;
+                }
+                else if (inline is Span span && Find(span.Inlines, LinkUrls.TryGetValue(span, out var own) ? own : url) is { } found) return found;
+            }
+            return null;
+        }
+    }
+
+    static void Add(InlineCollection target, Markdig.Syntax.Inlines.Inline inline, NewsPost post)
     {
         switch (inline)
         {
@@ -122,37 +160,32 @@ static class MarkdownView
             case EmphasisInline emphasis:
                 Span span = emphasis.DelimiterCount >= 2 ? new Bold() : new Italic();
                 if (emphasis.DelimiterCount >= 2) span.Foreground = Brush("PaperLight");
-                foreach (var child in emphasis) Add(span.Inlines, child, post, open);
+                foreach (var child in emphasis) Add(span.Inlines, child, post);
                 target.Add(span);
                 break;
             case CodeInline code:
                 target.Add(new Run(code.Content) { FontFamily = Mono, FontWeight = FontWeight.Normal, FontSize = 13, Foreground = Brush("PaperLight") });
                 break;
             case LineBreakInline lineBreak:
-                target.Add(lineBreak.IsHard ? new LineBreak() : new Run(" "));
+                target.Add(new Run(lineBreak.IsHard ? "\n" : " ")); // a Run, so text positions are plain character counts
                 break;
             case LinkInline { IsImage: false } link:
-                target.Add(Link(string.Concat(link.Descendants<LiteralInline>().Select(l => l.Content.ToString())), NewsFeed.Resolve(post, link.Url ?? ""), open));
+                target.Add(Link(string.Concat(link.Descendants<LiteralInline>().Select(l => l.Content.ToString())), NewsFeed.Resolve(post, link.Url ?? "")));
                 break;
             case AutolinkInline auto:
-                target.Add(Link(auto.Url, auto.Url, open));
+                target.Add(Link(auto.Url, auto.Url));
                 break;
             case ContainerInline container:
-                foreach (var child in container) Add(target, child, post, open);
+                foreach (var child in container) Add(target, child, post);
                 break;
         }
     }
 
-    static InlineUIContainer Link(string label, string url, Action<string> open)
+    static Span Link(string label, string url)
     {
-        var link = new TextBlock
-        {
-            Text = label, Foreground = Brush("BrassLight"), TextDecorations = TextDecorations.Underline, Cursor = new Cursor(StandardCursorType.Hand),
-            FontWeight = FontWeight.SemiBold,
-        };
-        ToolTip.SetTip(link, url);
-        link.PointerPressed += (_, e) => { open(url); e.Handled = true; };
-        return new InlineUIContainer(link) { BaselineAlignment = BaselineAlignment.TextBottom };
+        var link = new Underline { Foreground = Brush("BrassLight"), Inlines = { new Run(label) } };
+        LinkUrls.Add(link, url);
+        return link;
     }
 
     static IBrush Brush(string key) =>

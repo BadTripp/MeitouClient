@@ -78,7 +78,7 @@ versions. The game gets the Kenshi folder through `KENSHI_PATH`.
 ## News
 
 The Home page shows the repository's `news/` folder (format in `news/README.md`): one folder per article,
-`<yyyy-mm-dd>-<slug>/index.md` with an optional front matter block (`title`, `date`, `image`) and its pictures beside it, newest
+`<yyyy-mm-dd>-<slug>/index.md` with an optional front matter block (`title`, `date`, `author`, `image`) and its pictures beside it, newest
 20 first. `news/` is listed through the contents API on `master` (one call, cached with its ETag in `news-cache/`); each
 `index.md` downloads from raw.githubusercontent.com and is kept by its folder's tree hash, images by URL, so the page works
 offline. Relative image and link paths resolve against the article's folder; a folder without `index.md` is skipped.

@@ -286,12 +286,26 @@
       <Setter Property="Cursor" Value="Hand" />
     </Style>
 
-    <!-- Title bar: the window's own minimise / maximise / close plates; close turns BadBright, as the game's Exit -->
+    <!-- Window buttons: flat on the title bar like the system ones; only hover lights them. -->
     <Style Selector="Button.chrome">
       <Setter Property="MinHeight" Value="30" />
-      <Setter Property="Width" Value="32" />
+      <Setter Property="Width" Value="40" />
       <Setter Property="Height" Value="30" />
       <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="Button.chrome /template/ ContentPresenter#PART_ContentPresenter, Button.chrome:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.chrome:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="BoxShadow" Value="none" />
+    </Style>
+    <Style Selector="Button.chrome:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#1Affffff" />
+    </Style>
+    <Style Selector="Button.chrome:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#0Dffffff" />
+    </Style>
+    <Style Selector="Button.close:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#4Dc42b1c" />
     </Style>
     <Style Selector="Button.chrome Path">
       <Setter Property="Stroke" Value="{StaticResource Main}" />

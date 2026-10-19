@@ -80,7 +80,9 @@ public sealed partial class MainWindow : Window
         var card = new StackPanel { Spacing = 8 };
         if (post.Image is { } cover) card.Children.Add(MarkdownView.Image(NewsFeed.Resolve(post, cover), news, 300));
         card.Children.Add(new TextBlock { Text = post.Title, FontSize = 22, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
-        if (post.Date is { } date) card.Children.Add(new TextBlock { Classes = { "desc" }, Text = date.ToString("d MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture) });
+        // "19 October 2026 · author", either part when only it is given.
+        var byline = string.Join(" · ", new[] { post.Date?.ToString("d MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture), post.Author }.Where(s => !string.IsNullOrEmpty(s)));
+        if (byline.Length > 0) card.Children.Add(new TextBlock { Classes = { "desc" }, Text = byline });
         card.Children.Add(MarkdownView.Render(post, news, OpenLink));
         return new Border { Classes = { "post" }, Child = card };
     }

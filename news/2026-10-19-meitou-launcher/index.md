@@ -1,6 +1,7 @@
 ---
 title: The Meitou launcher
 date: 2026-10-19
+author: VlcekM
 image: ../../assets/branding/header.png
 ---
 

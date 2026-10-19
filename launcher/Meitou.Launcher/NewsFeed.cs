@@ -7,7 +7,7 @@ using System.Text.Json;
 namespace Meitou.Launcher;
 
 /// <summary>A news post: <c>news/&lt;yyyy-mm-dd&gt;-&lt;slug&gt;/index.md</c> with an optional front matter block, its images beside it (docs/launcher.md, "News").</summary>
-public sealed record NewsPost(string File, string Title, DateOnly? Date, string? Image, string Body, string BaseUrl);
+public sealed record NewsPost(string File, string Title, DateOnly? Date, string? Author, string? Image, string Body, string BaseUrl);
 
 /// <summary>
 /// The Home page's posts, from the repository's <c>news/</c> folder, one folder per article: listed through the contents API (one call, cached
@@ -24,7 +24,6 @@ public sealed class NewsFeed(HttpClient http)
 
     static string CacheDirectory => Path.Combine(LauncherConfig.DataDirectory, "news-cache");
 
-    /// <summary>The newest posts first (by file name, which starts with the date).</summary>
     /// <summary>
     /// Debug builds show the checkout's own <c>news/</c> (found above the executable, next to <c>MeitouClient.slnx</c>), so a post can be
     /// previewed before it is pushed; null in Release builds or outside a checkout.
@@ -141,7 +140,7 @@ public sealed class NewsFeed(HttpClient http)
         DateOnly? date = meta.TryGetValue("date", out var d) && DateOnly.TryParse(d, out var parsed) ? parsed
             : file.Length >= 10 && DateOnly.TryParse(file[..10], out var fromName) ? fromName : null;
         var title = meta.GetValueOrDefault("title") ?? Path.GetFileNameWithoutExtension(file);
-        return new NewsPost(file, title, date, meta.GetValueOrDefault("image"), string.Join("\n", lines[bodyStart..]).Trim(), baseUrl);
+        return new NewsPost(file, title, date, meta.GetValueOrDefault("author"), meta.GetValueOrDefault("image"), string.Join("\n", lines[bodyStart..]).Trim(), baseUrl);
     }
 
     /// <summary>An image's bytes, from the disk cache or downloaded once; null when it cannot be had.</summary>
