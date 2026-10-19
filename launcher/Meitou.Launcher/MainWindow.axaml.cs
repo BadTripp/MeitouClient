@@ -6,6 +6,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using Meitou.Content;
 
 namespace Meitou.Launcher;
@@ -14,6 +15,7 @@ public sealed partial class MainWindow : Window
 {
     readonly LauncherConfig config;
     readonly Releases releases = new(Releases.CreateClient());
+    readonly LauncherUpdater updater;
     readonly ObservableCollection<ModRow> mods = [];
     List<Release> allReleases = [];
     GameInstall? install;
@@ -27,6 +29,7 @@ public sealed partial class MainWindow : Window
     public MainWindow(LauncherConfig config, GameInstall? found)
     {
         this.config = config;
+        updater = new LauncherUpdater(releases, config.IncludePrereleases);
         InitializeComponent();
         ModListBox.ItemsSource = mods;
         ModListBox.AddHandler(PointerMovedEvent, ModList_PointerMoved, RoutingStrategies.Bubble, handledEventsToo: true);
@@ -36,7 +39,8 @@ public sealed partial class MainWindow : Window
         ShowPrereleaseToggle();
         DataFolderText.Text = $"Installed versions and the game's settings: {LauncherConfig.DataDirectory}";
         LauncherVersionText.Text = $"v{LauncherVersion} · {Releases.Rid}";
-        LauncherAbout.Text = $"Version {LauncherVersion} for {Releases.Rid}.";
+        LauncherAbout.Text = $"Version {LauncherVersion} for {Releases.Rid}. "
+            + (updater.IsInstalled ? "Updates itself from GitHub." : "Not installed by its Setup, so updates open the release page.");
         RefreshPresets();
         RefreshInstalled();
         UseKenshi(found);
@@ -312,13 +316,7 @@ public sealed partial class MainWindow : Window
         var (list, problem) = await releases.FetchAsync();
         allReleases = list;
         ShowReleases();
-        if (allReleases.Where(r => r.Kind == ReleaseKind.Launcher && !r.Prerelease)
-                .FirstOrDefault(r => System.Version.TryParse(r.Version, out var v) && v > System.Version.Parse(LauncherVersion)) is { } update)
-        {
-            LauncherUpdateButton.Content = $"Get launcher {update.Version}";
-            LauncherUpdateButton.Tag = update.PageUrl;
-            LauncherUpdateButton.IsVisible = true;
-        }
+        await ShowLauncherUpdateAsync();
         Status(problem ?? "");
     }
 
@@ -405,10 +403,79 @@ public sealed partial class MainWindow : Window
             await this.Launcher.LaunchUriAsync(new Uri(row.Release.PageUrl));
     }
 
+    // ---- Launcher updates ----
+
+    // Installed by its Setup or AppImage: Velopack finds, downloads and applies the update. Run from anywhere else (a build, a copied
+    // folder): the newest launcher-v* release's page.
+    async Task ShowLauncherUpdateAsync()
+    {
+        string? version;
+        if (updater.IsInstalled)
+        {
+            try { version = await updater.CheckAsync(); }
+            catch (Exception ex) { LauncherAbout.Text = $"Version {LauncherVersion}. The update check failed: {ex.Message}"; return; }
+            LauncherUpdateButton.Tag = null;
+        }
+        else
+        {
+            var page = allReleases.Where(r => r.Kind == ReleaseKind.Launcher && (config.IncludePrereleases || !r.Prerelease))
+                .FirstOrDefault(r => System.Version.TryParse(r.Version.Split('-')[0], out var v) && v > System.Version.Parse(LauncherVersion));
+            version = page?.Version;
+            LauncherUpdateButton.Tag = page?.PageUrl;
+        }
+        LauncherUpdateButton.IsVisible = version is not null;
+        LauncherUpdateButton.Content = updater.IsInstalled ? $"Update to {version}" : $"Get launcher {version}";
+        if (version is not null) Status($"Launcher {version} is available (Settings).");
+    }
+
     async void LauncherUpdate_Click(object? sender, RoutedEventArgs e)
     {
-        if (LauncherUpdateButton.Tag is string url)
-            await this.Launcher.LaunchUriAsync(new Uri(url));
+        if (LauncherUpdateButton.Tag is string url) { await this.Launcher.LaunchUriAsync(new Uri(url)); return; }
+        LauncherUpdateButton.IsEnabled = false;
+        try
+        {
+            await updater.UpdateAndRestartAsync(p => Dispatcher.UIThread.Post(() => Status($"Updating the launcher: {p}%")), CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Status($"Launcher update failed: {ex.Message}");
+            LauncherUpdateButton.IsEnabled = true;
+        }
+    }
+
+    // ---- Window: own title bar and resize grips ----
+
+    void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        if (e.ClickCount == 2) ToggleMaximize();
+        else BeginMoveDrag(e);
+    }
+
+    void Minimize_Click(object? sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    void Maximize_Click(object? sender, RoutedEventArgs e) => ToggleMaximize();
+
+    void Close_Click(object? sender, RoutedEventArgs e) => Close();
+
+    void ToggleMaximize() => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    void Grip_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Control { Tag: string edge } && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            BeginResizeDrag(Enum.Parse<WindowEdge>(edge), e);
+    }
+
+    // Maximised, the plate fills the screen: no shadow margin, square corners, no grips.
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property != WindowStateProperty || Plate is null) return;
+        bool max = WindowState == WindowState.Maximized;
+        Plate.Margin = new Thickness(max ? 0 : 14);
+        Plate.CornerRadius = new CornerRadius(max ? 0 : 10);
+        Grips.IsVisible = !max;
+        MaximizeButton.Content = max ? "❐" : "▢";
     }
 
     // ---- Play ----

@@ -5,6 +5,10 @@ namespace Meitou.Launcher;
 static class Program
 {
     [STAThread]
-    public static void Main(string[] args) =>
+    public static void Main(string[] args)
+    {
+        // First: Velopack runs its install, update and uninstall hooks here and may exit (docs/launcher.md, "Self-update").
+        Velopack.VelopackApp.Build().Run();
         AppBuilder.Configure<App>().UsePlatformDetect().LogToTrace().StartWithClassicDesktopLifetime(args);
+    }
 }

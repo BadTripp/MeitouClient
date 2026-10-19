@@ -60,7 +60,8 @@
     <FluentTheme />
 
     <Style Selector="Window">
-      <Setter Property="Background" Value="{StaticResource Vignette}" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="TransparencyBackgroundFallback" Value="{StaticResource Vignette}" />
       <Setter Property="Foreground" Value="{StaticResource Main}" />
       <Setter Property="FontFamily" Value="fonts:Kenshi#Exo 2, $Default" />
       <Setter Property="FontWeight" Value="SemiBold" />
@@ -257,6 +258,22 @@
       <Setter Property="Foreground" Value="{StaticResource Quiet}" />
       <Setter Property="Cursor" Value="SizeNorthSouth" />
       <Setter Property="FontSize" Value="16" />
+    </Style>
+    <!-- Clickable things show the hand -->
+    <Style Selector="Button, ToggleButton, ComboBox, ComboBoxItem, CheckBox, ListBoxItem">
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <!-- Title bar: the window's own minimise / maximise / close plates; close turns BadBright, as the game's Exit -->
+    <Style Selector="Button.chrome">
+      <Setter Property="MinHeight" Value="28" />
+      <Setter Property="Width" Value="36" />
+      <Setter Property="Height" Value="28" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="Button.close:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Foreground" Value="{StaticResource BadBright}" />
     </Style>
   </Application.Styles>
 </Application>

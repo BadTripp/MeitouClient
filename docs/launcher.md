@@ -1,7 +1,8 @@
 # Launcher
 
 `launcher/Meitou.Launcher` (Avalonia, `meitou-launcher`): installs game releases from GitHub, edits the mod list like Kenshi's own
-launcher, keeps mod presets and starts the game. Prototype UI, unstyled. Mods come only from disk (`mods/` and downloaded workshop
+launcher, keeps mod presets and starts the game. Styled after the Meitou UI kit ([meitou-ui](meitou-ui.md)) with its own title bar; Exo 2
+is read from the Kenshi install, nothing is shipped. Mods come only from disk (`mods/` and downloaded workshop
 items); the launcher never downloads or hosts mods.
 
 ## Releases
@@ -9,22 +10,29 @@ items); the launcher never downloads or hosts mods.
 - One repository, two tag families: the game `v<version>` (`release.yml`), the launcher `launcher-v<version>`
   (`launcher-release.yml`, changelog `launcher/CHANGELOG.md`). Launcher releases are never marked Latest. Both workflows pass
   `--notes-start-tag` with the previous tag of their own family, so the generated notes never span the other family's tag.
-- Assets: `Meitou-<version>-<rid>.zip` and `MeitouLauncher-<version>-<rid>.zip`, `<rid>` as .NET's
-  `RuntimeInformation.RuntimeIdentifier` (`win-x64`, `linux-x64`, `osx-x64`, `osx-arm64`). A release with no zip for the machine's
-  RID is listed but not installable.
+- Game assets: `Meitou-<version>-<rid>.zip`, `<rid>` as .NET's `RuntimeInformation.RuntimeIdentifier` (`win-x64`, `linux-x64`,
+  `osx-x64`, `osx-arm64`). A release with no zip for the machine's RID is listed but not installable.
 - The list comes from the REST API without a token (60 requests an hour per IP). The answer and its ETag are cached in
   `releases-cache.json`, so an unchanged list is a 304 that costs no quota. Downloads use the asset URLs, which don't count
   against the quota.
 - A download is checked against the asset's `digest` (`sha256:<hex>`) when GitHub lists one. The zip's single top folder becomes
   `versions/<version>/`. The game is `MeitouClient[.exe]` since 0.15 (`meitou[.exe]` before; the launcher takes either); on Unix
   it gets its execute bits. Cancelling a download removes the partial zip and unpacked folder.
-- A newer non-pre-release `launcher-v*` shows a button to its page. The launcher does not update itself yet.
-- **Velopack** (MIT; checked 2026-10-19 against its `GithubSource`/`GitBase` source): fits, with one change. `GitBase` merges the
-  feed (`releases.<channel>.json`) of every listed release that has one and skips the rest, so game releases in between are
-  harmless. But `GithubSource` reads only the newest 10 releases (`per_page=10`, page 1), so launcher releases older than 10 game
-  releases go unseen: subclass it and override `GetReleases` to list `launcher-v*` tags (or 100 per page). Packages: Windows
-  Setup + portable, Linux an AppImage (built on any OS), macOS a `.app`/`.pkg` that must be built on a Mac. Needs
-  `VelopackApp.Build().Run()` first in `Main`.
+
+## Self-update (Velopack)
+
+- `launcher-release.yml` packs the launcher with `vpk pack` (Velopack, MIT; `vpk` version = the `Velopack` package version) on each
+  runtime's own OS, one channel per RID (`--channel <rid>`, packId `MeitouLauncher`): Windows `-Setup.exe` + `-Portable.zip`,
+  Linux an AppImage, macOS a bundle and installer (Mac-only tooling, unsigned). Every file name carries its channel
+  (**Verified** for win-x64: `MeitouLauncher-<v>-win-x64-full.nupkg`, `releases.win-x64.json`, `assets.win-x64.json`,
+  `RELEASES-win-x64`), so all four go on one `launcher-v<version>` release; the job fails on a name clash.
+- `Program.Main` calls `VelopackApp.Build().Run()` first. `LauncherUpdater` uses `ExplicitChannel = <rid>` and a `GithubSource`
+  whose `GetReleases` returns only `launcher-v*` releases from the launcher's own cached list. Velopack's stock listing reads just
+  the newest 10 releases (`per_page=10`, page 1; **Verified** in its source 2026-10-19), which game releases would crowd out;
+  its `GitBase` merges the feed of every release given and skips releases without one.
+- Installed by Setup or AppImage (`UpdateManager.IsInstalled`): Settings offers "Update to <v>", which downloads, applies and
+  restarts. Run from anywhere else (a build, a copied folder): a button to the newest `launcher-v*` release page.
+- **Unknown**: the update path end to end; no `launcher-v*` release exists yet.
 
 ## Game zips per runtime
 
@@ -48,7 +56,7 @@ Native dependencies off Windows:
 
 ## Files
 
-The launcher's folder is `%LocalAppData%/Meitou`, `~/.local/share/Meitou` or `~/Library/Application Support/Meitou`, the same
+The launcher's data folder (its program, once installed, is Velopack's, e.g. `%LocalAppData%/MeitouLauncher`) is `%LocalAppData%/Meitou`, `~/.local/share/Meitou` or `~/Library/Application Support/Meitou`, the same
 folder as the game's caches (shader cache, LODs, navmesh). Beside them it holds
 `launcher.json` (Kenshi folder, channel, chosen version, launch arguments, presets), `versions/` and the game's working directory.
 The game runs from that folder, so its `meitou.user.json` (and anything else it writes to the working directory) is shared by all

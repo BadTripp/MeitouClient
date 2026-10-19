@@ -3,15 +3,25 @@
         xmlns:l="using:Meitou.Launcher"
         x:Class="Meitou.Launcher.MainWindow"
         Title="Meitou Launcher" Icon="avares://meitou-launcher/Assets/meitou.ico"
-        Width="1040" Height="680" MinWidth="760" MinHeight="520">
-  <Border Classes="plate" Margin="14" Padding="22,14,22,16">
+        WindowDecorations="None" TransparencyLevelHint="Transparent"
+        Width="1040" Height="700" MinWidth="760" MinHeight="540">
+  <!-- No system frame: the plate floats on a transparent window with its own title bar; the margin holds its shadow and the resize grips. -->
+  <Panel>
+    <Border x:Name="Plate" Classes="plate" Margin="14" Padding="22,4,22,16">
     <DockPanel>
-      <!-- Title -->
-      <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-        <TextBlock x:Name="KenshiBadge" DockPanel.Dock="Right" Classes="desc" VerticalAlignment="Center" />
-        <TextBlock Classes="title" Text="Meitou" />
+      <!-- Title bar: drag to move, double-click to maximise -->
+      <DockPanel x:Name="TitleBar" DockPanel.Dock="Top" Height="52" Background="Transparent" PointerPressed="TitleBar_PointerPressed">
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <Button Classes="chrome" Content="—" Click="Minimize_Click" ToolTip.Tip="Minimise" />
+          <Button x:Name="MaximizeButton" Classes="chrome" Content="▢" Click="Maximize_Click" ToolTip.Tip="Maximise" />
+          <Button Classes="chrome close" Content="✕" Click="Close_Click" ToolTip.Tip="Close" />
+        </StackPanel>
+        <TextBlock x:Name="KenshiBadge" DockPanel.Dock="Right" Classes="desc" VerticalAlignment="Center" Margin="0,0,18,0" />
+        <Image DockPanel.Dock="Left" Source="avares://meitou-launcher/Assets/meitou-64.png" Width="28" Height="28" Margin="0,0,12,0"
+               VerticalAlignment="Center" RenderOptions.BitmapInterpolationMode="HighQuality" />
+        <TextBlock Classes="title" Text="Meitou" VerticalAlignment="Center" />
       </DockPanel>
-      <Border DockPanel.Dock="Top" Classes="rule" Margin="0,0,0,14" />
+      <Border DockPanel.Dock="Top" Classes="rule" Margin="0,4,0,14" />
 
       <!-- Footer: secondary action left, the version to start and the one paper action right -->
       <StackPanel DockPanel.Dock="Bottom">
@@ -180,5 +190,18 @@
         </ScrollViewer>
       </Panel>
     </DockPanel>
-  </Border>
+    </Border>
+
+    <!-- Resize grips in the margin (hidden while maximised) -->
+    <Panel x:Name="Grips">
+      <Border Tag="North" Height="8" VerticalAlignment="Top" Margin="20,0" Background="Transparent" Cursor="SizeNorthSouth" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="South" Height="8" VerticalAlignment="Bottom" Margin="20,0" Background="Transparent" Cursor="SizeNorthSouth" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="West" Width="8" HorizontalAlignment="Left" Margin="0,20" Background="Transparent" Cursor="SizeWestEast" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="East" Width="8" HorizontalAlignment="Right" Margin="0,20" Background="Transparent" Cursor="SizeWestEast" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="NorthWest" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Top" Background="Transparent" Cursor="TopLeftCorner" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="NorthEast" Width="20" Height="20" HorizontalAlignment="Right" VerticalAlignment="Top" Background="Transparent" Cursor="TopRightCorner" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="SouthWest" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomLeftCorner" PointerPressed="Grip_PointerPressed" />
+      <Border Tag="SouthEast" Width="20" Height="20" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomRightCorner" PointerPressed="Grip_PointerPressed" />
+    </Panel>
+  </Panel>
 </Window>
