@@ -870,6 +870,13 @@ public sealed unsafe class VulkanDevice : IDisposable
             var p2 = new PhysicalDeviceProperties2 { SType = StructureType.PhysicalDeviceProperties2, PNext = &pushProps };
             Vk.GetPhysicalDeviceProperties2(pd, &p2);
             MaxPushDescriptors = pushProps.MaxPushDescriptors;
+            // MoltenVK (macOS): push descriptor sets cannot go into Metal argument buffers, so they bind through MSL
+            // attributes, where the per-function sampler cap is 16 — a set with more (water: ocean + shadows + sky) fails
+            // to compile. Lower the budget so the existing regular descriptor set path (argument buffers) is used instead.
+            if (OperatingSystem.IsMacOS() && MaxPushDescriptors > 16)
+            {
+                MaxPushDescriptors = 16;
+            }
         }
         if (HasRayQuery)
         {
