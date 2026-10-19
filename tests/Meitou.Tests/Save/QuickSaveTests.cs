@@ -230,4 +230,70 @@ public class QuickSaveTests
         }
         finally { Directory.Delete(root, recursive: true); }
     }
+
+    /// <summary>The player's squads after a load: name, member count and the names of the members, in squad order.</summary>
+    static List<(string Name, string[] Members)> SquadsOf(SimWorld world) =>
+        [.. SquadManagement.PlayerSquads(world).Select(s => (s.Name, s.Members.Select(m => world.Characters.Cold(m.Slot)!.Name).ToArray()))];
+
+    [Fact]
+    public void A_new_empty_squad_and_its_name_survive_a_quicksave_and_load()
+    {
+        var data = SyntheticTown.Data(SyntheticTown.Database(anatomy: true));
+        using var a = Start(data);
+        a.World.Commands.Enqueue(new NewSquadCommand(SyntheticTown.Centre) { Tick = 0 });
+        a.World.RunTicks(2);
+        var fresh = SquadManagement.PlayerSquads(a.World)[1];
+        a.World.Commands.Enqueue(new RenameSquadCommand(fresh.Id, "Raiders") { Tick = a.World.Tick });
+        a.World.RunTicks(1);
+
+        var (_, folder, save) = Quicksave(a, "squad-empty");
+        try
+        {
+            using var b = new Game(NewWorld(data, 1), data, null!);
+            SaveLoader.Load(b.World, save, data);
+            var squads = SquadsOf(b.World);
+            Assert.Equal(2, squads.Count);
+            Assert.Equal(a.Squad.Members.Count, squads[0].Members.Length);
+            Assert.Equal("Raiders", squads[1].Name);
+            Assert.Empty(squads[1].Members);
+        }
+        finally { Directory.Delete(Path.GetDirectoryName(folder)!, recursive: true); }
+    }
+
+    [Fact]
+    public void A_member_moved_to_another_squad_is_saved_in_that_squads_platoon_through_two_saves()
+    {
+        var data = SyntheticTown.Data(SyntheticTown.Database(anatomy: true));
+        using var a = Start(data);
+        a.World.Commands.Enqueue(new NewSquadCommand(SyntheticTown.Centre) { Tick = 0 });
+        a.World.RunTicks(2);
+        var moved = a.Squad.Members[0];   // the leader: the platoon must not follow its first member
+        string movedName = a.World.Characters.Cold(moved.Slot)!.Name;
+        a.World.Commands.Enqueue(new MoveToSquadCommand(moved, SquadManagement.PlayerSquads(a.World)[1].Id) { Tick = a.World.Tick });
+        a.World.RunTicks(1);
+        var expected = SquadsOf(a.World);
+        Assert.Equal([movedName], expected[1].Members);
+
+        var (_, folder, save) = Quicksave(a, "squad-move");
+        string again = Path.Combine(Temp("squad-move-2"), QuickSave.Name);
+        try
+        {
+            using var b = new Game(NewWorld(data, 1), data, null!);
+            var loaded = SaveLoader.Load(b.World, save, data);
+            Assert.Equal(expected, SquadsOf(b.World), (x, y) => x.Name == y.Name && x.Members.SequenceEqual(y.Members));
+            // Saved again from the loaded world, each squad keeps its own platoon file.
+            var platoons = SquadManagement.PlayerSquads(b.World).Select(s => s.SaveName).ToList();
+            Assert.Equal(platoons.Count, platoons.Distinct().Count());
+            SaveCapture.Capture(b.World, data, loaded.Clock, loaded, new SaveCaptureOptions { Placements = [new Meitou.Data.World.TownPlacement("inst", "30-t", SyntheticTown.Centre, null)] }).Write(again);
+            using var c = new Game(NewWorld(data, 1), data, null!);
+            SaveLoader.Load(c.World, SaveGame.Load(again), data);
+            Assert.Equal(expected, SquadsOf(c.World), (x, y) => x.Name == y.Name && x.Members.SequenceEqual(y.Members));
+            Assert.Equal(platoons, SquadManagement.PlayerSquads(c.World).Select(s => s.SaveName));
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(folder)!, recursive: true);
+            if (Directory.Exists(Path.GetDirectoryName(again)!)) Directory.Delete(Path.GetDirectoryName(again)!, recursive: true);
+        }
+    }
 }
