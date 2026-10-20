@@ -77,7 +77,7 @@ Save sample (autosave of the owner's game, 51 zone files): `lock lvl` values spa
 - **XP** (`FUN_1408c62e0`, **Verified**): after each roll, stat 37 gains `k x map[37] x ((101 - stat) / 101)^2` with
   `k = 1.2` on success, 0.24 on failure. The lock level is passed but unused.
 - **Messages/sounds**: "Lockpicking (Chance {p}%)" on the bar, "Pick success!" / "Pick failed" floating text,
-  `Character_Unlock_Success`; `Character_Unlock_Fail` when the task ends without success.
+  `Character_Unlock_Success`. Wwise events: [audio](../audio.md#characters-footsteps-combat-voices).
 - **Target** (`Task_PickLock` slot 5): a building handle (a door resolves to its lock-owning object) or a **character**, meaning
   that character's cage (only when they are in a building prison). Shackles: the item handle, or a character, meaning their
   worn shackles. Self-targets are allowed: the caged character picks its own cage, a shackled one its own shackles (both
@@ -102,6 +102,9 @@ Same targets as picking; Task_CutLock / Task_BruteForceLock share the shackle ta
   The bar shows hardness x 10. Same crime rule as picking (2 for own-target / buildings, 7 for another character).
 - **Break** (`Task_BruteForceShackles` slot 2, **Observed**): instant; succeeds when effective strength x stat scale > 3 x hardness,
   else "I'm not strong enough to do that". Sets broken, "*Crunck*".
+- **Sounds** (**Verified**, strings and callers). Slot 1 of Task_PickLock (also Task_PickLock_Shackles), Task_CutShackles (also Task_CutLock) and Task_UnlockDoor posts the `Character_Unlock` loop on the character; Task_BruteForceShackles has no slot-1 sound.
+  `Character_Unlock_Success` comes from slot 2 when a roll, cut or break succeeds. Slot 3 (the task's end, success included) of Task_PickLock and Task_UnlockDoor posts `Character_Unlock_Fail`, which only stops the loop;
+  Task_CutShackles slot 3 only removes the progress bar, so what ends an interrupted cut's loop is **Unknown**. Task_CuffTarget (putting shackles on: "Restraining" bar, `medic` animation) posts no event.
 - **Bash door** (81/226/287, `Task_BashDoor`, update `FUN_140348c10`, **Observed**): needs a weapon (animals use their natural
   one); humans play `stonemine`, the blow lands at clip progress 0.6. Each update books Burglary (2) against the owner. A blow
   (door vfunc 62, `FUN_14029d690`): the attacker's damage packet, x0.25 for an animal (vfunc 0x248), then
