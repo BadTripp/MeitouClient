@@ -91,8 +91,10 @@ sealed partial class PlayerInterface
             {
                 var door = detail.Doors[0];
                 if (door.Broken) { status = "Broken"; bad = true; }
-                stats.Add(new("Open/Close:", door.Broken ? "The door is broken" : door.Open ? "The door is open" : "The door is closed", MainColour, door.Open && !door.Broken ? GoodColour : null));
-                stats.Add(new("Security:", $"{(door.Locked ? "Locked" : "Unlocked")} (lvl {door.Level.ToString(CultureInfo.InvariantCulture)})", MainColour, door.Locked ? null : GoodColour));
+                stats.Add(new("Open/Close:", door.Broken ? "The door is broken" : door.Open ? "The door is open" : "The door is closed", MainColour, door.Open && !door.Broken ? GoodColour : null,
+                    door.Broken ? "It will no longer close and needs to be repaired." : null));
+                stats.Add(new("Security:", $"{(door.Locked ? "Locked" : "Unlocked")} (lvl {door.Level.ToString(CultureInfo.InvariantCulture)})", MainColour, door.Locked ? null : GoodColour,
+                    door.Locked ? "The door is locked and will keep out intruders." : "The door is unlocked."));
             }
             if (own && Machine(focus.SiteId) is { } machine) AddMachineLines(machine, stats, ref status, ref bad);
             if (!own && (focus.PublicDay || focus.PublicNight))

@@ -8,7 +8,7 @@ using Silk.NET.Vulkan;
 namespace Meitou.Rendering.Ui;
 
 /// <summary>Native alpha-composited MyGUI atlas slices and styled native control frames.</summary>
-public sealed class UiPainter : IDisposable
+public sealed partial class UiPainter : IDisposable
 {
     readonly DebugOverlay overlay;
     readonly MyGuiResources resources;
@@ -231,24 +231,11 @@ public sealed class UiPainter : IDisposable
                 font.Target = overlay.Target;
                 scale = 1;
             }
-            else if (resources.Resources.TryGetValue(fontName, out var fontResource)
-                && (string?)fontResource.Attribute("type") == "ResourceTrueTypeFont")
+            else if (ResourceFont(fontName, c.TextScale ?? height / 1080f, minimumTextPixels) is { } resourceFont)
             {
-                string? Property(string key) => fontResource.Elements("Property").FirstOrDefault(p => (string?)p.Attribute("key") == key)?.Attribute("value")?.Value;
-                float Number(string key, float fallback) => float.TryParse(Property(key), System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out float number) && float.IsFinite(number) && number > 0 ? number : fallback;
-                if (Property("Source") is { } source && FontPath(source) is { } sourcePath)
-                {
-                    // TrueType resource sizes are points at the resource's DPI, resized as the original does on load. Bake at the resulting em pixel size.
-                    float resolution = Number("Resolution", 50);
-                    int resourcePixels = Math.Clamp((int)MathF.Round(Math.Max(minimumTextPixels,
-                        EffectiveFontSize(sourcePath, Number("Size", 20), resolution) * resolution / 72 * (c.TextScale ?? height / 1080f))), 6, 192);
-                    var key = (sourcePath, resourcePixels, Property("Antialias") == "false");
-                    if (!resourceFonts.TryGetValue(key, out var exact)) resourceFonts[key] = exact = DebugOverlay.FromUiFont(overlay.Gpu, sourcePath, resourcePixels, key.Item3);
-                    font = exact;
-                    font.Target = overlay.Target;
-                    scale = 1;
-                }
+                font = resourceFont;
+                font.Target = overlay.Target;
+                scale = 1;
             }
             if (minimumTextPixels > 0)
             {
