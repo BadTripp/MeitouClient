@@ -49,6 +49,7 @@ sealed partial class PlayerInterface
         foreach (var (id, file, modal) in FaithfulScreenFiles)
             faithfulScreens.Register(id, MyGuiReader.ReadLayout(resolve(file + ".layout") ?? throw new FileNotFoundException(file)), modal,
                 centreRoot: id is "new-game" or "save" or "load" or "file");
+        faithfulScreens.Follow("bag", "inventory");   // the bag window is married to the inventory, opened and closed by OPEN BAG only
         faithfulScreens.Activated += FaithfulAction;
         uiHost.Diagnostic += d => Console.Error.WriteLine($"ui        {d.Extension} {d.Operation}: {d.Error.Message}");
         uiRegistration = uiHost.Register(new PlayerUiExtension(ExecuteUiAction));

@@ -88,7 +88,8 @@ sealed partial class PlayerInterface
         else if (e.Screen == "trader" && e.Widget == "ArrangeButton") Say(new Meitou.Simulation.Trading.ArrangeStock { Tick = session.World.Tick });
         else if (e.Screen is "inventory" or "bag")
         {
-            if (e.Widget == "OpenBagButton") { faithfulScreens.Open("bag"); if (shownTrader.IsNone) PlaceBagWindow(); else PlaceTradeWindows(); }
+            if (e.Widget == "OpenBagButton" && faithfulScreens.IsOpen("bag")) faithfulScreens.Close("bag");
+            else if (e.Widget == "OpenBagButton") { faithfulScreens.Open("bag"); if (shownTrader.IsNone) PlaceBagWindow(); else PlaceTradeWindows(); }
             else if (e.Widget == "LimbsButton") faithfulScreens.Open("limbs");
             else if (e.Widget == "ArrangeButton" && Selected().FirstOrDefault() is { } lead) Say(new Meitou.Simulation.Items.ArrangeInventory(lead.Id) { Tick = session.World.Tick });
         }
@@ -187,6 +188,8 @@ sealed partial class PlayerInterface
         if (id == "dialogue") { AddDialogueChoices(controls); return; }
         if (id == "prospect") { AddProspectContent(controls); return; }
         if (id is "building" or "bench") { AddMachineContent(id, controls); return; }
+        // The bag window has no caption buttons (the vanilla screenshot): OPEN BAG closes it.
+        if (id == "bag") controls.RemoveAll(c => c.Action.StartsWith("mygui:close", StringComparison.Ordinal) || c.Action.StartsWith("mygui:pin", StringComparison.Ordinal));
         AddMapContent(id, controls);
         if (id == "overview") { AddResearchContent(controls); AddCraftContent(controls); AddAiContent(controls); AddSquadsContent(controls); }
         if (id == "trader") { ArrangeTraderWindow(controls); AddTraderContent(controls); return; }
