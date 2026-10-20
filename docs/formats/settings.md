@@ -188,7 +188,8 @@ the game calls `Root::restoreConfig` / `saveConfig` (**Verified**), which use th
 | `Blood`, `Decal Range`, `Decal Resolution` | Honoured by the game (read once at start from `settings.cfg`; restart to change): blood decals on the terrain, [blood-decals.md](../game/blood-decals.md). Not in the viewer |
 | `harpoonLimit` | Not implemented |
 | `generate distant towns` | Not honoured: towns without a baked mesh are drawn from their buildings' distant meshes |
-| `npc range`, `mouse speed *`, `invert *`, UI, audio, gameplay keys | Not applicable / not implemented |
+| `mouse speed pan`, `mouse speed tilt` | The game's Controls page has one "Camera rotation speed" slider (2 … 50, default 6) setting both; kept in `meitou.user.json`, `settings.cfg` not read |
+| `npc range`, `mouse speed horizontal` / `vertical`, `invert *`, UI, audio, gameplay keys | Not applicable / not implemented |
 
 ### Viewer: water reflection
 

@@ -20,6 +20,10 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
     readonly Slider inGameTransitionSpeed = new("In-game transition speed", SkyArrival.MinSpeed, SkyArrival.MaxSpeed,
         () => config.InGameTransitionSpeed, v => config.InGameTransitionSpeed = v, "0.00'x'");
     readonly Slider characterFlightTime = new("Character flight time", 0.5f, 6, () => config.CharacterFlightSeconds, v => config.CharacterFlightSeconds = v, "0.0' s'");
+    Slider? cameraRotateSpeed;
+    Slider CameraRotateSpeed => cameraRotateSpeed ??= new("Camera rotation speed", UserConfig.MinCameraRotateSpeed, UserConfig.MaxCameraRotateSpeed,
+        () => config.CameraRotateSpeed, v => { config.CameraRotateSpeed = MathF.Round(v * 2) / 2; CameraRotateSpeedChanged?.Invoke(config.CameraRotateSpeed); },
+        "0.#", Faithful: global::Meitou.Data.World.KenshiCamera.DefaultRotateSpeed);
     Slider[]? audioSliders;
     /// <summary>The seven audio sliders of the original's options (docs/formats/settings.md); each writes <see cref="UserConfig.Audio"/> and calls <see cref="AudioChanged"/>.</summary>
     Slider[] AudioSliders => audioSliders ??= [
@@ -82,6 +86,8 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
     public Action? OffscreenChanged { get; init; }
     /// <summary>The door auto-close switch changed (<see cref="UserConfig.DoorsCloseBehind"/>).</summary>
     public Action<bool>? DoorsCloseChanged { get; init; }
+    /// <summary>Applies a new camera rotation speed (<see cref="UserConfig.CameraRotateSpeed"/>) to the camera.</summary>
+    public Action<float>? CameraRotateSpeedChanged { get; init; }
     /// <summary>Called when an audio slider changes (the config holds the new values); the game applies them to the running sound.</summary>
     public Action? AudioChanged { get; init; }
     public bool Visible
@@ -162,6 +168,8 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
         if (page == 2)
             result.Add(new("Hardware mouse", "Use the Windows cursor instead of the game's drawn pointer (no hover pointers).",
                 Toggle: new("Hardware mouse", () => config.HardwareMouse, v => config.HardwareMouse = v)));
+        if (page == 3)
+            result.Add(new(CameraRotateSpeed.Label, "How fast the rotate and tilt keys and the mouse turn the camera (the game: 6).", Slider: CameraRotateSpeed));
         if (page == 3)
             foreach (var action in Enum.GetValues<InputAction>().Where(a => a != InputAction.Quit && a != InputAction.ToggleFps))
                 result.Add(new(ActionLabel(action), BindingHint(action), Binding: action));
@@ -454,6 +462,7 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
         config.Audio = new();
         AudioChanged?.Invoke();
         config.HardwareMouse = false;
+        CameraRotateSpeed.Set(global::Meitou.Data.World.KenshiCamera.DefaultRotateSpeed);
         config.HoverOutline = true;
         config.SelectionRings = true;
         config.LuckyrenMode = false;

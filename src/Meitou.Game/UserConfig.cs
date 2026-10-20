@@ -73,6 +73,10 @@ sealed class UserConfig
     public bool FixDoorBreak { get; set; } = true;
     public bool FixAmbienceSuffix { get; set; } = true;
     public bool FixWindStop { get; set; } = true;
+    /// <summary>The strategy camera's turn and tilt rate in degrees per second per unit of input (Controls settings): the original's
+    /// <c>mouse speed pan</c> / <c>mouse speed tilt</c> (slider 2 … 50, default 6), one value for both here.</summary>
+    public float CameraRotateSpeed { get; set; } = Meitou.Data.World.KenshiCamera.DefaultRotateSpeed;
+    public const float MinCameraRotateSpeed = 2, MaxCameraRotateSpeed = 50;
     /// <summary>The Windows cursor instead of the game's drawn pointer (the original's <c>hardware_mouse</c>, default off; Interface settings).</summary>
     public bool HardwareMouse { get; set; }
     /// <summary>Outline and tint the character under the cursor (Advanced settings; Meitou only, the game has none).</summary>
