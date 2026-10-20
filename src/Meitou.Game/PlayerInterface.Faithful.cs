@@ -88,8 +88,7 @@ sealed partial class PlayerInterface
         else if (e.Screen == "trader" && e.Widget == "ArrangeButton") Say(new Meitou.Simulation.Trading.ArrangeStock { Tick = session.World.Tick });
         else if (e.Screen is "inventory" or "bag")
         {
-            if (e.Widget == "OpenBagButton" && faithfulScreens.IsOpen("bag")) faithfulScreens.Close("bag");
-            else if (e.Widget == "OpenBagButton") { faithfulScreens.Open("bag"); if (shownTrader.IsNone) PlaceBagWindow(); else PlaceTradeWindows(); }
+            if (e.Widget == "OpenBagButton") ToggleBag();
             else if (e.Widget == "LimbsButton") faithfulScreens.Open("limbs");
             else if (e.Widget == "ArrangeButton" && Selected().FirstOrDefault() is { } lead) Say(new Meitou.Simulation.Items.ArrangeInventory(lead.Id) { Tick = session.World.Tick });
         }
