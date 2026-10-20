@@ -70,6 +70,9 @@ public sealed class FixtureRegistry
     /// <summary>The GAMESTATE_BUILDING records of a loaded save by building instance id (<see cref="Saving.SaveLoader"/>): a building registered later takes its lock and door state from them.</summary>
     public IReadOnlyDictionary<string, FcsRecord>? Saved { get; set; }
 
+    /// <summary>The item factory a loaded save's container contents are made with (<see cref="ContainerSave"/>); set by the loader.</summary>
+    public Meitou.Simulation.Items.ItemFactory? Items { get; set; }
+
     // ------------------------------------------------------------------ registration
 
     /// <summary>Registers the fixtures of a town's buildings (<see cref="TownSite.Buildings"/>) once, then binds the held characters whose <see cref="CharacterCold.InWhat"/> names one.</summary>
@@ -178,7 +181,7 @@ public sealed class FixtureRegistry
         {
             Id = id, Building = building, Kind = kind, RecordId = record.StringId, Site = site, Owner = owner, Position = at, Yaw = yaw,
             Restrains = functionality?.GetBool("restrains movement") ?? false, UseRange = functionality is null ? 25 : FloatOf(functionality, "use range", 25),
-            Contents = kind == FixtureKind.Container && storageWidth > 0 && storageHeight > 0 ? new Items.Inventory(storageWidth, storageHeight) : null,
+            Contents = kind == FixtureKind.Container && storageWidth > 0 && storageHeight > 0 ? new Meitou.Simulation.Items.Inventory(storageWidth, storageHeight) : null,
             Lock = !locked ? null : new LockState { Level = RollLevel(world.Seed, id, faction, IntOf(record, "lock level bonus"), door: false), Hardness = FloatOf(record, "hardness") },
         };
     }
@@ -625,11 +628,13 @@ public sealed class FixtureRegistry
     /// <c>locked</c> only when the saved <c>lock lvl</c> is above 0; doors by suffix i: <c>state</c>, <c>doa</c>, <c>broken</c>, <c>gatecode</c>, <c>wants lock</c>, <c>lock lvl</c>,
     /// <c>locked</c>, <c>hardness</c>. Interior fixtures (whose save ids are not mapped) keep their rolls but count as restored, apart from Meitou's own <c>meitou lock</c> key (see <see cref="InteriorKey"/>).
     /// </summary>
-    static void Restore(FcsRecord state, string building, List<Fixture> list)
+    void Restore(FcsRecord state, string building, List<Fixture> list)
     {
         foreach (var f in list)
         {
             f.Restored = true;
+            if (f.Contents is { } grid && Items is { } factory && ContainerSave.KeyOf(f, building) is { } contentsKey && state.Strings.TryGetValue(contentsKey, out var saved))
+                ContainerSave.Read(saved, grid, factory);
             if (f.Kind == FixtureKind.Door)
             {
                 string i = f.DoorIndex.ToString(CultureInfo.InvariantCulture);
@@ -675,6 +680,11 @@ public sealed class FixtureRegistry
         if (!byBuilding.TryGetValue(buildingInstance, out var list)) return false;
         foreach (var f in list)
         {
+            if (f.Contents is { } grid && ContainerSave.KeyOf(f, buildingInstance) is { } contentsKey)
+            {
+                state.Strings.Remove(contentsKey);
+                if (ContainerSave.Write(grid) is { } text) state.Strings[contentsKey] = text;
+            }
             if (f.Lock is not { } l) continue;
             if (f.Kind == FixtureKind.Door)
             {

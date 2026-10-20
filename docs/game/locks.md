@@ -182,7 +182,9 @@ Interior items with `has inventory` (storage size from the record, 18 x 18 by de
 **Engine choices**, not Verified against the original: they start empty (what the original stocks them with is **Unknown**); a right click with a selection walks the nearest
 character to one (`OpenContainerOrder`, reach 20) and opens a storage window beside the inventory, closing when the opener walks 1.5 x the reach away; a locked one refuses
 ("It's locked."; pick it first); a building shop's containers refuse too, their stock being the shop's one merged inventory (`Shop.ForBuilding`). Items move with
-`PutInMachine` / `TakeFromMachine` addressed by the fixture id. Contents are **not saved** (the interior ids are not mapped to the original's). Theft rolls
+`PutInMachine` / `TakeFromMachine` addressed by the fixture id. Contents are saved in Meitou's own GAMESTATE_BUILDING string `meitou container <layout index>` (the index of the fixture id; JSON list of items with cell, quality, level,
+material, maker, charge and a bag's contents; absent while empty; `Locks/ContainerSave.cs`), the original's interior ids being unmapped. Like the locks, only into building states the
+save already holds (zones visited), and the original ignores the key (**Unverified**). A lock on a stored shackle and prosthetic wear are not kept. Theft rolls
 ([carry-loot](carry-loot.md)) for taking from another faction's container are not modelled.
 
 ## Save keys
