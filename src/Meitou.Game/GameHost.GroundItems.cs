@@ -18,6 +18,7 @@ sealed partial class GameHost
     /// <summary>Once a frame with <see cref="UpdateBuildings"/>, after a new world's runtime placements were cleared.</summary>
     void UpdateGroundItems(WorldSnapshot snapshot)
     {
+        session.World.GroundItems.Limit = config.GroundItemLimit;   // the setting, applied at the next drop
         if (snapshot.GroundItemsRevision == groundRevision) return;
         groundRevision = snapshot.GroundItemsRevision;
         var current = snapshot.GroundItems.Select(g => g.Id).ToHashSet();

@@ -44,6 +44,10 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
         config.AttackSlots = Math.Clamp((int)MathF.Round(v), 1, 5);
         AttackSlotsChanged?.Invoke(config.AttackSlots);
     }, "0", Faithful: UserConfig.FaithfulAttackSlots, Meitou: UserConfig.MeitouAttackSlots);
+    Slider? groundItemsSlider;
+    Slider GroundItemsSlider => groundItemsSlider ??= new("Dropped items kept", 16, global::Meitou.Simulation.Items.GroundItems.MaxLimit, () => config.GroundItemLimit,
+        v => config.GroundItemLimit = Math.Clamp((int)MathF.Round(v), 1, global::Meitou.Simulation.Items.GroundItems.MaxLimit), "0", Logarithmic: true,
+        Meitou: global::Meitou.Simulation.Items.GroundItems.DefaultLimit);
     readonly List<Hit> hits = [];
     readonly List<UiControl> controls = [];
     readonly SettingsMenuArt art = new();
@@ -215,6 +219,8 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
             result.Add(new("luckyren Mode", "A character that takes a fatal hit explodes, covers everything around in blood and sends bones flying everywhere. Its gear falls to the ground around the spot.",
                 Toggle: new("luckyren Mode", () => config.LuckyrenMode, v => config.LuckyrenMode = v, Remaster: true, OnOff: true),
                 Picture: SettingsMenuArt.LuckyrenImage));
+            result.Add(new(GroundItemsSlider.Label, "How many items dropped during play (severed limbs, luckyren Mode's gear) stay on the ground; past it the oldest disappears. "
+                + "Items that were on the ground in the save always stay.", Slider: GroundItemsSlider));
             result.Add(new("Main menu scene transitions", "Sky flight to/from the main menu (Meitou UI).",
                 Toggle: new("Main menu scene transitions", () => config.MainMenuTransitions, v => config.MainMenuTransitions = v)));
             result.Add(new(mainMenuTransitionSpeed.Label, "Higher values make the camera ascend and descend faster.", Slider: mainMenuTransitionSpeed));
@@ -451,6 +457,7 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
         config.HoverOutline = true;
         config.SelectionRings = true;
         config.LuckyrenMode = false;
+        config.GroundItemLimit = global::Meitou.Simulation.Items.GroundItems.DefaultLimit;
         player.SetUiMode(UiMode.Meitou);
         player.SpeedUnit = config.SpeedUnit = SpeedUnit.Mph;
         player.Floaters = config.Floaters = FloaterMode.Simple;

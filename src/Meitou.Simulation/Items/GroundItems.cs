@@ -25,8 +25,16 @@ public sealed record GroundItem(int Id, ItemInstance Item, Vector3 Position, Qua
 /// </summary>
 public sealed class GroundItems
 {
-    /// <summary>How many items dropped in play (not read from the save) lie in the world at most (an engine choice; the original's limbs carry a <c>timeout</c>, meaning <b>Unknown</b>).</summary>
-    public const int Limit = 64;
+    /// <summary>The default and largest <see cref="Limit"/>.</summary>
+    public const int DefaultLimit = 64, MaxLimit = 1024;
+
+    int limit = DefaultLimit;
+
+    /// <summary>
+    /// How many items dropped in play (not read from the save) lie in the world at most (an engine choice; the original's limbs carry a <c>timeout</c>, meaning
+    /// <b>Unknown</b>): 1 to <see cref="MaxLimit"/>, the host's "Dropped items kept" setting. Lowered, the oldest beyond it go at the next drop.
+    /// </summary>
+    public int Limit { get => limit; set => limit = Math.Clamp(value, 1, MaxLimit); }
 
     readonly List<GroundItem> items = [];
     int nextId = 1;
@@ -40,7 +48,7 @@ public sealed class GroundItems
     public void Drop(ItemInstance item, Vector3 position, float yaw)
     {
         items.Add(new GroundItem(nextId++, item, position, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw)));
-        if (items.Count(i => i.Item.Saved is null) > Limit) items.RemoveAt(items.FindIndex(i => i.Item.Saved is null));
+        for (int extra = items.Count(i => i.Item.Saved is null) - limit; extra > 0; extra--) items.RemoveAt(items.FindIndex(i => i.Item.Saved is null));
         Revision++;
     }
 

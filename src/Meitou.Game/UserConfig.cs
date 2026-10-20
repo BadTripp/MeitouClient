@@ -79,8 +79,10 @@ sealed class UserConfig
     public bool HoverOutline { get; set; } = true;
     /// <summary>The green ring under each selected character (Advanced settings; default on).</summary>
     public bool SelectionRings { get; set; } = true;
-    /// <summary>A character that takes a fatal hit explodes, covers everything around in blood and sends bones flying (Advanced settings; Meitou only, off by default). Stored only: nothing reads it yet.</summary>
+    /// <summary>A character that takes a fatal hit explodes, covers everything around in blood and sends bones flying (Advanced settings; Meitou only, off by default; docs/game/luckyren.md).</summary>
     public bool LuckyrenMode { get; set; }
+    /// <summary>How many items dropped in play stay on the ground before the oldest goes (Advanced settings; <see cref="Meitou.Simulation.Items.GroundItems.Limit"/>).</summary>
+    public int GroundItemLimit { get; set; } = Meitou.Simulation.Items.GroundItems.DefaultLimit;
     /// <summary>The audio sliders (Audio settings): the original's six volumes and the music frequency; null until first used, then taken from the install's settings.cfg.</summary>
     public Meitou.Audio.AudioSettings? Audio { get; set; }
     /// <summary>Worker threads of the simulation; null = half the cores.</summary>

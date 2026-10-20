@@ -295,7 +295,7 @@ fitted and removed by dragging them onto or off the limbs window's slots (`MoveI
 `PlayerSystem.MoveLimb`, rules in [character-stats.md](game/character-stats.md)).
 
 Ground items: `World.GroundItems`, loose items: the save's (zone `1-itemlist`, read and written by `Saving/GroundItemSave`,
-[save.md](formats/save.md#zone-files)) and the severed limbs combat drops; at most 64 dropped in play (the oldest of those goes; read ones
+[save.md](formats/save.md#zone-files)) and the severed limbs combat drops; at most `GroundItems.Limit` dropped in play (default 64, up to 1024 by the Advanced setting "Dropped items kept"; the oldest of those goes; read ones
 are not capped); published with a revision. A dropped limb lies flat 5 units to its side of the character, random yaw (the original drops it
 at the bone and lets physics settle it); a read item keeps its saved rotation, drawn by its yaw. The host adds each as a runtime world-object
 placement of its record's `ground mesh` / `mesh` (`GameHost.GroundItems`, `WorldObjectLayout.Item`). A right click on one (within 24 px of its
