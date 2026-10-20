@@ -201,7 +201,7 @@ static partial class TerrainShaders
         uniform float uBloodCellSize;
         uniform vec4 uBloodCells[8];   // column, row, layer
 
-        vec4 P(int biome), int k) { return texelFetch(uParams, ivec2(k, biome), 0); }
+        vec4 P(int biome, int k) { return texelFetch(uParams, ivec2(k, biome), 0); }
 
         struct Surface { vec4 albedo; vec4 normal; float absorb; };
 
