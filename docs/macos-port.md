@@ -55,6 +55,16 @@ resume after restart. Final asset tree: 12 GB, 15,692 files, depot root == insta
 Fixed by `DYLD_LIBRARY_PATH` (above). No code change needed. A `meitou-run.sh` wrapper was made
 so the tester does not have to remember it (see §6).
 
+A launch gotcha that cost a full debugging round: **SIP-restricted launchers silently strip
+`DYLD_LIBRARY_PATH`** — wrapping the game in `nohup … &` (the habit for background runs) produces
+a process in which the variable is empty. GLFW then cannot find the Vulkan loader, and Silk.NET
+dies with `Attempted to initialize a Vulkan window using GLFW, which doesn't support Vulkan on
+this computer.` — a message that reads like a missing OS feature but is only the lost environment.
+GLFW 3.4 supports Vulkan on macOS through MoltenVK; a plain launch (`meitou-run.sh`, a shell
+function, or a bare `cmd &`) opens the window. The same strip invalidates probes of
+`glfwVulkanSupported` made from `/usr/bin/python3` (reports 0 even with the variable set); probe
+from the app's own process instead.
+
 ### 2.2 `vkCreateInstance` → `ErrorIncompatibleDriver` (headless, windowless!)
 The macOS Vulkan loader hides portability drivers unless the instance opts in:
 `VK_KHR_portability_enumeration` + `VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR`.
