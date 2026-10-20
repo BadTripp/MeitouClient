@@ -381,6 +381,28 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
                 table.Cold(slot)!.DrawnWeapon = WeaponKinds.None;
                 return;
         }
+        if (mind.Resume)
+        {
+            // Back from its town's time unloaded: it is already where the plan's walk ends (docs/simulation.md "Off-screen tier", residents' schedule).
+            mind.Resume = false;
+            if (mind.Step is TaskType.MOVE_ON_FREE_WILL or TaskType.MOVE_ON_FREE_WILL_FAST && !mind.Plan[0].Target.IsNone)
+            {
+                var end = mind.Plan[0].Target.Position;
+                // On a ring round the spot by member (engine choice): members sharing a bed or node are not put on one point, where separation would throw them off it.
+                float angle = mind.MemberIndex * 2.39996f;
+                end += new Vector3(MathF.Sin(angle), 0, MathF.Cos(angle)) * ResumeRing;
+                var walk = world.Walkability;
+                var at = !float.IsNaN(end.Y) && walk.FloorNear(end.X, end.Z, end.Y, FloorSlack) is { } floor ? floor
+                    : new Vector3(end.X, float.IsNaN(end.Y) ? walk.GroundHeight(end.X, end.Z) : end.Y, end.Z);
+                // Only onto walkable ground: a spot it could not walk to either is left to the walk and its give-up rule.
+                if (walk.IsWalkable(at.X, at.Z, at.Y))
+                {
+                    MovementSystem.Stop(table, slot);
+                    n.Position = at;
+                    n.Task = (byte)CharacterTask.Idle;
+                }
+            }
+        }
         switch (behaviour)
         {
             case AiBehaviour.Mill:
@@ -575,6 +597,9 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
     /// <summary>How far above or below a spot's floor a character may stand and still be at it (units).</summary>
     const float FloorSlack = 6;
 
+    /// <summary>The radius of the ring a resident back from its town's time unloaded is put on round its spot (units; half a human's separation radius).</summary>
+    const float ResumeRing = 4;
+
     /// <summary>Switches to a standing task (wander, follow, idle, rest), dropping a walk in progress; nothing when it is doing it already.</summary>
     static void Become(CharacterTable table, int slot, CharacterTask task)
     {
@@ -638,10 +663,14 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
                 if (cold.Ai is null)
                 {
                     var p = table.Next[s].Position;
-                    cold.Ai = new AiMind { Squad = squad, MemberIndex = k, Post = new Vector2(p.X, p.Z), RaceGoals = cold.Race is { } race ? data.Ai.RaceGoals(race.StringId) : [] };
+                    cold.Ai = new AiMind
+                    {
+                        Squad = squad, MemberIndex = k, Post = new Vector2(p.X, p.Z), RaceGoals = cold.Race is { } race ? data.Ai.RaceGoals(race.StringId) : [], Resume = squad.Resume,
+                    };
                 }
                 if (cold.Ai.Goal is { } g) board.Crowd[g.Task.Type] = board.Crowd.GetValueOrDefault(g.Task.Type) + 1;
             }
+            squad.Resume = false;
             ClaimTurrets(world, board, squad);
             ClaimSeats(world, board, squad);
         }

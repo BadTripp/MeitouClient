@@ -96,6 +96,8 @@ public sealed class StoredSquad
     /// <summary>The platoon position the members' places belong to (a stand-in that travelled since takes them along), and the tick they were stored at.</summary>
     public Vector2 Anchor { get; set; }
     public long StoredTick { get; set; }
+    /// <summary>The game hours (<see cref="World.GameHours"/>) they were stored at (0 for a save's: not saved), for the residents' schedule.</summary>
+    public double StoredHours { get; set; }
     /// <summary>The characters while the platoon is not in the world (empty while it is).</summary>
     public List<StoredMember> Members { get; } = [];
 }

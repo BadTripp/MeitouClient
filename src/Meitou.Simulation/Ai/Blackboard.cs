@@ -281,6 +281,8 @@ public sealed class AiMind
     public bool SeatUnreachable { get; set; }
     /// <summary>The sitting clip of the chair it sits on (<see cref="HomeSpot.SitClip"/>), for <see cref="AnimationSystem"/>; null when not seated. Follows from the goal and seat, so not hashed.</summary>
     public string? SitClip { get; set; }
+    /// <summary>Its first think puts it where its plan's walk ends (<see cref="Squad.Resume"/>: back from its town's time unloaded); cleared by that think.</summary>
+    public bool Resume { get; set; }
     /// <summary>Whether its lists hold any combat goal at all (else the stance stays the old default).</summary>
     public bool HasCombatGoals { get; set; }
     /// <summary>The role list and hour <see cref="Stance"/> was worked out for (a cache; the stance itself is hashed).</summary>
@@ -303,5 +305,6 @@ public sealed class AiMind
         hasher.Add(SeatUnreachable);
         hasher.Add(CommitUntil);
         hasher.Add(Target ?? new Vector3(float.NaN));
+        if (Resume) hasher.Add(0x52657375);
     }
 }

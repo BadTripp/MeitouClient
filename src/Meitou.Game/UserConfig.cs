@@ -66,6 +66,8 @@ sealed class UserConfig
     public bool CampaignAncestorsOnce { get; set; } = true;
     /// <summary>Wild animals and homeless squads keep their characters while their area is unloaded (Advanced settings; Faithful off: removed and made anew, as the game does).</summary>
     public bool KeepWild { get; set; } = true;
+    /// <summary>Town residents back after an hour or more unloaded are where their daily schedule puts them (Advanced settings; Faithful off: where they stood, as the game does).</summary>
+    public bool ResidentSchedule { get; set; } = true;
     /// <summary>Doors a walker opened close behind it after 5 s (Advanced settings; Faithful off: they stay open, as in the game; docs/simulation.md "Cages, beds and locks").</summary>
     public bool DoorsCloseBehind { get; set; } = true;
     /// <summary>Fixes of the game's own bugs (Fixes settings; on: fixed, off: as the game does; docs/audio.md): doors and gates sound when they break,
