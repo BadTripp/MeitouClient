@@ -1251,7 +1251,7 @@ static class WorldFrame
         gpu.Shadow?.SetFogHide(gpu.FogVolumes?.ShadowHideDistance, gpu.FogVolumes?.ShadowHidePending == true);   // or where the placed fog block the eye is in hides the whole view
         if (gpu.Shadow is not null) { gpu.Shadow.Temporal = gpu.Post?.Temporal == true; DrawShadows(gpu, camera, render, light, rw, rh, gpu.Sky.ShadowSunHeight); }
         StageClock.Lap(12);
-        gpu.Lamps?.Update(eye, gpu.Objects);
+        gpu.Lamps?.Update(eye, gpu.Objects, WorldLights.DaylightFactor(hour, scene.Clock.Sunrise, scene.Clock.Sunset));
         // The traced scene of the global illumination: its acceleration structures for this eye (docs/render-gi.md).
         if (gpu.Probes is { } probesActive) probesActive.Active = gpu.GiActive;
         if (gpu.Gi is { } gi && gpu.GiActive)

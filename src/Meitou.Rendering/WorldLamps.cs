@@ -25,6 +25,7 @@ internal sealed class WorldLamps : IDisposable
     // The lamps binned each frame: the world's (once loaded) and those of buildings placed during play, by building id.
     WorldLight[]? world, lamps;
     readonly Dictionary<string, WorldLight[]> runtime = new(StringComparer.Ordinal);
+    readonly Dictionary<string, float> runtimePower = new(StringComparer.Ordinal);
     bool runtimeChanged;
     readonly Texture[] cells, index, data;
     readonly Sampler nearest;
@@ -84,16 +85,33 @@ internal sealed class WorldLamps : IDisposable
         runtimeChanged = true;
     }
 
-    public void RemoveRuntime(string building) => runtimeChanged |= runtime.Remove(building);
+    /// <summary>
+    /// The factor on a placed building's lamps (docs/formats/lights.md "When a light is on": the game's per-update power scale, the building's power share);
+    /// at 0 or below they are hidden. 1 until set.
+    /// </summary>
+    public void SetRuntimePower(string building, float factor) => runtimePower[building] = factor;
+
+    public void RemoveRuntime(string building)
+    {
+        runtimeChanged |= runtime.Remove(building);
+        runtimePower.Remove(building);
+    }
 
     public void ClearRuntime()
     {
         runtimeChanged |= runtime.Count > 0;
         runtime.Clear();
+        runtimePower.Clear();
     }
 
-    /// <summary>Bins the lamps around <paramref name="eye"/> for this frame (the pulsing and shimmering ones at their power now).</summary>
-    public void Update(Vector3 eye, WorldObjectRenderer? objects = null)
+    /// <summary>The power factor of lamp <paramref name="i"/>: 1 for the world's, the building's factor for a placed building's (its placement id is the building id).</summary>
+    float PowerFactor(int i) => i < world!.Length ? 1 : runtimePower.GetValueOrDefault(lamps![i].PlacementId, 1);
+
+    /// <summary>
+    /// Bins the lamps around <paramref name="eye"/> for this frame (the pulsing and shimmering ones at their power now). <paramref name="daylight"/> is the game's daylight
+    /// factor (<see cref="WorldLights.DaylightFactor"/>): night-only lamps are left out above <see cref="WorldLights.NightDaylightLimit"/>.
+    /// </summary>
+    public void Update(Vector3 eye, WorldObjectRenderer? objects = null, float daylight = 0)
     {
         slot = ctx.Frame.Slot;
         grid = default;
@@ -122,6 +140,7 @@ internal sealed class WorldLamps : IDisposable
         {
             var l = lamps[i];
             if (l.Position.X + l.Radius < x0 || l.Position.X - l.Radius > x1 || l.Position.Z + l.Radius < z0 || l.Position.Z - l.Radius > z1) continue;
+            if (!WorldLights.IsLit(l, daylight) || PowerFactor(i) <= 0) continue;
             var room = l.Interior ? objects?.InteriorFor(l.PlacementId) : null;
             // An unloaded or unrepresentable room must not turn its lights into unbounded outdoor lamps.
             if (l.Interior && (room is null || room.Footprint.Length is < 3 or > MaxRoomEdges)) continue;
@@ -136,7 +155,7 @@ internal sealed class WorldLamps : IDisposable
         {
             var (lamp, room) = near[k];
             var l = lamps[lamp];
-            float power = l.Intensity * WorldLights.EffectFactor(l.Effect, t);
+            float power = l.Intensity * WorldLights.EffectFactor(l.Effect, t) * PowerFactor(lamp);
             float inner = MathF.Min(l.InnerAngle, l.OuterAngle), outer = MathF.Max(l.InnerAngle, l.OuterAngle);
             int row = k * DataWidth;
             dataValues[row] = new Vector4(l.Position, l.Radius);

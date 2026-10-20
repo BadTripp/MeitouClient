@@ -504,5 +504,5 @@ storage` (function 2); Large Barrels also hold Water.
 - How often Building slot 28 resets the builder counter, the work distance of builders, which storages
   `Task_EmptyMachine_BuildMats` fetches from, and what `FUN_14025c6d0` (holding dismantle work) tests.
 - Event types of the queue at `DAT_1421346d8` other than 8 (research progress) and 11 (build work).
-- The wind generator's animation value (its output share), and what `vfunc_0x520` (a consumer counted as active) tests.
+- The wind generator's animation value (its output share). `vfunc_0x520` (a consumer counted as active): 1 for every class but `LightBuilding`, whose answer is in [lights](../formats/lights.md#when-a-light-is-on).
 - Option slider defaults; the third value of reference triples; the record field of `BuildingClassType`.

@@ -39,6 +39,11 @@ sealed partial class GameHost
             DiffBuildings(snapshot);
             buildingsRevision = snapshot.BuildingsRevision;
         }
+        // A lit building's lamps burn at its power share (granted / demand, 1 for one that draws nothing): dark without supply (docs/formats/lights.md "When a light is on").
+        if (gpu.Lamps is { } lamps && litBuildings.Count > 0)
+            foreach (var m in snapshot.Machines)
+                if (m.Power is { Kind: Meitou.Simulation.Production.PowerKind.Consumer } pw && litBuildings.Contains(m.Site))
+                    lamps.SetRuntimePower(m.Site, pw.Demand > 0 ? pw.Granted / pw.Demand : 1);
         UpdateGroundItems(snapshot);
         UpdateDoors();
         UpdateFarms(snapshot);

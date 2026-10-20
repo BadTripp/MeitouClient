@@ -78,8 +78,8 @@ public static class WorldLights
     /// <summary>The light pass draws a night-only light while the daylight factor is at most this.</summary>
     public const float NightDaylightLimit = 0.1f;
 
-    /// <summary>Hours over which the daylight factor ramps at sunrise and at sunset (1/12 hour).</summary>
-    public const float DaylightRampHours = 1f / 12;
+    /// <summary>Hours over which the daylight factor ramps at sunrise and at sunset: the exe's 1/12 is a fraction of the day (<c>GameClock.RampHours</c>).</summary>
+    public const float DaylightRampHours = 2;
 
     /// <summary>The lights of every placed building of the world. Destroyed buildings give none (Unknown in the game).</summary>
     /// <param name="layouts">Building layouts (from <c>interiors.level</c>) for the lights of exterior/interior layout objects; null skips them.</param>
@@ -140,7 +140,7 @@ public static class WorldLights
             light.GetFloat("outer", 40) * (MathF.PI / 180),
             light.GetFloat("falloff", 1),
             (WorldLightEffect)Math.Clamp(light.GetInt("effect"), 0, 3),
-            p.Owner.GetInt("function") == LightFunction ? WorldLightRule.Night : WorldLightRule.WhenBuildingOn,
+            p.Function == LightFunction ? WorldLightRule.Night : WorldLightRule.WhenBuildingOn,
             interior,
             p.Holder.Type == FcsRecordType.BUILDING_PART ? p.Holder.GetInt("building floor") : 0,
             light.StringId,
@@ -193,7 +193,7 @@ public static class WorldLights
 
     /// <summary>
     /// The game's daylight factor at <paramref name="hour"/>: 0 outside [sunrise, sunset], 1 inside, ramping linearly over
-    /// <see cref="DaylightRampHours"/> after sunrise and before sunset (Observed that the bounds are the CONSTANTS <c>sunrise</c>/<c>sunset</c>).
+    /// <see cref="DaylightRampHours"/> after sunrise and before sunset (Observed, <c>FUN_14066cb50</c>; the bounds are the CONSTANTS <c>sunrise</c>/<c>sunset</c>).
     /// </summary>
     public static float DaylightFactor(float hour, float sunrise, float sunset)
     {
