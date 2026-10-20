@@ -230,6 +230,8 @@ public sealed class CharacterCold
     public float BuildBar { get; set; }
     /// <summary>The building the <see cref="CharacterTask.Operate"/> task works (<see cref="Construction.BuildSite.Id"/>; null: none). Serial phases only. Hashed only while set.</summary>
     public string? OperateSite { get; set; }
+    /// <summary>The progress (0 to 1) of the <see cref="CharacterTask.Prospect"/> task (null: not prospecting). Serial phases only; not saved. Hashed only while set.</summary>
+    public float? Prospecting { get; set; }
     /// <summary>The storage an operator walks to, to store its machine's output or fetch an input (<see cref="Production.ProductionSystem"/> "Hauling"; null: at its machine). Not saved. Hashed only while set.</summary>
     public string? HaulSite { get; set; }
     /// <summary>The ITEM a hauling operator fetches from <see cref="HaulSite"/>; null: it stores what it carries.</summary>
@@ -477,6 +479,7 @@ public sealed class CharacterTable
             // A builder's site, bar and the task it goes back to add to the hash only while it works one, so worlds without sites hash as before.
             if (k.BuildSite is { } site) { hasher.Add(0x4275696C); hasher.Add(Rng.StableHash(site)); hasher.Add(k.BuildBar); hasher.Add((int)k.ResumeTask); }
             if (k.OperateSite is { } machine) { hasher.Add(0x4F706572); hasher.Add(Rng.StableHash(machine)); }
+            if (k.Prospecting is { } prospected) { hasher.Add(0x50726F73); hasher.Add(prospected); }
             if (k.HaulSite is { } haul) { hasher.Add(0x4861756C); hasher.Add(Rng.StableHash(haul)); hasher.Add(Rng.StableHash(k.HaulFetch ?? "")); }
             if (k.HaulTo is { } haulTo) hasher.Add(Rng.StableHash(haulTo));
             if (k.Implicit is { } implicitJob) { hasher.Add(0x496D706C); hasher.Add((int)implicitJob); hasher.Add((int)k.ResumeTask); }

@@ -83,6 +83,7 @@ sealed partial class PlayerInterface
         else if (e.Screen == "stats" && e.Action.StartsWith("stat:", StringComparison.Ordinal)) selectedStat = e.Action[5..];
         else if (e.Screen == "build") BuildAction(e);
         else if (e.Screen == "dialogue") DialogueAction(e);
+        else if (e.Screen == "prospect") ProspectScreenAction(e);
         else if (e.Screen == "overview") { MapAction(e.Widget); ResearchAction(e); CraftAction(e); AiAction(e); SquadsAction(e); }
         else if (e.Screen is "building" or "bench") MachineAction(e);
         else if (e.Screen == "trader" && e.Widget == "ArrangeButton") Say(new Meitou.Simulation.Trading.ArrangeStock { Tick = session.World.Tick });
@@ -104,6 +105,7 @@ sealed partial class PlayerInterface
         if (id == "file") { BindFileDialog(b); return b; }
         else if (id == "trader") BindTraderScreen(b);
         else if (id == "dialogue") BindDialogueScreen(b);
+        else if (id == "prospect") BindProspectScreen(b);
         else if (id == "build") BindBuildScreen(b);
         else if (id is "building" or "bench") BindMachineScreen(id, b);
         else if (id is "inventory" or "stats" or "bag" or "limbs")
@@ -181,6 +183,7 @@ sealed partial class PlayerInterface
         if (id == "editor") { AddEditorContent(controls); return; }
         if (id == "build") { AddBuildContent(controls); return; }
         if (id == "dialogue") { AddDialogueChoices(controls); return; }
+        if (id == "prospect") { AddProspectContent(controls); return; }
         if (id is "building" or "bench") { AddMachineContent(id, controls); return; }
         AddMapContent(id, controls);
         if (id == "overview") { AddResearchContent(controls); AddCraftContent(controls); AddAiContent(controls); AddSquadsContent(controls); }
@@ -204,7 +207,7 @@ sealed partial class PlayerInterface
     readonly List<string> uiMessages = [];
     /// <summary>
     /// The orders panel's toggles by the words in their widget names (the layout names only <c>OrdersChaseButton</c>, <c>OrdersMedicButton</c> and <c>OrdersRescueButton</c>
-    /// for certain, docs/game/ui-screens.md section 4; the rest are matched by the button's word, so a differently spelt name still binds). Prospect has no backend.
+    /// for certain, docs/game/ui-screens.md section 4; the rest are matched by the button's word, so a differently spelt name still binds). Prospect is its own action (PlayerInterface.Prospecting.cs).
     /// </summary>
     static readonly (string Word, CharacterOrders Order)[] OrderWords =
     [

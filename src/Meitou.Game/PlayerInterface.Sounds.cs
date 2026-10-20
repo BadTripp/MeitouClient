@@ -87,9 +87,9 @@ sealed partial class PlayerInterface
         if (speedNow > 0) soundSpeed = speedNow;
         speedSounded = false;
 
-        // A blueprint read or a building unlocked another way: "Research complete" (140834550). The first look only takes the baseline.
+        // A research finished (also one that unlocks nothing) or a blueprint read: "Research complete" (140834550). The first look only takes the baseline.
         if (!ReferenceEquals(soundWorld, session.World)) soundUnlocked = -1;
-        int unlocked = session.CurrentSnapshot.UnlockedBuildings.Count;
+        int unlocked = session.CurrentSnapshot.UnlockedBuildings.Count + session.CurrentSnapshot.Research.Finished;
         if (soundUnlocked >= 0 && unlocked > soundUnlocked) Sound("Notifications", "Notifications", "Thing_Complete");
         soundUnlocked = unlocked;
 
@@ -149,6 +149,8 @@ sealed partial class PlayerInterface
         {
             case "title" or "menu" or "new-game" or "advanced" or "save" or "load" or "message" or "file": Sound("General_Click"); break;
             case "inventory" or "bag" or "trader": if (e.Widget == "ArrangeButton") Sound("General_Click"); break;
+            // A pick in the research type list (FUN_14049b5e0): Research_Tabs is set to the item's text, the category; the same row again is no change.
+            case "overview": if (e is { Widget: "ResearchTypeList", Action: "select" } && e.Text != researchCategory) Sound("Research_Tab", "Research_Tabs", e.Text); break;
             case "build":
                 if (e.Widget is "CategoriesList" or "BuildingsList" or "BuldingTypePrevButton" or "BuldingTypeNextButton") Sound("Building_Navigate");
                 break;

@@ -183,6 +183,7 @@ public sealed partial class ProductionSystem : ITickSystem
                     }
                     break;
                 }
+                case ProspectOrder prospect: ProspectBegin(world, prospect); break;
                 case AddJob add: AddJobs(world, add); break;
                 case RemoveJob remove: RemoveJobAt(world, remove); break;
                 case MoveJob move: MoveJobTo(world, move); break;
@@ -342,6 +343,7 @@ public sealed partial class ProductionSystem : ITickSystem
 
     public void SlowWorld(World world)
     {
+        ProspectStep(world);
         Sync(world);
         var research = world.Research;
         research.Rate = 0;
@@ -714,7 +716,7 @@ public sealed partial class ProductionSystem : ITickSystem
                 Description = r.Description,
                 Cost = state.Paid.Contains(r.Id, StringComparer.Ordinal) ? [] : [.. r.CostAt(state.Times(r.Id)).Select(c => (items.Info(c.Item)?.Name ?? c.Item, c.Count))],
             }).ToArray();
-        return publishedResearch = new ResearchSnapshot(state.TechLevel, state.BenchLevel, queue, state.Rate, available);
+        return publishedResearch = new ResearchSnapshot(state.TechLevel, state.BenchLevel, queue, state.Rate, available) { Finished = state.Completed.Count };
     }
 
     // ------------------------------------------------------------------ items in and out

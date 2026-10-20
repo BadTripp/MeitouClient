@@ -118,6 +118,12 @@ one of an outstanding item), 51 `buildingHasBuildingMaterials` (`FUN_1405a39c0`:
 when the building is gone, the site stalls (back to the planner) or it completes. Work, delivery, auto-job scoring and
 dismantle: [buildings-production](buildings-production.md#construction-tick).
 
+## Prospecting
+
+**Verified** (`Task_Prospecting` vtable `1416bf310`: init `140351c90`, update `140002f04`'s target; the HUD button `FUN_140721800`). Order 150, flags 0x41, condition `!me swim`. It is a `ProgressBarTask` (bar caption "Prospecting"). Each update: plays the `medic`
+animation at speed 1, sets the character's state field (`+0x198`) to 4 (meaning **Unknown**), adds the character's update time (`Character+0xc4`, [game-loop](game-loop.md#the-character-update-budget)) to the progress; at 1.0 it ends the task
+(`FUN_1400522c0`) and hands the character's position, its science stat and its name to the Prospecting window ([ui-screens](ui-screens.md#prospecting)). There is no walking, no XP and no target: it runs where the character stands.
+
 ## TaskData registry
 
 **Verified** (disassembly of the table builder `FUN_140319a60`, each registration call `FUN_14060ea00(type, memberFn, ...)` parsed,

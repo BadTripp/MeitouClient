@@ -64,7 +64,7 @@ sealed partial class PlayerInterface
         ("bag", "Kenshi_InventoryGenericWindow", false), ("limbs", "Kenshi_LimbReplacementWindow", false), ("trader", "Kenshi_InventoryTraderWindow", false),
         ("building", "Kenshi_GenericBuildingWindow", false), ("bench", "Kenshi_InventoryResearchWindow", false),
         ("build", "Kenshi_BuildWindow", false), ("editor", "Kenshi_CharacterEditor", true), ("dialogue", "Kenshi_ConversationPanel", true),
-        ("file", "Kenshi_OpenSaveFileDialog", true),
+        ("file", "Kenshi_OpenSaveFileDialog", true), ("prospect", "Kenshi_ProspectingWindow", false),
     ];
 
     /// <summary>The expanded layout and the current bindings of the HUD (<c>"hud"</c>) or of a faithful screen, for the layout audit test.</summary>
@@ -127,9 +127,11 @@ sealed partial class PlayerInterface
         foreach (string name in new[] { "ShortcutMapButton", "ShortcutTechButton", "ShortcutSquadButton" }) b.Actions[name] = "faithful:" + name;
         b.Actions["OrdersMedicButton"] = "meitou:medic";
         b.Actions["OrdersRescueButton"] = "meitou:rescue";
+        b.Actions["OrdersProspectButton"] = "meitou:prospect";
         var own = Selected().FirstOrDefault() ?? lead;   // the orders, jobs and squad tab stay the player's while another faction's character is inspected
         BindOrders(b, own);
-        foreach (string name in new[] { "LoadingPanel", "TownPanel", "TooltipPanel", "MessagePanel", "BiomeTextPanel" }) b.Hidden.Add(name);
+        foreach (string name in new[] { "LoadingPanel", "TownPanel", "TooltipPanel", "MessagePanel" }) b.Hidden.Add(name);
+        BindBiome(b);
         // The viewed floor (the exe's "Floor {1,num}", docs/game/ui-screens.md section 4; docs/formats/zones.md "Interior view"); the arrows step it as PageUp / PageDown do.
         b.Text["FloorText"] = $"Floor {Floor?.Get() ?? 0}";
         b.Actions["FloorArrowUp"] = "meitou:floor-up";
@@ -163,6 +165,7 @@ sealed partial class PlayerInterface
         if (lead is null && !buildingFocus) b.Hidden.Add("MedicalPanel");
         // Buttons without a backend are disabled, except those the original never greys out (the build and floor buttons look live there in the open).
         foreach (var w in faithfulHud.Widgets.Where(w => w.Type == "Button" && !b.Actions.ContainsKey(w.Name) && w.Name is not ("BuildButton" or "FloorArrowUp" or "FloorArrowDown"))) b.Disabled.Add(w.Name);
+        if (Selected().Count == 0 && !faithfulScreens.IsOpen("prospect")) b.Disabled.Add("OrdersProspectButton");
         if (Selected().Count == 0)
             foreach (string name in new[] { "OrdersMedicButton", "OrdersRescueButton", "medic", "rescue", "stop" }) b.Disabled.Add(name);
         return b;
@@ -267,6 +270,7 @@ sealed partial class PlayerInterface
         else if (action == "stop") Say(new StopCommand(SelectedIds()) { Tick = session.World.Tick });
         else if (action == "medic") Say(new Meitou.Simulation.FirstAid.MedicJobCommand(SelectedIds(), SlowModifier) { Tick = session.World.Tick });
         else if (action == "rescue") Say(new Meitou.Simulation.Carrying.RescueJobCommand(SelectedIds(), SlowModifier) { Tick = session.World.Tick });
+        else if (action == "prospect") ProspectAction();
         else if (action == "job-remove") RemoveJob(argument);
         else if (action.StartsWith("order.", StringComparison.Ordinal) && Enum.TryParse(action[6..], out CharacterOrders order))
             Say(new OrdersCommand(SelectedIds(), order) { Tick = session.World.Tick });

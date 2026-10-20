@@ -313,7 +313,7 @@ field prefixes by MiningResource: `iron`, `stone`, `copper`, `carbon`, `water`, 
 - A building that is not the player's (`FUN_140546dd0`: its owner's `+0x250`, the test also used by research
   upgrades and generator fuel) yields 0.5 where it would get 0; the player's yields 0.
 - The farm efficiency also reads the record's `arid`, `green`, `swamp` coverages (crop types 2, 1, 3).
-- Mining the rocks directly and the prospecting window are not in the engine.
+- The prospecting window lists water, fertility, stone, iron and copper from `uses_resources` ([ui-screens](ui-screens.md#prospecting)); mining the rocks directly is not in the engine.
 
 ## Crafting
 

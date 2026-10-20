@@ -330,6 +330,13 @@ public sealed class ResourceField
         return farm.Arid * r.GetFloat("arid") + farm.Green * r.GetFloat("green") + farm.Swamp * r.GetFloat("swamp");
     }
 
+    /// <summary>The name of the BIOME_GROUP at a position (null without an areas map): what the prospecting window shows as the zone.</summary>
+    public string? ZoneName(float x, float z) => Group(x, z)?.Name;
+
+    /// <summary>The crop coverages (<c>green</c>, <c>arid</c>, <c>swamp</c>) of the ground at a position (<b>Observed</b>, the prospecting window's Environment); all 0 without a resources record.</summary>
+    public (float Green, float Arid, float Swamp) Coverage(float x, float z) =>
+        Resources(x, z) is { } r ? (r.GetFloat("green"), r.GetFloat("arid"), r.GetFloat("swamp")) : default;
+
     /// <summary>The biome group's <c>farm water usage</c> (1 without a group).</summary>
     public float WaterUsage(float x, float z) => Group(x, z) is { } g && g.Floats.ContainsKey("farm water usage") ? g.GetFloat("farm water usage") : 1;
 }

@@ -298,8 +298,10 @@ the exe's). Posts are unconditional unless noted. Events that are not in `SFX_Ge
 | `Building_Button`; `_Navigate`; `_Confirm`; `_Undo`; `_Place` (`Building_Place` = `Outdoors` / `Indoors`); `_Cant_Build_There`; `_Click` (`Buildings_Click`) | entering build mode; list and arrow selection; confirm; undo (only with something queued); a placed ghost; a refused one; selecting a building (index 0 is silent) |
 | `UI_Generator` (`Generator` = `On` / `Off`); `Building_Lock_Unlock` (`Build_Lock` = the state being *left*) | machine power switch; door Security button |
 | `Dialogue_Choice` (`Dialogue_Choice` = `Continue_Conversation`) | a reply picked |
-| `Notifications` (`Notifications` = `Building_Complete`, `Thing_Complete`, `Bounty_Fulfilled`, `New_Biome`) | construction finished; research or blueprint learned, a dismantle finished; a bounty paid; the HUD biome banner on a region change |
-| `Slider`, `Create_Character`, `Prospect_Click`, `Prospect_Results`, `Research_Tab` (`Research_Tabs`) | data-panel slider; the character editor's Done (and a released prisoner); prospecting |
+| `Notifications` (`Notifications` = `Building_Complete`, `Thing_Complete`, `Bounty_Fulfilled`, `New_Biome`) | construction finished; research or blueprint learned, a dismantle finished; a bounty paid; the HUD biome banner appearing ([Biome banner](game/ui-screens.md#biome-banner), `MainBarGUI::vfunc_10`, **Verified**) |
+| `Slider`, `Create_Character` | data-panel slider; the character editor's Done (and a released prisoner) |
+| `Prospect_Click`; `Prospect_Results` | the HUD Prospect button when it gives a character the prospecting task (`FUN_140721800`; closing the open window is silent); the Prospecting Results window shown (`FUN_14049f180`), a second after the click ([Prospecting](game/ui-screens.md#prospecting)) |
+| `Research_Tab` (`Research_Tabs`) | a pick in the overview research tab's type list (`ResearchTypeList`; `FUN_14049b5e0`, not for a deselect); the switch value is the list item's text, the RESEARCH `category`. **Verified** bank: five values, `Industry` and `Defense` resolved by hash, three **Unknown**; an unmatched value is silent |
 
 `Inventory_Items` (`FUN_14075e360`, **Verified**): WEAPON and CROSSBOW by `material` (`Weapon_Metal`, `Weapon_Wood`); ARMOUR by `material type` (`Fabric`, `Leather`, `Robotic_Component`, `Steel_Bar`); ITEM, CONTAINER, NEST_ITEM
 and MAP_ITEM by `inventory sound` (`Backpack`, `Building_Material`, `Fabric`, `Flour`, `Food`, `Kits`, `Leather`, `Luxury`, `Narcotics`, `Ore`, `Potato`, `Robotic_Component`, `Rum`, `Steel_Bar`, `Tools`, `Water`, `Wheat`,
@@ -308,9 +310,11 @@ Hover and Slider; whether the editor's speed reset posts `Game_Speed_Normal`; wh
 
 Meitou (`UiSounds` in `Meitou.Audio`, `PlayerInterface.Sounds.cs`, `GameHost.AudioUi.cs`): the host plays what `PlayerInterface.UiSound` receives. Hooks: `ExecuteUiAction` (HUD actions), `FaithfulAction` (the original screens' widgets),
 the commands `Say` sends (orders, item moves, trades, dialogue choices), and a poll in `Draw` for windows opening and closing, the title button under the pointer, the speed keys (F2 to F4, when the clock moves to a new speed without a button), a building of the player's finishing
-(`Building_Complete`) and a new building unlocked by research or a blueprint (`Thing_Complete`; the sim also queues `DismantleDone` for a finished dismantle and `BountyPaid` for a reward, played as `Thing_Complete` / `Bounty_Fulfilled`).
-**No trigger in Meitou (not played):** `Building_Click` (a building cannot be selected), `UI_Generator` (the machine panel has no power switch, [above](#machine-sounds-meitou)), `Building_Lock_Unlock` (no door panel), `Prospect_Click` and `Prospect_Results` (no prospecting), `Research_Tab` (the research tab posts
-nothing), `New_Biome` (no HUD biome banner), `Character_Drop_Ground` (an item cannot be dragged out onto the ground), `Create_Character` on a prisoner's release, `Slider` outside the editor; `Building_Place`'s `Indoors` value
+(`Building_Complete`) and a research finished or a building unlocked by a blueprint (`Thing_Complete`, one a frame; the sim also queues `DismantleDone` for a finished dismantle and `BountyPaid` for a reward, played as `Thing_Complete` / `Bounty_Fulfilled`).
+The prospecting, research tab and biome sounds are posted where the exe posts them: the HUD's Prospect action when it gives the task (`Prospect_Click`), the results window opening (`Prospect_Results`, in the poll), a type list pick in the overview (`Research_Tab`),
+and the banner (`New_Biome`, `PlayerInterface.Biome.cs`).
+**No trigger in Meitou (not played):** `Building_Click` (a building cannot be selected), `UI_Generator` (the machine panel has no power switch, [above](#machine-sounds-meitou)), `Building_Lock_Unlock` (no door panel),
+`Character_Drop_Ground` (an item cannot be dragged out onto the ground), `Create_Character` on a prisoner's release, `Slider` outside the editor; `Building_Place`'s `Indoors` value
 (Meitou's ghost has no parent building to ask) is always `Outdoors`.
 
 ## Meitou's player

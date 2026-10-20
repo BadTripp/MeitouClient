@@ -135,11 +135,11 @@ public sealed class AnimationSystem(AnimationLibrary library, AnimationLengths l
     int KnockoutClip { get; } = library.IndexOf(Carrying.CarrySystem.KnockoutClip);
     int CarriedClip { get; } = library.IndexOf(Carrying.CarrySystem.CarriedClip);
 
-    // Building and delivering materials play the medic clip (Verified, Task_Build and Task_AddMaterialsToBuilding).
+    // Building, delivering materials and prospecting play the medic clip (Verified, Task_Build, Task_AddMaterialsToBuilding and Task_Prospecting).
     // Resting on a chair plays the clip its functionality names ("sitting chair"), else sitting on the floor.
     int HeldClip(CharacterTask task, CharacterCold cold) => task switch
     {
-        CharacterTask.Treat or CharacterTask.Build or CharacterTask.DeliverMaterials => TreatingClip,
+        CharacterTask.Treat or CharacterTask.Build or CharacterTask.DeliverMaterials or CharacterTask.Prospect => TreatingClip,
         CharacterTask.Rest => cold.Ai?.SitClip is { } sit && SitClipOf(sit) is >= 0 and var chair ? chair : RestingClip,
         CharacterTask.Dismantle => DismantlingClip,
         // An operator at work plays its functionality's clip (Observed, Task_OperateMachine; stonemine without one).

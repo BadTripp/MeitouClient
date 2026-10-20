@@ -114,6 +114,7 @@ sealed partial class GameHost
             preparedBase = null;   // used, or stale
             game = SaveCapture.Capture(world, popData!, new SaveClock((int)clock.Day, clock.Hour, clock.Minute), loadedSave, CaptureOptions(), prepared);
             WriteWeather(game, (int)clock.Day, clock.HourOfDay);
+            player.WriteBiome(game.Camera);
         }
         catch (Exception e)
         {
@@ -238,6 +239,7 @@ sealed partial class GameHost
         // before the first tick (like a new game's start).
         Task navmesh = Task.CompletedTask;
         var saved = read.Result.Camera;
+        player.ReadBiome(saved);
         if (saved.HasView)
         {
             var (yaw, pitch, distance) = KenshiCamera.FromSaved(saved.Rotation, saved.Zoom);

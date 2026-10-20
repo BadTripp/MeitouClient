@@ -78,5 +78,7 @@ public readonly record struct ResearchOption(string Id, string Name, string Cate
 /// <summary>The research state as the host shows it (docs/simulation.md "Production", Research).</summary>
 public sealed record ResearchSnapshot(int TechLevel, int BenchLevel, IReadOnlyList<(string Id, string Name, float Progress)> Queue, float Rate, IReadOnlyList<ResearchOption> Available)
 {
+    /// <summary>How many researches have been finished (counting repeats): the host plays the notification when it grows.</summary>
+    public int Finished { get; init; }
     public static ResearchSnapshot Empty { get; } = new(1, 0, [], 0, []);
 }
