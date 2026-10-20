@@ -34,6 +34,13 @@ sealed partial class PlayerInterface
         if (key == Meitou.Engine.Input.Key.Tab && faithfulScreens.FocusNext(shift)) return true;
         if (key == Meitou.Engine.Input.Key.Enter && faithfulScreens.Submit()) return true;
         if (key == Meitou.Engine.Input.Key.Space && faithfulScreens.ActivateFocused()) return true;
+        // The list or combo box last clicked takes the MyGUI ListBox keys (docs/formats/mygui.md "Widget runtime").
+        if (key switch
+            {
+                Meitou.Engine.Input.Key.Up => UiListKey.Up, Meitou.Engine.Input.Key.Down => UiListKey.Down, Meitou.Engine.Input.Key.PageUp => UiListKey.PageUp,
+                Meitou.Engine.Input.Key.PageDown => UiListKey.PageDown, Meitou.Engine.Input.Key.Home => UiListKey.Home, Meitou.Engine.Input.Key.End => UiListKey.End,
+                Meitou.Engine.Input.Key.Enter => UiListKey.Accept, _ => (UiListKey?)null,
+            } is { } listKey && faithfulScreens.ListKey(listKey)) return true;
         if (DialogueKey(key)) return true;
         if (faithfulScreens.HasModal) return true;
         // change_squad (Tab): the squad bar shows the next squad with members (docs/game/ui-input.md section 6).
@@ -141,6 +148,7 @@ sealed partial class PlayerInterface
             BindCraftTab(b);
             // Editor preview markers are unrelated to the current camera and orders.
             b.Hidden.Add("CameraMarker"); b.Hidden.Add("MovemementMarker");
+            b.NativeScroll.Add("MapScrollView");   // the map pans and zooms itself (PlayerInterface.Map.cs); the canvas is not the layout's 4096 px
         }
         if (id is "inventory" or "bag" or "limbs" or "trader") BindInventoryGeometry(id, b);
         return b;
