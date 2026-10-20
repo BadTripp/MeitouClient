@@ -66,7 +66,7 @@ THE SOFTWARE.
 ## NVIDIA Streamline
 
 `src/Meitou.Rendering/Upscalers/Streamline.cs` and `DlssUpscaler.cs` declare Streamline's structures, enums and
-entry points following its public headers (Streamline 2.14.1). The Streamline libraries and NVIDIA's DLSS runtime are
+entry points following its public headers (Streamline 2.14.16). The Streamline libraries and NVIDIA's DLSS runtime are
 not part of this repository; they are loaded at run time when the user provides them (see
 [LICENSE-EXCEPTION.md](LICENSE-EXCEPTION.md) for the DLSS runtime).
 
