@@ -359,7 +359,9 @@ public static partial class SaveCapture
             if (orders) Orders.Write(g, cold);
             if (orders && sc.Ai is { } ai) PermaJobSave.Write(ai, cold, world.Buildings, buildings);
             HeldSave.Write(g, cold, link, world.Fixtures, buildings);
-            RagdollSave.Write(g, id.IsNone ? null : world.Systems.OfType<Ragdolls.RagdollSystem>().FirstOrDefault()?.SaveState(id));
+            // A world without ragdolls (headless) keeps what was read; a stale pose is not used where the character no longer lies.
+            if (id.IsNone) RagdollSave.Write(g, null);
+            else if (world.Systems.OfType<Ragdolls.RagdollSystem>().FirstOrDefault() is { } ragdolls) RagdollSave.Write(g, ragdolls.SaveState(id));
             if (cold.PortraitSerial is { } portraitSerial) g.Ints["portrait_serial"] = (int)portraitSerial;
         }
 

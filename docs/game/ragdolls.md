@@ -169,7 +169,7 @@ No ragdoll key or pose is saved. After loading, the medical tick and the dead-bo
 WHOLE from the loaded animated pose.
 
 Meitou adds GAMESTATE_CHARACTER string `meitou ragdoll` for a whole-body (not carried) ragdoll: `frozen age n`, then per body (definition order)
-position x y z and rotation x y z w, invariant floats; absent otherwise; the original ignores it. **Observed** (headless, real data, a knocked-out
+position x y z and rotation x y z w, invariant floats; absent otherwise (a world without ragdolls keeps the loaded key); the original ignores it. **Observed** (headless, real data, a knocked-out
 human frozen after 61 ticks): save → load gives the same 13 body poses (offset 0), frozen flag and age; without the key it falls again from the clip.
 
 ## Unknowns
