@@ -66,6 +66,8 @@ sealed partial class GameHost
                 var (name, quantity, quality) = DebugItemField(field);
                 if (DebugRecord(name, character: false) is not { } item) return $"no item record matches '{name}'";
                 world.Commands.Enqueue(new DebugGiveItem(selected[0], item.Id, quantity, quality) { Tick = tick });
+                if (scene.Database is { } db && db.Find(item.Id)?.Type == Meitou.Data.Fcs.FcsRecordType.WEAPON && DebugGiveItem.Grade(db, quality) is { } grade)
+                    return $"gave {quantity} x {grade.Name} {item.Name} (level {grade.Level})";
                 return $"gave {quantity} x {item.Name}{(DebugHasQuality(item.Id) ? $" (quality {quality})" : "")}";
             case DebugRow.Money:
                 if (!long.TryParse(field, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out long delta)) return "money: a whole number, e.g. 500 or -500";

@@ -320,9 +320,11 @@ sealed partial class PlayerInterface
     /// </summary>
     IReadOnlyList<TooltipLine> ItemLines(ItemTip t)
     {
-        var lines = new List<TooltipLine> { new(t.Quantity > 1 ? $"{t.Name} ({t.Quantity})" : t.Name, "", TooltipTone.Title) };
-        if (t.Brief) return lines;
         var record = ItemRecordOf?.Invoke(t.Record);
+        // A weapon's grade is its model, which leads its name ("Mk I Fragment Axe"); the weapon rows have no grade of their own.
+        string name = record?.Type == Meitou.Data.Fcs.FcsRecordType.WEAPON && t.Material.Length > 0 && RecordName?.Invoke(t.Material) is { Length: > 0 } model ? model + " " + t.Name : t.Name;
+        var lines = new List<TooltipLine> { new(t.Quantity > 1 ? $"{name} ({t.Quantity})" : name, "", TooltipTone.Title) };
+        if (t.Brief) return lines;
         var combat = CombatOf?.Invoke();
         var type = record?.Type;
         int function = type == Meitou.Data.Fcs.FcsRecordType.ITEM ? record!.GetInt("item function") : 0;
