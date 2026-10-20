@@ -117,14 +117,18 @@ it (error 1.3 cells): a strip one cell deep along the edge loses its edge vertex
 (zone 19.29, scratch probe): the Longhouse `4-Newwworld-INGAME`'s outside ramp ends on the tile line z−13152 one row short of its
 doorstep, which was cut off from the street and its door never joined; with the border the path from the street reaches the room.
 Kept area grows by 0.04..1.1% (zones 20.32, 21.32, 20.29, 18.35) while polygons drop 20..45%.
-**Zone borders** (engine choice): each zone is pruned by its own seeds only and cached that way; when a zone loads, points on the
-kept edges of each shared border seed the neighbour's full mesh (and back) until nothing grows, so the kept set does not depend on load
-order. The original seeds a new zone from already built neighbours' border midpoints (order dependent) but ships prebuilt tiles, so
-players never see the order. A region kept only through a neighbour is lost when its zone loads without that neighbour (a save loaded
-mid-zone: only zones within 340 of a walker are active); a path that fails from a pruned polygon keeps the region the walker stands on
-(`NavMeshService.KeepAt`, not cached) and asks again. **Observed** ("6 dudes" save, scratch harness): zone 14.26 has 1 seed and keeps
-598 of 12,862 polygons alone; a character 2,300 from its borders stood on a pruned polygon and could not path. The original
-`tile14.26.hkt` has a polygon under it (y 702, point-in-polygon in the same harness). **Observed** (World's End, zones 25..27 × 12..14, `meitou-tools navmesh --around 1`): with neighbour seeds
+**Zone borders** (engine choice): each zone is pruned by its own seeds plus every region with an open edge on the zone's border line
+at ground level (edge middle within `SeedPruner.BorderGroundSlack` 30 of the terrain, or the water height over it; roofs and walkways
+crossing the border stay pruned), and cached that way. The original seeds a new zone from already built neighbours' border midpoints
+(order dependent) and ships every tile built, so a region going on into the next zone is kept wherever its seed is; Meitou loads zones
+alone (only those within 340 of a walker are active), so it cannot wait for the neighbours. **Observed** (scratch probe, original tile
+polygons vs Meitou's unpruned polygons sampled every 25 units): with own seeds alone Meitou kept 3.1 % of the shared area in 14.26
+(1 seed), 15.5 % in 25.13, 42 % in 26.14, 94..100 % elsewhere; with the border rule 98.9..99.9 % in all of 14.26, 13.26, 18.35, 19.29,
+20.32, 21.32, 25.13, 26.14, while area kept where the original has none rises to 3..5 % of the zone. When a zone loads, points on the
+kept edges of each shared border also seed the neighbour's full mesh (and back) until nothing grows (interiors cut by a border need it).
+A path that fails from a pruned polygon keeps the region the walker stands on (`NavMeshService.KeepAt`, not cached) and asks again.
+**Observed** ("6 dudes" save): a character in 14.26, 2,300 from its borders, stood on a pruned polygon and could not path; the original
+`tile14.26.hkt` has a polygon under it (y 702). **Observed** (World's End, zones 25..27 × 12..14, `meitou-tools navmesh --around 1`): with neighbour seeds
 zone 26.14 kept 7,943 polygons in raster order and 3,790 in reverse; with the closure every order gives the same kept sets and paths.
 An interior whose mask crosses a zone border is built in each zone it reaches, its box ending on the border line; a part without a
 seed keeps nothing (no largest-region fallback) and is kept through the closure from the part with the door. **Observed** (zones
@@ -139,7 +143,12 @@ ground 22..28 under the Storm House floor, Observed, showed through furniture ho
 polygon within `EdgeTolerance` counts. A character already off every layer near its height still steps down.
 **Long routes** (engine choice): goals in unloaded zones use `CoarseRoute` (terrain grid, slope and
 water costs, no buildings); the navmesh part ends inside loaded zones, the rest is provisional and
-re-asked; its zones within `Lookahead` load early. **Observed**: Hub→(-36000,-6000) and Hub→Squin arrive.
+re-asked; its zones within `Lookahead` load early. A goal in a loaded zone with no navmesh path is a long route too when its zone is
+in another block of side-by-side loaded zones than the walker's (two groups of walkers far apart); within one block, the navmesh's
+nearest reachable point and a straight provisional tail (the terrain search, under one lock for every path thread, is not run there;
+a way round through an unloaded zone within one block is not found). **Observed**: Hub→(-36000,-6000) and Hub→Squin arrive; "6 dudes"
+save, scratch harness with the host's zone loading: Fog Islands (-80620,-24171) → the squad at (-31620,11420), 60.5k units, arrives
+(17,506 ticks); before, it walked to the nearest reachable point and stopped on a cliff 10.6k short.
 
 ### Generator (runtime and tool-time navmesh building)
 
