@@ -1009,4 +1009,3 @@ Original-game unknowns are maintained in each linked subsystem reference; do not
 - `CharacterHot.Animation`/`AnimationTime` (the old movement layers) and the name length are still hashed; removing them moves every hash.
 - `HoursPerTick` is a constant of its own, not derived from `WorldSettings.TickSeconds`.
 - Navmesh: the cache key does not see a changed collision file; a running build is not stopped on unload (it finishes into the cache).
-- Long routes: the coarse grid knows the level data's buildings, not the player's (it is built once).
