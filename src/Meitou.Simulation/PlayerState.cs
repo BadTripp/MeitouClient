@@ -215,7 +215,8 @@ public sealed partial class PlayerSystem(PopulationData? data = null) : ITickSys
                         ref var hot = ref table.Next[dropper];
                         var at = hot.Position + new System.Numerics.Vector3(MathF.Sin(hot.Yaw), 0, MathF.Cos(hot.Yaw)) * 3;
                         at.Y = world.Walkability.GroundHeight(at.X, at.Z, hot.Position.Y);
-                        world.GroundItems.Drop(item, at, hot.Yaw);
+                        // Turned at random (the original's physics tumbles it), by a roll of the dropper and the tick.
+                        world.GroundItems.Drop(item, at, Rng.Float(Rng.Hash(world.Seed, (ulong)dropper, RngPurpose.Loot, (ulong)world.Tick)) * MathF.Tau);
                         if (worn) assembly?.RefreshEquipment(holder);
                     }
                     break;

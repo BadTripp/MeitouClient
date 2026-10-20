@@ -296,8 +296,9 @@ fitted and removed by dragging them onto or off the limbs window's slots (`MoveI
 
 Ground items: `World.GroundItems`, loose items: the save's (zone `1-itemlist`, read and written by `Saving/GroundItemSave`,
 [save.md](formats/save.md#zone-files)) and the severed limbs combat drops; at most `GroundItems.Limit` dropped in play (default 1024, up to 4096 by the Advanced setting "Dropped items kept"; the oldest of those goes; read ones
-are not capped); published with a revision. A dropped limb lies flat 5 units to its side of the character, random yaw (the original drops it
-at the bone and lets physics settle it); a read item keeps its saved rotation, drawn by its yaw. The host adds each as a runtime world-object
+are not capped); published with a revision. A dropped limb lies 5 units to its side of the character, an item dropped from the inventory 3 units ahead, both at a random
+yaw (the original drops them and lets physics settle them); the host lays a dropped item flat (`GameHost.LaidFlat`, engine choice: its mesh bounds' thinnest axis up, lowest corner on the
+ground, so a weapon, modelled along +Y, lies on its blade's flat); a read item is drawn by its saved position and whole rotation. The host adds each as a runtime world-object
 placement of its record's `ground mesh` / `mesh` (`GameHost.GroundItems`, `WorldObjectLayout.Item`). A right click on one (within 24 px of its
 projected middle, pointer `pick_item`) gives `PickUpItemOrder`: the nearest able selected character walks to it and, within 15 units
 (`PlayerSystem.PickUpReach`), puts it in its inventory (`Inventory.Add`); what does not fit stays on the ground ("Not enough room in my

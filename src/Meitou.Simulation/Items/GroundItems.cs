@@ -2,21 +2,17 @@ using System.Numerics;
 
 namespace Meitou.Simulation.Items;
 
-/// <summary>An item lying in the world, as the host draws it: <see cref="Yaw"/> about Y, the mesh laid flat (docs/simulation.md "Ground items").</summary>
-public readonly record struct GroundItemSnapshot(int Id, string Record, string Name, Vector3 Position, float Yaw);
+/// <summary>
+/// An item lying in the world, as the host draws it (docs/simulation.md "Ground items"): a saved one by its whole <see cref="Rotation"/>, a <see cref="Dropped"/> one turned by it
+/// about Y and laid flat on the ground by the host.
+/// </summary>
+public readonly record struct GroundItemSnapshot(int Id, string Record, string Name, Vector3 Position, Quaternion Rotation, bool Dropped);
 
 /// <summary>One loose item: where it lies and how it is turned (a saved item's whole rotation, written back as read; a dropped one turned about Y).</summary>
 public sealed record GroundItem(int Id, ItemInstance Item, Vector3 Position, Quaternion Rotation)
 {
-    /// <summary>The turn about Y the host draws it with.</summary>
-    public float Yaw
-    {
-        get
-        {
-            var ahead = Vector3.Transform(Vector3.UnitZ, Rotation);
-            return ahead.X * ahead.X + ahead.Z * ahead.Z < 1e-6f ? 0 : MathF.Atan2(ahead.X, ahead.Z);
-        }
-    }
+    /// <summary>Dropped in play (turned about Y only), not put back from the save.</summary>
+    public bool Dropped { get; init; }
 }
 
 /// <summary>
@@ -47,7 +43,7 @@ public sealed class GroundItems
     /// <summary>Drops an item made in play, turned <paramref name="yaw"/> about Y.</summary>
     public void Drop(ItemInstance item, Vector3 position, float yaw)
     {
-        items.Add(new GroundItem(nextId++, item, position, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw)));
+        items.Add(new GroundItem(nextId++, item, position, Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw)) { Dropped = true });
         for (int extra = items.Count(i => i.Item.Saved is null) - limit; extra > 0; extra--) items.RemoveAt(items.FindIndex(i => i.Item.Saved is null));
         Revision++;
     }
@@ -75,7 +71,7 @@ public sealed class GroundItems
     /// <summary>The items as published, made again only when <see cref="Revision"/> changed.</summary>
     internal IReadOnlyList<GroundItemSnapshot> Published()
     {
-        if (publishedAt != Revision) (published, publishedAt) = ([.. items.Select(i => new GroundItemSnapshot(i.Id, i.Item.Record, i.Item.Name, i.Position, i.Yaw))], Revision);
+        if (publishedAt != Revision) (published, publishedAt) = ([.. items.Select(i => new GroundItemSnapshot(i.Id, i.Item.Record, i.Item.Name, i.Position, i.Rotation, i.Dropped))], Revision);
         return published;
     }
     IReadOnlyList<GroundItemSnapshot> published = [];
