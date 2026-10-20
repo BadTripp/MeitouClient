@@ -58,7 +58,7 @@ sealed partial class GameHost
                 if (techniques.TryGetValue(library.Definitions[i].Id, out var t) && t is { Kinds: WeaponKinds.Unarmed, IsBlock: false, IsDodge: false, Animal: 0 })
                     weapons[i] = (t.Blows >= 2 ? t.Limb2 : t.Limb1) is 0 or 1 ? "HtH_Punch" : "HtH_Kick";   // the last blow's limb: the arms are 0 and 1 (FUN_1402b4570)
             definitionWeapons = weapons;
-            characterSounds = new CharacterSounds(sound.Player, groundSurfaces);
+            characterSounds = new CharacterSounds(sound.Player, groundSurfaces) { Floor = FloorSurface };
         }
         var sounds = characterSounds;
         var world = session.World;
