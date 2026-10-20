@@ -6,8 +6,10 @@ namespace Meitou.Navigation;
 /// <summary>
 /// Long trips across zones whose navmesh is not loaded (a move order on the map): A* over a coarse grid of the whole world built from the terrain
 /// alone. A step between two cells is barred where the terrain between them is steeper than <see cref="MaxSlopeDegrees"/>; cells under the water
-/// cost the agent's water factor. Buildings, walls and foliage are not in it: the navmesh path near the walker refines the route as its zones load
-/// (<see cref="NavmeshWalkability"/>). Engine choice, not the original's (which routes over its pre-built navmesh tiles, docs/game/pathfinding.md).
+/// cost the agent's water factor. A step that crosses a building's footprint (the level data's walls and buildings, not the player's) costs
+/// <see cref="BuildingCost"/> times as much, so routes go round towns and walls where open ground allows and still through them where not (a coarse cell
+/// is wider than a gate). Foliage is not in it: the navmesh path near the walker refines the route as its zones load (<see cref="NavmeshWalkability"/>).
+/// Engine choice, not the original's (which routes over its pre-built navmesh tiles, docs/game/pathfinding.md).
 /// Thread-safety: the grid is built once on first use; queries are serialised (one search buffer).
 /// </summary>
 public sealed class CoarseRoute
@@ -23,6 +25,8 @@ public sealed class CoarseRoute
     public const float HeuristicWeight = 1.2f;
     /// <summary>Cells expanded at most per search.</summary>
     public const int MaxExpanded = 3_000_000;
+    /// <summary>The cost factor of a step across a building's footprint (engine choice: a detour of a few cells round a wall is cheaper).</summary>
+    public const float BuildingCost = 8;
 
     // Direction k: (dx, dz). Bits 0..7 of a cell: the step in direction k is barred. Bit 8: under the water.
     static readonly (int Dx, int Dz)[] Directions = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)];
@@ -30,7 +34,10 @@ public sealed class CoarseRoute
 
     readonly Func<float, float, float> terrain;
     Func<Func<float, float, float>>? slopeTerrain;
+    Func<IReadOnlyList<Vector2[]>>? obstacles;
     readonly Lazy<ushort[]> cells;
+    // Bit k of a cell: the step in direction k crosses a building's footprint (filled with the grid).
+    byte[] crossings = [];
     readonly object searchLock = new();
     float[]? g;
     int[]? parent, stamp;
@@ -41,10 +48,12 @@ public sealed class CoarseRoute
     /// Makes the height function the grid is built from (once, then dropped): it should be exact to about <see cref="SlopeStep"/>, or cliffs smooth into
     /// ramps the walker cannot take. Null: <paramref name="terrainHeight"/>.
     /// </param>
-    public CoarseRoute(Func<float, float, float> terrainHeight, Func<Func<float, float, float>>? slopeTerrain = null)
+    /// <param name="obstacles">Makes the building footprints (world X/Z polygons, convex) the grid is built with (once, then dropped). Null: none.</param>
+    public CoarseRoute(Func<float, float, float> terrainHeight, Func<Func<float, float, float>>? slopeTerrain = null, Func<IReadOnlyList<Vector2[]>>? obstacles = null)
     {
         terrain = terrainHeight;
         this.slopeTerrain = slopeTerrain;
+        this.obstacles = obstacles;
         cells = new Lazy<ushort[]>(Build, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
@@ -87,8 +96,61 @@ public sealed class CoarseRoute
                 }
         for (int z = 0; z < Side; z++)
             for (int x = 0; x < Side; x++) result[z * Side + x] |= Border(x, z);
+        crossings = Crossings(obstacles?.Invoke() ?? []);
+        obstacles = null;
         return result;
     }
+
+    /// <summary>For every step, whether the segment between the two cell centres meets one of the footprints.</summary>
+    static byte[] Crossings(IReadOnlyList<Vector2[]> hulls)
+    {
+        var result = new byte[Side * Side];
+        foreach (var hull in hulls)
+        {
+            if (hull.Length < 3) continue;
+            var min = new Vector2(float.MaxValue);
+            var max = new Vector2(float.MinValue);
+            foreach (var p in hull) { min = Vector2.Min(min, p); max = Vector2.Max(max, p); }
+            // Every step with an end within a cell of the hull's box (a step reaches one cell out).
+            int x0 = Math.Max(0, CellOf(min.X) - 1), x1 = CellOf(max.X), z0 = Math.Max(0, CellOf(min.Y) - 1), z1 = CellOf(max.Y);
+            for (int z = z0; z <= z1; z++)
+                for (int x = x0; x <= x1; x++)
+                    for (int k = 0; k < 4; k++)
+                    {
+                        var (dx, dz) = Directions[k];
+                        int nx = x + dx, nz = z + dz;
+                        if (nx < 0 || nz < 0 || nx >= Side || nz >= Side || !Meets(Centre(x, z), Centre(nx, nz), hull)) continue;
+                        result[z * Side + x] |= (byte)(1 << k);
+                        result[nz * Side + nx] |= (byte)(1 << (k + 4));
+                    }
+        }
+        return result;
+    }
+
+    /// <summary>Whether the segment a-b meets the convex polygon (either winding).</summary>
+    static bool Meets(Vector2 a, Vector2 b, Vector2[] hull)
+    {
+        // Clip the segment's parameter range against each edge's half-plane.
+        float area = 0;
+        for (int i = 0; i < hull.Length; i++) area += Cross(hull[i], hull[(i + 1) % hull.Length]);
+        float sign = area >= 0 ? 1 : -1;
+        float t0 = 0, t1 = 1;
+        var d = b - a;
+        for (int i = 0; i < hull.Length; i++)
+        {
+            var p = hull[i];
+            var e = hull[(i + 1) % hull.Length] - p;
+            // Inside: sign * cross(e, x - p) >= 0.
+            float num = sign * Cross(e, a - p), den = sign * Cross(e, d);
+            if (MathF.Abs(den) < 1e-9f) { if (num < 0) return false; continue; }
+            float t = -num / den;
+            if (den > 0) t0 = MathF.Max(t0, t); else t1 = MathF.Min(t1, t);
+            if (t0 > t1) return false;
+        }
+        return true;
+    }
+
+    static float Cross(Vector2 a, Vector2 b) => a.X * b.Y - a.Y * b.X;
 
     static bool TooSteep(Func<float, float, float> terrain, Vector2 a, Vector2 b, float rise)
     {
@@ -119,6 +181,7 @@ public sealed class CoarseRoute
     List<Vector3> Find(Vector3 from, Vector3 to, float waterFactor, bool slopes)
     {
         var map = cells.Value;
+        var crossing = crossings;
         int sx = CellOf(from.X), sz = CellOf(from.Z), gx = CellOf(to.X), gz = CellOf(to.Z);
         int start = sz * Side + sx, goal = gz * Side + gx;
         float waterCost = MathF.Max(1, waterFactor);
@@ -151,6 +214,7 @@ public sealed class CoarseRoute
                     float step = (k & 1) == 0 ? 1 : MathF.Sqrt(2);
                     // Half the step in each cell; water cells cost the water factor.
                     float cost = step * 0.5f * (((flags & Water) != 0 ? waterCost : 1) + ((map[next] & Water) != 0 ? waterCost : 1));
+                    if ((crossing[cell] & (1 << k)) != 0) cost *= BuildingCost;
                     float gn = gc + cost;
                     if (stamp[next] == generation && gn >= g[next]) continue;
                     stamp[next] = generation; g[next] = gn; parent[next] = cell;
@@ -173,7 +237,7 @@ public sealed class CoarseRoute
             route.Add(new Vector3(centre.X, MathF.Max(terrain(centre.X, centre.Y), WorldWater.Height), centre.Y));
         }
         route.Add(to);
-        return Smooth(route, slopes ? map : null);
+        return Smooth(route, slopes ? map : null, crossing);
     }
 
     /// <summary>The steps out of the world from a cell on its edge.</summary>
@@ -186,15 +250,15 @@ public sealed class CoarseRoute
         return Math.Max(dx, dz) + (MathF.Sqrt(2) - 1) * Math.Min(dx, dz);
     }
 
-    /// <summary>Drops turning points the walker can skip: a straight line between the neighbours that crosses only open, dry cells.</summary>
-    static List<Vector3> Smooth(List<Vector3> route, ushort[]? map)
+    /// <summary>Drops turning points the walker can skip: a straight line between the neighbours that crosses only open, dry cells and no building.</summary>
+    static List<Vector3> Smooth(List<Vector3> route, ushort[]? map, byte[] crossing)
     {
         if (route.Count <= 2 || map is null) return route;
         var result = new List<Vector3> { route[0] };
         int anchor = 0;
         for (int i = 2; i < route.Count; i++)
         {
-            if (Clear(route[anchor], route[i], map)) continue;
+            if (Clear(route[anchor], route[i], map, crossing)) continue;
             result.Add(route[i - 1]);
             anchor = i - 1;
         }
@@ -202,8 +266,8 @@ public sealed class CoarseRoute
         return result;
     }
 
-    /// <summary>Whether the straight line steps only between neighbouring dry cells without a barred step (walked cell by cell).</summary>
-    static bool Clear(Vector3 a, Vector3 b, ushort[] map)
+    /// <summary>Whether the straight line steps only between neighbouring dry cells without a barred step or a building crossing (walked cell by cell).</summary>
+    static bool Clear(Vector3 a, Vector3 b, ushort[] map, byte[] crossing)
     {
         int x = CellOf(a.X), z = CellOf(a.Z), tx = CellOf(b.X), tz = CellOf(b.Z);
         float length = Vector2.Distance(new(a.X, a.Z), new(b.X, b.Z));
@@ -215,7 +279,7 @@ public sealed class CoarseRoute
             if (nx == x && nz == z) continue;
             int k = Array.IndexOf(Directions, (Math.Sign(nx - x), Math.Sign(nz - z)));
             if (Math.Abs(nx - x) > 1 || Math.Abs(nz - z) > 1 || k < 0) return false;
-            if ((map[z * Side + x] & (1 << k)) != 0 || (map[nz * Side + nx] & Water) != 0) return false;
+            if ((map[z * Side + x] & (1 << k)) != 0 || (crossing[z * Side + x] & (1 << k)) != 0 || (map[nz * Side + nx] & Water) != 0) return false;
             (x, z) = (nx, nz);
         }
         return x == tx && z == tz;

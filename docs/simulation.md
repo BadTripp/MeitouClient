@@ -272,7 +272,9 @@ Own DotRecast builder/cache (`Meitou.Navigation`), not Havok runtime. Default ce
 (radius per wall end, default radius 4), water factor and doors. `NavAdapter` exposes simulation interfaces;
 `ZoneGate` holds population until ready. Collision and world placement rules:
 [collision.md](formats/collision.md), [pathfinding.md](game/pathfinding.md).
-Cache validation, asynchronous unload races and key omissions are listed under known gaps.
+Cache key: the zone's building hash, the build settings and a content hash (the data files in load order, `seeds.def` and the
+height, blend, biome and overlay maps by size and write time, the DotRecast version). Unloading a zone skips its queued build;
+a running one is still cached but not published, and its task is cancelled.
 
 ## Animation
 
@@ -1002,5 +1004,5 @@ Original-game unknowns are maintained in each linked subsystem reference; do not
   there shows in the hash only later.
 - `CharacterHot.Animation`/`AnimationTime` (the old movement layers) and the name length are still hashed; removing them moves every hash.
 - `HoursPerTick` is a constant of its own, not derived from `WorldSettings.TickSeconds`.
-- Navmesh: unloading a zone whose build is queued or running does nothing, so the zone comes back when the build publishes (R3); the cache key
-  misses foliage, record contents, `seeds.def`, collision files, the DotRecast version and the load order (R5).
+- Navmesh: the cache key does not see a changed collision file; a running build is not stopped on unload (it finishes into the cache).
+- Long routes: the coarse grid knows the level data's buildings, not the player's (it is built once).

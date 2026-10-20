@@ -75,8 +75,7 @@ DotRecast: cells2,height1,tile48 cells,agent18/climb5,ground/water/door areas. B
 cache tiles and gate population on readiness. Query A* through portal clearance (radius per wall end; tile-border, seam
 and area-change ends are open) and water/door costs. **Observed** (zone 18.39, `meitou-tools navmesh`): a Swamp Village
 shack's stair straddles the tile line x−62208 and its foot came out as 6..8-unit portals, so a 2*radius rule kept radius-4
-agents under the house; the west half's foot meets the walkboard in a near-miss T, joined as an inner seam. Unload of in-flight builds/cache invalidation remains imperfect; constraints
-are in [simulation](../simulation.md#open-questions-and-known-gaps). Original Havok tiles are
+agents under the house; the west half's foot meets the walkboard in a near-miss T, joined as an inner seam. Cache key and unload rules: [simulation](../simulation.md#navmesh). Original Havok tiles are
 reference evidence, not a runtime dependency or proof of DotRecast polygon parity.
 
 **Furniture** comes from building layouts (`BuildingLayouts`), none when destroyed. **Verified**
@@ -142,8 +141,11 @@ heights snap to walkable collision (`NavSurfaces`, also its edge within `EdgeRea
 `StandRise` of the character wins. A layer more than `StandDrop` (12) below the character is not stepped onto (engine choice: the
 ground 22..28 under the Storm House floor, Observed, showed through furniture holes and walkers fell to it); with no layer in range, a
 polygon within `EdgeTolerance` counts. A character already off every layer near its height still steps down.
-**Long routes** (engine choice): goals in unloaded zones use `CoarseRoute` (terrain grid, slope and
-water costs, no buildings); the navmesh part ends inside loaded zones, the rest is provisional and
+**Long routes** (engine choice): goals in unloaded zones use `CoarseRoute` (192-unit terrain grid, slope and
+water costs; a step whose centre line crosses a level-data building's footprint hull costs `BuildingCost` 8×, so routes go round
+walls and towns where open ground allows; IGNORE `path mode`, gateways, destroyed buildings and WALKABLE ones that are features or
+under the agent height, i.e. bridges, walkboards, pontoons, platforms, are left out; WALKABLE covers walls and houses too, **Verified**
+against the placed records); the navmesh part ends inside loaded zones, the rest is provisional and
 re-asked; its zones within `Lookahead` load early. A goal in a loaded zone with no navmesh path is a long route too when its zone is
 in another block of side-by-side loaded zones than the walker's (two groups of walkers far apart); within one block, the navmesh's
 nearest reachable point and a straight provisional tail (the terrain search, under one lock for every path thread, is not run there;

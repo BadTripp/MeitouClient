@@ -27,7 +27,7 @@ public sealed class NavSystem : IDisposable
             var raw = map.Downsample(2, out int size);
             var grid = new HeightWindow(0, 0, 2, size, size, raw);
             return (x, z) => grid.TryHeightAt(x, z, out float h) ? h : terrainHeight(x, z);
-        });
+        }, routeObstacles: () => BuildingFootprints.Obstacles(install, db, levels, (x, z) => terrainHeight((float)x, (float)z)));
         service = new NavMeshService(install, db, levels, Walkability, settings, cache, Runtime);
         Walkability.KeepStanding = service.KeepAt;
         Walkability.DoorGeometry = new NavDoorGeometry(install, db);

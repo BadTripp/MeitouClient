@@ -16,11 +16,13 @@ public sealed class NavmeshWalkability : IWalkability
     volatile NavWorld world = NavWorld.Empty;
 
     /// <param name="routeTerrain">Makes the finer height function the long-range grid is built from (<see cref="CoarseRoute"/>); null: <paramref name="terrainHeight"/>.</param>
-    public NavmeshWalkability(Func<float, float, float> terrainHeight, IWalkability? fallback = null, Func<Func<float, float, float>>? routeTerrain = null)
+    /// <param name="routeObstacles">Makes the building footprints the long-range grid avoids; null: none.</param>
+    public NavmeshWalkability(Func<float, float, float> terrainHeight, IWalkability? fallback = null, Func<Func<float, float, float>>? routeTerrain = null,
+        Func<IReadOnlyList<Vector2[]>>? routeObstacles = null)
     {
         ground = terrainHeight;
         this.fallback = fallback ?? new OpenGroundWalkability(terrainHeight);
-        coarse = new Lazy<CoarseRoute>(() => new CoarseRoute(terrainHeight, routeTerrain));
+        coarse = new Lazy<CoarseRoute>(() => new CoarseRoute(terrainHeight, routeTerrain, routeObstacles));
     }
 
     /// <summary>The doors' run-time state; shared with every query made through this object.</summary>
