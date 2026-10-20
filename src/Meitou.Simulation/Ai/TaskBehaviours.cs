@@ -65,6 +65,7 @@ public static class TaskBehaviours
         [TaskType.FOLLOW_SQUADLEADER] = (AiBehaviour.Follow, "Following leader"),
         [TaskType.FOLLOW_SLAVEMASTER] = (AiBehaviour.Follow, "Following master"),
         [TaskType.BODYGUARD] = (AiBehaviour.Follow, "Bodyguard"),
+        [TaskType.FOLLOW_PLAYER_ORDER] = (AiBehaviour.Follow, "Following"),
         [TaskType.GO_HOME_AND_GO_TO_BED] = (AiBehaviour.Sleep, "Going to bed"),
         [TaskType.GO_HOME_AND_GO_TO_BED_SECURE] = (AiBehaviour.Sleep, "Going to bed"),
         [TaskType.SLEEP_ON_FLOOR] = (AiBehaviour.Sleep, "Sleeping on ground"),

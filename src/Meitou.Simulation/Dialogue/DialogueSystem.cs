@@ -9,6 +9,11 @@ public sealed record TalkOrder(CharacterId Talker, CharacterId Target) : SimComm
 public sealed record DialogueChoice(int Index) : SimCommand;
 /// <summary>Leaves the open conversation (its window closed).</summary>
 public sealed record EndConversation : SimCommand;
+/// <summary>
+/// Fires dialogue event <see cref="Event"/> at <see cref="Npc"/> with <see cref="Target"/> as its partner (the original's <c>FUN_140684990</c>, from the systems that witness it):
+/// a line of the NPC's list for the event, or of <see cref="Dialogue"/> when given, said as speech bubbles.
+/// </summary>
+public sealed record DialogueEvent(CharacterId Npc, CharacterId Target, int Event, string? Dialogue = null) : SimCommand;
 
 /// <summary>The open player conversation as the conversation window shows it (published with the snapshot).</summary>
 public sealed record ConversationView(CharacterId Npc, CharacterId Player, CharacterId Speaker, string SpeakerName, string PlayerName, string Text,
@@ -133,8 +138,14 @@ public sealed partial class DialogueSystem : ITickSystem, IStateHashed, IDialogu
                     End(world);
                     CancelApproach(world);
                     break;
+                case DialogueEvent e:
+                    if (e.Dialogue is { } id) { if (dialogue.Node(id) is { IsRoot: true } root) StartBubbles(world, e.Npc, e.Target, root, e.Event); }
+                    else if (Settings.AmbientEvents) Fire(world, e.Npc, e.Target, e.Event);
+                    break;
             }
         }
+        // Bubbles a choice started (a crowd trigger) are said at once, also while the conversation window pauses the game.
+        if (bubbles.Count > 0) StepBubbles(world);
         RefreshView(world);
     }
 
@@ -142,7 +153,7 @@ public sealed partial class DialogueSystem : ITickSystem, IStateHashed, IDialogu
     {
         ExpireSpeech(world);
         if (bubbles.Count > 0) StepBubbles(world);
-        if (Settings.AmbientEvents && world.Tick % Settings.AmbientEveryTicks == 0) SeePlayers(world);
+        if (Settings.AmbientEvents && world.Tick % Settings.AmbientEveryTicks == 0) SeeOthers(world);
         if (!talker.IsNone && open is null)
         {
             var table = world.Characters;
@@ -326,7 +337,8 @@ public sealed partial class DialogueSystem : ITickSystem, IStateHashed, IDialogu
         var (count, _) = counters.GetValueOrDefault(key);
         counters[key] = (count + 1, world.GameHours);
         if (world.Characters.TryResolveNext(c.Npc, out int n) && world.Characters.Cold(n) is { SquadId: >= 0 } nc) met[(nc.SquadId, c.Player)] = world.GameHours;
-        Release(world, c.Npc);
+        // An arrest the conversation started (DA 29, 30) keeps the guard held.
+        if (Arrests?.Arrests.Any(a => a.Guard == c.Npc) != true) Release(world, c.Npc);
     }
 
     void MarkUsed(World world, Conversation c, DialogueNode line)

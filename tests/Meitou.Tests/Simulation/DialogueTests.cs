@@ -123,6 +123,68 @@ public class DialogueTests
         Assert.True(loaded.DialogueLocks!["rich-d"]);
     }
 
+    /// <summary>
+    /// A guard greets a stranger of another squad (event 3; its line refuses player targets) with a crowd trigger: his mate cheers (event 74), and the chain passes to the line the
+    /// stranger says back (speaker T_TARGET).
+    /// </summary>
+    [Fact]
+    public void A_greeting_between_npcs_sets_off_the_crowd_and_the_target_answers()
+    {
+        var data = PopulationData.Create(Db([
+            Rec("p-d", FcsRecordType.FACTION, r => r.Name = "Nameless"),
+            Rec("f-d", FcsRecordType.FACTION, r => r.Name = "Villagers"),
+            Rec("guard-c", FcsRecordType.CHARACTER, r => { r.Name = "Guard"; r.References["dialogue package"] = [Ref("guard-p")]; }),
+            Rec("guard-p", FcsRecordType.DIALOGUE_PACKAGE, r => r.References["dialogs"] = [Ref("hail-d", 3)]),
+            Rec("player-dc", FcsRecordType.DIALOG_ACTION, r => { r.Ints["condition name"] = 36; r.Ints["who"] = (int)Talker.Target; }),
+            Rec("hail-d", FcsRecordType.DIALOGUE, r => { r.Bools["monologue"] = true; r.References["lines"] = [Ref("hail-l")]; }),
+            Rec("hail-l", FcsRecordType.DIALOGUE_LINE, r =>
+            {
+                r.Strings["text0"] = "Hail, /YOURNAME/.";
+                r.References["conditions"] = [Ref("player-dc", 0)];
+                r.References["crowd trigger"] = [Ref("cheer-d", 100)];
+                r.References["lines"] = [Ref("answer-l")];
+            }),
+            Rec("answer-l", FcsRecordType.DIALOGUE_LINE, r => { r.Ints["speaker"] = (int)Talker.Target; r.Strings["text0"] = "Hail yourself."; }),
+            Rec("cheer-d", FcsRecordType.DIALOGUE, r => { r.Bools["monologue"] = true; r.References["lines"] = [Ref("cheer-l")]; }),
+            Rec("cheer-l", FcsRecordType.DIALOGUE_LINE, r => r.Strings["text0"] = "Hurrah!"),
+        ]), []);
+        var dialogue = new DialogueSystem(data, new DialogueSettings { AmbientEvents = true });
+        var ground = new OpenGroundWalkability((_, _) => 150);
+        using var world = new SimWorld(new WorldSettings { Seed = 5, PublishSnapshots = false }, ground, [dialogue]);
+        world.Player.Faction = data.PlayerFaction;
+        int villagers = data.FactionIndex("f-d");
+        Squad? last = null;
+        CharacterId Spawn(string name, float x, int faction, bool player, string record, bool join = false)
+        {
+            if (!join)
+            {
+                last = new Squad { Id = world.Squads.NextId(), TemplateId = "t", Faction = faction };
+                world.Squads.Add(last);
+            }
+            var cold = new Meitou.Tests.Combat.Combatant { Name = name }.MakeCold();
+            (cold.Faction, cold.IsPlayer, cold.RecordId, cold.Inventory, cold.SquadId) = (faction, player, record, new Inventory(), last!.Id);
+            var id = world.Characters.Spawn(new CharacterHot { Position = new Vector3(x, 150, 0), Health = 100, MaxSpeed = 60, WalkSpeed = 15, Task = (byte)CharacterTask.Idle }, cold, 0);
+            last.Members.Add(id);
+            if (!join) last.Leader = id;
+            return id;
+        }
+        Spawn("hero", 0, data.PlayerFaction, true, "");
+        Spawn("Guard", 100, villagers, false, "guard-c");
+        Spawn("Mate", 110, villagers, false, "guard-c", join: true);
+        Spawn("Stranger", 150, villagers, false, "");
+
+        var said = new HashSet<string>();
+        for (int i = 0; i < 400; i++)
+        {
+            world.RunTicks(1);
+            foreach (var s in dialogue.PublishSpeech()) said.Add($"{world.Characters.Cold(s.Speaker.Slot)!.Name}: {s.Text}");
+        }
+        // Which of the two greets depends on the scan order; the other cheers.
+        string[] all = [.. said.Order()];
+        Assert.True(all.SequenceEqual(["Guard: Hail, Stranger.", "Mate: Hurrah!", "Stranger: Hail yourself."]) || all.SequenceEqual(["Guard: Hurrah!", "Mate: Hail, Stranger.", "Stranger: Hail yourself."]),
+            string.Join(" | ", all));
+    }
+
     /// <summary>The hero walks 300 up to the villager and talks twice (rich, buying; then plain), pinned in <see cref="GoldenHashTests"/>.</summary>
     internal static List<ulong> Scripted(int threads)
     {

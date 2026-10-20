@@ -187,6 +187,19 @@ public sealed partial class ArrestSystem
     }
 
     /// <summary>
+    /// <c>DA_ARREST_TARGET</c> (29, <c>FUN_140680560</c>): in his own town the speaker captures the target and cages it (the original's tasks 240 and 112: an arrest with no fine);
+    /// elsewhere he and his squad attack it (task 4). False: the speaker is busy, or either is gone or down.
+    /// </summary>
+    public bool ArrestFromDialogue(World world, CharacterId guard, CharacterId target)
+    {
+        var table = world.Characters;
+        if (!table.TryResolveNext(guard, out int g) || table.Cold(g) is not { IsPlayer: false, Medical.Incapacitated: false, Carrying.IsNone: true } || Busy(guard)) return false;
+        if (!table.TryResolveNext(target, out int t) || !table.Next[t].Alive || table.Cold(t) is not { IsImprisoned: false, CarriedBy.IsNone: true }) return false;
+        Start(world, g, t, force: true);
+        return true;
+    }
+
+    /// <summary>
     /// The bounty desk's <c>DA_PAY_BOUNTY</c> (10, <c>FUN_140680560</c>, economy.md 11.4, <b>Observed</b>): the body <paramref name="carrier"/> carries pays its unclaimed entry for the
     /// speaker's booking faction, halved (truncated) when dead, into the player's money, and the entry is marked claimed. Returns what it paid (0: nothing).
     /// </summary>

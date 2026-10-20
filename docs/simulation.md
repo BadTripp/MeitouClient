@@ -878,8 +878,12 @@ to the next tick. A hostile target is attacked instead.
 
 - **Effects built**: locks, interrupts, `change relations`, trade, relations, the three attacks, take and give money, the surgeon's editor
   (paid by the line, `EditCharacter.Paid`), assign and clear bounty, lock this dialogue, DA 37 / 38 (a campaign's phase), `trigger campaign` (`PopulationSystem.TriggerFromDialogue`: the rules in
-  [campaigns](game/factions-squads-towns.md#campaigns); `world state` conditions read the live states), recruiting (DA 3 / 18, `DialogueSystem.Recruit`); the rest is
-  listed in [dialogue](game/dialogue.md#meitou-design).
+  [campaigns](game/factions-squads-towns.md#campaigns); `world state` conditions read the live states), recruiting (DA 3 / 18, `DialogueSystem.Recruit`), crowd
+  triggers, `give item`, `change AI` and `AI contract` (`Ai.ChangeAi`, `Ai.StartContract` with the target: `Blackboard.MissionTarget`, followed by goals aimed at the
+  squad mission through `AiMind.FollowTarget`; on its end the leader's `contract end talk passive`), DA 25 / 53 (`FixtureRegistry.TagEscaped` / `FreeSlave`) and DA 29
+  (`ArrestSystem.ArrestFromDialogue`); the rest is listed in [dialogue](game/dialogue.md#meitou-design).
+- **Events from other systems**: `DialogueEvent` (deferred to the next tick) fires an event at an NPC as bubbles, or a given DIALOGUE (the contract end talk);
+  first aid, shackles and the release rounds send them.
 - **Recruiting** ([facts](game/dialogue.md#recruiting)): at the `max faction size` cap the line "It looks like your squad is a little full." is
   posted and the conversation ends; otherwise the speaker leaves its squad (its leader passes to the first member left) and joins the player's
   active squad (the first selected player character's, else `Player.Squad`, else the talker's), or a new "blank squad" squad when that one has
