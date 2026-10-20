@@ -36,7 +36,8 @@ sealed partial class PlayerInterface
     {
         if (faithfulScreens is null) return;
         var focus = BuildingFocus();
-        var m = focus?.SiteId is { } id && session.CurrentSnapshot.Buildings.FirstOrDefault(s => s.Id == id) is { Complete: true } ? Machine(id) : null;
+        // A rock's natural site is no registry building: its machine, once mined, is enough.
+        var m = focus?.SiteId is { } id && (ProductionSystem.IsNatural(id) || session.CurrentSnapshot.Buildings.FirstOrDefault(s => s.Id == id) is { Complete: true }) ? Machine(id) : null;
         if (m is not null && m.Inputs.Count == 0 && m.Output is null && m.Storage is null && m.Craft is null) m = null;
         // An open container takes the window.
         m = session.CurrentSnapshot.Machines.FirstOrDefault(c => c.IsContainer) ?? m;

@@ -31,7 +31,7 @@ sealed partial class PlayerInterface
     /// <summary>The selected building while it still exists (a site that was cancelled or dismantled drops the selection).</summary>
     SelectedBuilding? BuildingFocus()
     {
-        if (selectedBuilding is { SiteId: { } id } && !session.CurrentSnapshot.Buildings.Any(s => s.Id == id)) SetBuilding(null);
+        if (selectedBuilding is { SiteId: { } id } && !Meitou.Simulation.Production.ProductionSystem.IsNatural(id) && !session.CurrentSnapshot.Buildings.Any(s => s.Id == id)) SetBuilding(null);
         return selectedBuilding;
     }
 
@@ -61,6 +61,7 @@ sealed partial class PlayerInterface
                 var info = host.WorldInfo(b);
                 best = new(UiMode == Meitou.Data.Ui.UiMode.Meitou && info.Sells is { } sells ? sells : info.Name, info.Type, info.Owner, info.Town, null, b.Key, new Vector3(b.Position.X, y, b.Position.Z), hull, info.PublicDay, info.PublicNight, b.BuildingId);
             }
+        if (PickRockAt(pixel) is { } rock && rock.T < bestT) best = RockBuilding(rock.Rock);
         return best;
     }
 

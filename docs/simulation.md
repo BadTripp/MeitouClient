@@ -745,6 +745,15 @@ crafting benches, generators and batteries. Facts: [production](game/buildings-p
   - Research benches add to the research queue; crafting benches work their queue.
   - More characters than `max operators` are refused with "X is already in use.".
   - Farms tick whether anyone is there; there is no offline catch-up on load.
+- **Rocks** (`ProductionSystem.Natural.cs`, UI `PlayerInterface.Rocks.cs`; facts in [resources](game/buildings-production.md#resources)). A foliage
+  rock is a natural site, operated like a mine: a right click on it with characters selected is an `OperateOrder`, with Shift an Operating machine
+  job. Its site id `natural:<BUILDING>@x,y,z` (the rock's position) is all the sim needs: the site is made from it (an `is foliage` BUILDING
+  with an operable mine; with a rock source, one of it must stand there), owned by no faction, so player-only lookups skip it. Its machine
+  yields `ResourceField.NodeYield` (at least 0.1) and is kept in memory, not saved; a saved job keeps the id (`meitou pjob<i>`). The ore stays in
+  the rock's output (5) until taken: a left click selects the rock and opens its machine window once it has been mined (**Observed** by the
+  owner: the base game's ore is picked up by hand), or a storage within `HaulRange` takes it as for any machine. Engine choices: the rock is picked as a sphere of `NodeRadius` 25; level-placed `is foliage`
+  buildings (not drawn, not in `FoliageResourceNodes`) cannot be mined. NPC town mines are not run (the original's make output while NPCs
+  operate them).
 - **Items.** `PutInMachine` and `TakeFromMachine` move items between a character within 200 of the building and the machine:
   inputs, output, or storage cells.
 - **Research** (`Construction/ResearchState`). A queue paid at queue time from the benches' storage; a paid id is never
@@ -752,7 +761,8 @@ crafting benches, generators and batteries. Facts: [production](game/buildings-p
   - Bench level is the best complete bench's `tech level`.
   - Several operators add with the 0.6^k falloff.
   - Partial progress is kept off the queue (in memory only).
-- **Hash.** Machines and research join the world hash only once the player has one; golden hashes are unchanged.
+- **Hash.** Machines and research join the world hash only once the player has one; golden hashes are unchanged. Yields read the
+  biome map and rock source, so a replay without them (headless) hashes other yields than the host.
   RNG: `RngPurpose.Farm` (replanting, harvest rolls), `RngPurpose.Craft` (critical rolls).
 - **Crafting** (`ProductionSystem.Crafting.cs`, data `Construction/CraftingData.cs`). `QueueCraft` (at most 20),
   `CancelCraft`, `RepeatCrafts`. The first craft binds the input sections to its ingredients (other items in a section

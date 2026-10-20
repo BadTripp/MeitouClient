@@ -111,6 +111,7 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
             else if (GroundItemClick(p)) { }
             else if (ContainerClick(p)) { }
             else if (DoorClick(p, alt)) { }
+            else if (RockClick(p, shift)) { }
             else if (Ray(p) is { } ray && MoveHit(ray.Origin, ray.Direction) is { } hit)
             {
                 Move(hit, shift);
