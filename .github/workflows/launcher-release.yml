@@ -54,7 +54,7 @@ jobs:
       matrix:
         include:
           - { rid: win-x64, os: windows-latest, exe: meitou-launcher.exe }
-          - { rid: linux-x64, os: ubuntu-latest, exe: meitou-launcher }
+          - { rid: linux-x64, os: ubuntu-22.04, exe: meitou-launcher }
           - { rid: osx-x64, os: macos-latest, exe: meitou-launcher }
           - { rid: osx-arm64, os: macos-latest, exe: meitou-launcher }
     runs-on: ${{ matrix.os }}
