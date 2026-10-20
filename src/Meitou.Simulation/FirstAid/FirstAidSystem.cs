@@ -50,14 +50,20 @@ public sealed class FirstAidSystem(GameConstants constants, BodyOptions options,
                     if (!table.TryResolveNext(order.Patient, out int patient) || table.Cold(patient)!.Medical is not { Dead: false }) break;
                     foreach (var id in Who(world, order.Medics))
                         if (table.TryResolveNext(id, out int slot) && table.Cold(slot) is { Race: not null, Stats: not null } cold && CanAct(cold))
-                            Begin(table, slot, order.Patient, CharacterTask.Idle);
+                        {
+                            if (FindKit(world, slot, cold, ItemInfo.FirstAidKitFunction) is null && FindKit(world, slot, cold, ItemInfo.RobotKitFunction) is null)
+                                world.Bark(id, "I don't have a medkit.");   // refused before the medic moves
+                            else Begin(table, slot, order.Patient, CharacterTask.Idle);
+                        }
                     break;
                 case SplintOrder splint:
                     if (!table.TryResolveNext(splint.Patient, out int splinted) || table.Cold(splinted)!.Medical is not { Dead: false }) break;
                     foreach (var id in Who(world, splint.Medics))
-                        if (table.TryResolveNext(id, out int slot) && table.Cold(slot) is { Race: not null, Stats: not null } cold && CanAct(cold)
-                            && FindKit(world, slot, cold, ItemInfo.SplintKitFunction) is not null)   // "I don't have a splint kit."
-                            Begin(table, slot, splint.Patient, CharacterTask.Idle, splint: true);
+                        if (table.TryResolveNext(id, out int slot) && table.Cold(slot) is { Race: not null, Stats: not null } cold && CanAct(cold))
+                        {
+                            if (FindKit(world, slot, cold, ItemInfo.SplintKitFunction) is null) world.Bark(id, "I don't have a splint kit.");
+                            else Begin(table, slot, splint.Patient, CharacterTask.Idle, splint: true);
+                        }
                     break;
                 case RestOrder rest:
                     foreach (var id in Who(world, rest.Characters))

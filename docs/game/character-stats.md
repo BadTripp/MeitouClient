@@ -59,6 +59,10 @@ stumps and robot wear are not interchangeable. Race tables own HP/blood/hunger/h
 stun0 and bleeding0; the wounds are already treated. First Aid has nothing left to bandage;
 the HUD's yellow layer shows the treated damage awaiting passive recovery.
 
+**Observed** (play, 2026-10-21): a first-aid order (self included) given to a character without a medkit is refused before
+any movement or animation, with the bubble "I don't have a medkit." Whether a squad mate's kit nearby or a robot repair kit
+avoids the refusal is **Unknown** (Meitou accepts any kit `FindKit` would use).
+
 **Verified** carried person adds CONSTANTS weight30, independent of body/race/inventory.
 **Observed** capacity C=1.2*strength*strength-injury-mult+15; encumbrance
 clamp((C-0.05W)/(0.95W),0,1), 1 through W<=C and0 at W>=20C. It affects speed, hunger, XP/dodge.
