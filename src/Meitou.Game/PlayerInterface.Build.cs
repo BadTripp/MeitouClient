@@ -538,7 +538,13 @@ sealed partial class PlayerInterface
         {
             bool open = doors.Any(d => d.Motion == Meitou.Simulation.Locks.DoorMotion.Open);
             verbs.Add((open ? "Close Doors" : "Open Doors", () => Say(new Meitou.Simulation.Locks.ToggleDoorsOrder(site.Id) { Tick = session.World.Tick })));
-            verbs.Add((doors.All(d => d.WantsLock) ? "Unlock Doors" : "Lock Doors", () => Say(new Meitou.Simulation.Locks.ToggleDoorLocksOrder(site.Id) { Tick = session.World.Tick })));
+            // The Security button's sound (FUN_140547060): Build_Lock is the state being left.
+            bool locked = doors.All(d => d.WantsLock);
+            verbs.Add((locked ? "Unlock Doors" : "Lock Doors", () =>
+            {
+                Sound("Building_Lock_Unlock", "Build_Lock", locked ? "Lock_Building" : "Unlock_Building");
+                Say(new Meitou.Simulation.Locks.ToggleDoorLocksOrder(site.Id) { Tick = session.World.Tick });
+            }));
         }
         return verbs;
     }

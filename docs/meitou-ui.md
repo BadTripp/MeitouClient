@@ -33,7 +33,7 @@ The project site ([site/](../site/), Astro + nginx container) uses a texture-fre
   buttons 38 tall 6 apart, Exit 4 further. Icon column 24, 12 to the label.
 - Type: Exo 2 600. 24 window title, 22 primary label (upper, 0.08em), 20 headings, 16 body,
   14 menu items (upper, 0.1em) and stat rows, 12 captions, 10 key badges (upper).
-- Focus 2px `brass-light` ring offset 2. Disabled `greyed-bright`, plate at 50%. Paper brightens 10%
+- Focus 2px `brass-light` ring offset 2. Meitou-only keyboard focus (Tab, Shift+Tab over a window's buttons) draws it round the button in the Meitou UI mode, also on the original layouts' windows ([ui-input](game/ui-input.md#edit-boxes-and-keyboard-focus)); the Faithful mode shows none. Disabled `greyed-bright`, plate at 50%. Paper brightens 10%
   on hover and drops 1px on press. Settings/title hover brightening eases in/out over 160ms.
 
 ## Copy

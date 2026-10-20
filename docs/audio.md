@@ -236,11 +236,12 @@ the exe's). Posts are unconditional unless noted. Events that are not in `SFX_Ge
 | `Stats_Preview` (`Stats_Up` opening, `Stats_Down` closing) | the extended-stats button |
 | `Blocks_Only` / `Stealth` (on) / `Taunt` | the Block, Hold, Passive, Ranged orders (on and off) / Sneak on / Taunt |
 | `Right_Click` | an order given: right click, context menu or quick order; not a move order while steering |
+| `Permanent_Job` | an order given with Shift (a job added to each selected character's list instead of a one-shot order), once per order however many characters get it and even if the add is refused: `FUN_1407f5a90` posts it unconditionally after its loop over the selection (**Verified**, decompiled; the dispatcher link is **Observed**, [ai-tasks](game/ai-tasks.md)); Medic and Rescue with Shift the same; its hash is in `SFX_General_Bank` (**Observed**) |
 | `Inventory_Open` / `_Close` | any inventory window (character, bag, loot, trade) created or removed |
 | `Item_Lift`, `Item_Drop`, `Sell_Item`, `Character_Drop_Ground` (`Inventory_Items`) | an item picked up with the mouse / put down / traded / dragged out to the ground; the switch is by record, below |
 | `Stats_Open` / `_Close`; `Tab`; `Map_Open` / `_Close`; `Tech_Open` / `_Close` | windows: stats; overview tabs (map 0, research 2; the others `Tab`); Map_Close only when closing on the map tab |
 | `Building_Button`; `_Navigate`; `_Confirm`; `_Undo`; `_Place` (`Building_Place` = `Outdoors` / `Indoors`); `_Cant_Build_There`; `_Click` (`Buildings_Click`) | entering build mode; list and arrow selection; confirm; undo (only with something queued); a placed ghost; a refused one; selecting a building (index 0 is silent) |
-| `UI_Generator` (`Generator` = `On` / `Off`); `Building_Lock_Unlock` (`Build_Lock` = the state being *left*) | machine power switch; door Security button |
+| `UI_Generator` (`Generator` = `On` / `Off`); `Building_Lock_Unlock` (`Build_Lock` = the state being *left*) | machine power switch; door Security button (`FUN_140547060` sets `Build_Lock` to `Lock_Building` when the door's lock flag is set, else `Unlock_Building`, posts, then flips the flag: **Verified**, decompiled) |
 | `Dialogue_Choice` (`Dialogue_Choice` = `Continue_Conversation`) | a reply picked |
 | `Notifications` (`Notifications` = `Building_Complete`, `Thing_Complete`, `Bounty_Fulfilled`, `New_Biome`) | construction finished; research or blueprint learned, a dismantle finished; a bounty paid; the HUD biome banner on a region change |
 | `Slider`, `Create_Character`, `Prospect_Click`, `Prospect_Results`, `Research_Tab` (`Research_Tabs`) | data-panel slider; the character editor's Done (and a released prisoner); prospecting |
@@ -251,11 +252,17 @@ and MAP_ITEM by `inventory sound` (`Backpack`, `Building_Material`, `Fabric`, `F
 Hover and Slider; whether the editor's speed reset posts `Game_Speed_Normal`; what Wwise does for a NULL switch value.
 
 Meitou (`UiSounds` in `Meitou.Audio`, `PlayerInterface.Sounds.cs`, `GameHost.AudioUi.cs`): the host plays what `PlayerInterface.UiSound` receives. Hooks: `ExecuteUiAction` (HUD actions), `FaithfulAction` (the original screens' widgets),
-the commands `Say` sends (orders, item moves, trades, dialogue choices), and a poll in `Draw` for windows opening and closing, the title button under the pointer, the speed keys (F2 to F4, when the clock moves to a new speed without a button), a building of the player's finishing
+the commands `Say` sends (orders, item moves, trades, dialogue choices; `AddJob` and the Shift Medic / Rescue commands as `Permanent_Job`), and a poll in `Draw` for windows opening and closing, the title button under the pointer, the speed keys (F2 to F4, when the clock moves to a new speed without a button), a building of the player's finishing
 (`Building_Complete`) and a new building unlocked by research or a blueprint (`Thing_Complete`; the sim also queues `DismantleDone` for a finished dismantle and `BountyPaid` for a reward, played as `Thing_Complete` / `Bounty_Fulfilled`).
-**No trigger in Meitou (not played):** `Building_Click` (a building cannot be selected), `UI_Generator` (no machine panel), `Building_Lock_Unlock` (no door panel), `Prospect_Click` and `Prospect_Results` (no prospecting), `Research_Tab` (the research tab posts
-nothing), `New_Biome` (no HUD biome banner), `Character_Drop_Ground` (an item cannot be dragged out onto the ground), `Create_Character` on a prisoner's release, `Slider` outside the editor; `Building_Place`'s `Indoors` value
-(Meitou's ghost has no parent building to ask) is always `Outdoors`.
+`Building_Click`: selecting a building (`SetBuilding`, so a click on the one already selected sounds again) switches `Buildings_Click` by the BUILDING's `select sound` (`UiSounds.BuildingSound`) and posts nothing for 0. The switch values are the exe's table at
+`0x141e17308` read by `FUN_1405504a0` (**Verified**: read from kenshi_x64.exe; 1 `Bed`, 2 `Dummy`, 3 `Farm`, 4 `Generator`, 5 `Grain_Silo`, 6 `House`, 7 `Mine_Ore`, 8 `Mine_Stone`, 9 `Research_Bench`, 10 `Store_Armor`, 11 `Store_Building_Materials`, 12 `Store_Flour`, 13 `Store_Ore`,
+14 `Store_Prisoner`, 15 `Store_Rum`, 16 `Store_Stones`, 17 `Stove`, 18 `Well`, 19 `Wind_Generator`, 20 `Chain_Bench`, 21 `Fabric_Loom`, 22 `Leather_Bench`, 23 `Medical_Desk`, 24 `Plate_Station`, 25 `Shop_Counter`, 26 `Smithy`, 27 `Stone_Processor`, 28 `Armorer`, 29 `Bar`, 30 `Boxes`,
+31 `Campfire`, 32 `Gate`, 33 `Gen_Goods`, 34 `Hive_Hut`, 35 `Lamp`, 36 `Long_House`, 37 `Outhouse`, 38 to 42 `Store_Armor`, `Store_Building_Materials`, `Store_Flour`, `Store_Ore`, `Store_Prisoner` again, 43 `Tailor`, 44 `Tower`, 45 `Travel`, 46 `Turret`, 47 `Wall_Metal`,
+48 `Wall_Station_House`, 49 `Wall_Stone`, 50 `Wall_Wood`, 51 `Wood_Obj_Big`, 52 `Wood_Obj_Small`; the **Unknown** is which BUILDING records set which index, and whether the bank has a sound for each value). `Building_Lock_Unlock`: Meitou's stand-in for the Security button is the
+building menu's Lock Doors / Unlock Doors verb (all the doors at once; `Build_Lock` is the state before the press). `Create_or_Load_Game` comes from `MusicDirector.OnCreateOrLoadGame`, `Hover` from the poll.
+**No trigger in Meitou (not played):** `UI_Generator` (the machine window has no power switch: `Machines.PowerOn` has no UI), `Prospect_Click` and `Prospect_Results` (no prospecting), `Research_Tab` (the research tab posts
+nothing), `New_Biome` (no HUD biome banner), `Character_Drop_Ground` (an item cannot be dragged out onto the ground: dropping outside the windows does nothing), `Create_Character` on a prisoner's release, `Slider` outside the editor (no data-panel slider yet; its drag events would sound through
+`SoundForScreen` as the editor's do); `Building_Place`'s `Indoors` value (Meitou's ghost has no parent building to ask) is always `Outdoors`.
 
 ## Meitou's player
 

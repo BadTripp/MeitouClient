@@ -30,18 +30,10 @@ sealed partial class PlayerInterface
             UpdateMenuPause();
             return true;
         }
-        if (faithfulScreens.HasKeyboardFocus)
-        {
-            UiEditKey? editing = key switch { Meitou.Engine.Input.Key.Left => UiEditKey.Left, Meitou.Engine.Input.Key.Right => UiEditKey.Right,
-                Meitou.Engine.Input.Key.Home => UiEditKey.Home, Meitou.Engine.Input.Key.End => UiEditKey.End, Meitou.Engine.Input.Key.Backspace => UiEditKey.Backspace,
-                Meitou.Engine.Input.Key.Delete => UiEditKey.Delete, Meitou.Engine.Input.Key.A when ctrl => UiEditKey.SelectAll, _ => null };
-            if (editing is { } editKey) faithfulScreens.EditKey(editKey, shift);
-            if (key == Meitou.Engine.Input.Key.Tab) faithfulScreens.FocusNext(shift);
-            if (key == Meitou.Engine.Input.Key.Enter) faithfulScreens.Submit();
-            return true;
-        }
+        if (faithfulScreens.HasKeyboardFocus) return EditFocusKey(key, ctrl, shift);
         if (key == Meitou.Engine.Input.Key.Tab && faithfulScreens.FocusNext(shift)) return true;
         if (key == Meitou.Engine.Input.Key.Enter && faithfulScreens.Submit()) return true;
+        if (key == Meitou.Engine.Input.Key.Space && faithfulScreens.ActivateFocused()) return true;
         if (DialogueKey(key)) return true;
         if (faithfulScreens.HasModal) return true;
         // change_squad (Tab): the squad bar shows the next squad with members (docs/game/ui-input.md section 6).
