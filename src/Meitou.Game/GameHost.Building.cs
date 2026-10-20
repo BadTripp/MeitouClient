@@ -148,7 +148,7 @@ sealed partial class GameHost
     /// What the player's build mode needs (docs/simulation.md "Buildings", PlayerInterface.Build.cs): the catalog of BUILDINGs, their texts and parts, the placement services
     /// (terrain, collision footprints) and the ghost drawing. Null without a game database.
     /// </summary>
-    Building.BuildServices? MakeBuildServices(Meitou.Data.World.GroundHeights heights)
+    Building.BuildServices? MakeBuildServices()
     {
         if (scene.Database is not { } db) return null;
         var footprints = new Meitou.Navigation.BuildingFootprints(install, db, IsSandbox || IsDuel ? null : scene.Objects?.Levels);
@@ -175,7 +175,7 @@ sealed partial class GameHost
             IconFile = icons.Find,
             Placement = new Building.PlacementServices
             {
-                Ground = heights.HeightAt,
+                Ground = gpu.Terrain.HeightAt,
                 Footprint = footprints.Of,
                 StaticAround = footprints.StaticAround,
                 StaticAlong = (origin, direction, length) => footprints.Along(origin, direction, length).Where(b => Pickable(b.Placement.BuildingId)),

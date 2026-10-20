@@ -105,7 +105,7 @@ sealed partial class GameHost(GameInstall install, WorldScene scene, AssetLocato
             clock: GameClockFor(constants ??= scene.Database is { } clockDb ? Meitou.Data.Gameplay.GameConstants.FromDatabase(clockDb) : null, o.Hour, o.Day ?? GameClock.DefaultStartDay),
             simulation: worldSettings = new Meitou.Simulation.WorldSettings { Seed = g.Seed, MinPartitionSize = 128, Threads = Math.Max(1, config.SimThreads ?? Math.Clamp(Environment.ProcessorCount / 2, 1, 8)) },
             systems: systems, walkability: walkability);
-        BootPlayer(display, heights, interactive);
+        BootPlayer(display, interactive);
     }
 
     /// <summary>
@@ -179,7 +179,7 @@ sealed partial class GameHost(GameInstall install, WorldScene scene, AssetLocato
     }
 
     /// <summary>The rest of <see cref="Boot"/> once the session exists: bindings, the player's interface, the start (a new game's squad, the sandbox, the duel), the camera, a <c>--load</c> save.</summary>
-    void BootPlayer(VulkanDisplay display, Meitou.Data.World.GroundHeights heights, bool interactive)
+    void BootPlayer(VulkanDisplay display, bool interactive)
     {
         var context = display.Context;
         var target = camera.Target;
@@ -193,7 +193,8 @@ sealed partial class GameHost(GameInstall install, WorldScene scene, AssetLocato
         // Tab is the game's change_squad, not the settings (they open from the Esc menu); older saved configs bound Tab to them.
         if (session.Bindings.Get(InputAction.ToggleSettings).SequenceEqual([Binding.Of(EngineKey.Tab)])) session.Bindings.Set(InputAction.ToggleSettings);
         LoadingStep("interface");
-        player = new PlayerInterface(session, heights.HeightAt, DrawnPosition);
+        // Picks against the drawn terrain (the streamed fine window): the boot window's heights fall back to a 144-unit grid away from the start.
+        player = new PlayerInterface(session, gpu.Terrain.HeightAt, DrawnPosition);
         player.LoadUi(g.UiMode ?? config.UiMode, assets.Find);
         player.SpeedUnit = config.SpeedUnit;
         player.Floaters = config.Floaters;
@@ -209,7 +210,7 @@ sealed partial class GameHost(GameInstall install, WorldScene scene, AssetLocato
         player.BuildingMoveHit = (origin, direction, distance) => gpu.Objects?.MoveHit(origin, direction, viewedFloor, distance);
         player.SurfaceMoveHit = SurfaceMoveHit;
         player.ClosedBuildingHit = (origin, direction, distance) => gpu.Objects?.ClosedBuildingHit(origin, direction, distance);
-        player.BuildHost = MakeBuildServices(heights);
+        player.BuildHost = MakeBuildServices();
         player.FactionName = faction => popData is { } d && faction >= 0 && faction < d.Factions.Count ? d.Factions[faction].Name : null;
         player.SquadLimits = () => popData?.Bodies.Constants;
         player.Rocks = () => popData?.ResourceNodes;
