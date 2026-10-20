@@ -160,23 +160,7 @@ jobs:
           $zips = @('win-x64', 'linux-x64', 'osx-x64', 'osx-arm64') | ForEach-Object { "out/Meitou-$env:VERSION-$_.zip" }
           foreach ($zip in $zips) { if (-not (Test-Path $zip)) { throw "$zip missing" } }
           $changes = Get-Content -Raw "$env:RUNNER_TEMP/changes.md"
-          $game = ([xml](Get-Content src/Meitou.Game/Meitou.Game.csproj)).Project.PropertyGroup.AssemblyName | Where-Object { $_ } | Select-Object -First 1
-          $download = @"
-          ## Download
-
-          The Meitou launcher installs these by itself. By hand: download the zip for your system, unzip it anywhere and run the game or the world viewer.
-          You need Kenshi installed: no game files are included. README.txt in the zip lists the keys, options and requirements.
-
-          - **Windows**: ``Meitou-$env:VERSION-win-x64.zip``, run ``$game.exe`` (the game) or ``meitou-viewer.exe`` (the world viewer). A Steam install is
-            found by itself, otherwise Meitou asks for your Kenshi folder once. DLSS (NVIDIA RTX) and FSR are included: pick them on the Tab panel's
-            anti-aliasing slider; for the viewer, start ``meitou-viewer-dlss.bat``.
-          - **Linux**: ``Meitou-$env:VERSION-linux-x64.zip``, run ``./$game`` or ``./meitou-viewer``. Needs a Vulkan 1.3 driver and loader.
-          - **macOS**: ``Meitou-$env:VERSION-osx-arm64.zip`` (Apple Silicon) or ``Meitou-$env:VERSION-osx-x64.zip`` (Intel). Needs a
-            Vulkan loader and MoltenVK installed, e.g. from the LunarG Vulkan SDK.
-
-          On Linux and macOS, give the Kenshi folder with ``KENSHI_PATH`` or when asked. DLSS and FSR are Windows-only.
-          "@
-          $notes = $changes.Trim() + "`n`n" + $download
+          $notes = $changes.Trim()
           $flags = @('--latest=false')
           if ($env:PRERELEASE -eq 'true' -or $env:NIGHTLY -eq 'true') { $flags += '--prerelease' }
           # A nightly's notes list every commit already (the version step). A full release adds GitHub's generated notes (merged pull requests),
