@@ -877,7 +877,9 @@ Scoring follows the original (`TaskProfiles`: desire, commitment, crowding per g
 the original computes in a function of its own counts as 1. Town goals ([ai-tasks.md](game/ai-tasks.md#town-goals)):
 wandering and patrolling in town walk to a general node of a town building, shopping to a node of a
 shop, relaxing under a bar package and sitting around (275, in the home) sit on a seat claimed per
-member on the package cadence, and the wanderer walks to the nearest town. Seats are the home's
+member on the package cadence, and the wanderer walks to the nearest town. A home node goal takes a
+node of its kind, a guard post a general node next (as the original), then any node but a shopkeeper's
+(engine; only the shopkeeper goal falls back onto the counter). Seats are the home's
 interior furniture with a CHAIR functionality (`HomeSpotKind.Chair`; never a standing node), free
 in that building this pass; relaxing falls back to a bar node, then a general node, sitting around
 has none and is not wanted without a chair (without a home it sits where it is). A seated character

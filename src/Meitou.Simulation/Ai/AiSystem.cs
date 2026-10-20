@@ -451,21 +451,27 @@ public sealed class AiSystem(PopulationData data, AiSettings? settings = null) :
             _ => HomeSpotKind.General,
         };
         if (Pick(home, kind, mind.MemberIndex) is { } spot) return (Flat(spot.Position), true, spot.Position.Y);
-        if (kind != HomeSpotKind.Bed && Pick(home, null, mind.MemberIndex) is { } any) return (Flat(any.Position), true, any.Position.Y);
+        // Guard posts fall back to general nodes (docs/game/ai-tasks.md "Town goals"); the counter is the shopkeeper's, so only its goal falls back onto it.
+        if (kind == HomeSpotKind.Guard && Pick(home, HomeSpotKind.General, mind.MemberIndex) is { } general) return (Flat(general.Position), true, general.Position.Y);
+        if (kind != HomeSpotKind.Bed && Pick(home, null, mind.MemberIndex, kind != HomeSpotKind.Shopkeeper) is { } any) return (Flat(any.Position), true, any.Position.Y);
         // No bed: it sleeps in the house; a node goal without nodes stays at its own post, except staying home.
         if (kind == HomeSpotKind.Bed || type == TaskType.STAY_IN_HOME) return (Flat(home.Position), true, null);
         return (mind.Post, false, null);
     }
 
-    /// <summary>The <paramref name="index"/>-th spot of a kind (null: any node, <see cref="HomeSpot.IsNode"/>) of a building, round robin; null when it has none.</summary>
-    static HomeSpot? Pick(TownBuilding home, HomeSpotKind? kind, int index)
+    /// <summary>
+    /// The <paramref name="index"/>-th spot of a kind (null: any node, <see cref="HomeSpot.IsNode"/>, shopkeeper nodes left out with <paramref name="notCounter"/>) of a
+    /// building, round robin; null when it has none.
+    /// </summary>
+    static HomeSpot? Pick(TownBuilding home, HomeSpotKind? kind, int index, bool notCounter = false)
     {
+        bool Takes(HomeSpot s) => kind is { } k ? s.Kind == k : s.IsNode && !(notCounter && s.Kind == HomeSpotKind.Shopkeeper);
         int count = 0;
-        foreach (var s in home.Spots) if (kind is { } k ? s.Kind == k : s.IsNode) count++;
+        foreach (var s in home.Spots) if (Takes(s)) count++;
         if (count == 0) return null;
         int want = index % count;
         foreach (var s in home.Spots)
-            if ((kind is { } k ? s.Kind == k : s.IsNode) && want-- == 0) return s;
+            if (Takes(s) && want-- == 0) return s;
         return null;
     }
 
