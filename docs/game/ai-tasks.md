@@ -606,6 +606,21 @@ vfunc 5 `FUN_14050caf0`). TaskData fields: +0x108 desire (a member function, nea
 | 45 Bodyguard | - | 0.9 |
 | 57, 58, 125, 237, 250 | - | 0.8 |
 
+## Combat goals
+
+**Verified** (registrations in `FUN_140319a60`, finder/desire stubs resolved by disassembly); readings of the finders' tests **Observed**.
+
+- 16 ATTACK_ENEMIES: effect state 6 `isNoEnemiesInVicinity` (registered without an evaluator). Finder `FUN_14059f3a0` walks the
+  looker's sensed characters (sense list kind 4) that are seen or heard (entry +0x38 / +0x39), drops those of a faction
+  `FUN_1406b23c0` accepts for the looker's (read as same/allied) and keeps those passing `FUN_140598630` and `FUN_140599f30` (read as
+  enemy tests, **Unknown** in detail); `FUN_14059e300` picks the target. Factor 1 with a target, else 0. This is the attack on sight.
+- 143 PROTECT_OWN_SQUAD ("Protect close allies"): effect `!isAggressionTowards` (state 16, evaluator `FUN_14059de10`: the target
+  resolves to a character whose AI-side object is set and byte +0x2b0 is set, meaning **Unknown**). Finder `FUN_14099d510` scores
+  each squad mate the looker senses by `FUN_14099a190`, nonzero only while that mate's AI holds a character target (+0x200 = 1,
+  hand +0x208); else it falls back to a hand list at +0x2f8. Achieved by 13 "Attacking attackers of" (list A `!16, !39, !12*`).
+- So a squad with PROTECT goals and no ATTACK goal starts no fight with an idle enemy (**Observed**): e.g. the base `Fog prince squad`
+  (`42029-rebirth.mod`, package `fog prince`); its dialogue package `fogman` answers only events 52 and 53 and has no effects.
+
 ## Town goals
 
 **Observed** (target finders named; TaskData effects lead the planner to the task that acts them out):

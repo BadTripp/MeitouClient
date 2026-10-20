@@ -166,13 +166,7 @@ public sealed class AggroSystem(FactionRelations relations, AggroSettings? setti
         }
         size = Math.Max(size, n);
         var next = table.Next;
-        if (present.Length != Relations.Count)
-        {
-            present = new bool[Relations.Count];
-            hasEnemy = new bool[Relations.Count];
-            raider = new bool[Relations.Count];
-            for (int f = 0; f < raider.Length; f++) raider[f] = IsRaider(Relations.Factions[f]);
-        }
+        if (present.Length != Relations.Count) { present = new bool[Relations.Count]; hasEnemy = new bool[Relations.Count]; }
         Array.Clear(present);
         for (int i = 0; i < n; i++)
         {
@@ -197,14 +191,7 @@ public sealed class AggroSystem(FactionRelations relations, AggroSettings? setti
         }
     }
 
-    bool[] present = [], presentBefore = [], hasEnemy = [], raider = [];
-
-    /// <summary>
-    /// A faction whose members attack enemies on sight whatever their package's combat goals say: hostile by default (<c>default relation</c> below -30) and of
-    /// <c>fundamental type</c> None or Bandit, the test the original's target choice <c>FUN_1404374d0</c> reads (docs/game/factions-squads-towns.md, Observed).
-    /// Engine choice: the fog prince squad lists only PROTECT_OWN_SQUAD (Defensive) yet hunts in the original, while Wildlife's "defensive only" turtles do not.
-    /// </summary>
-    static bool IsRaider(FactionData f) => f.DefaultRelation < FactionRelations.HostileThreshold && f.FundamentalType is FundamentalType.None or FundamentalType.Bandit;
+    bool[] present = [], presentBefore = [], hasEnemy = [];
     long changesBefore = -1;
     readonly List<int> presentList = [];
 
@@ -249,7 +236,6 @@ public sealed class AggroSystem(FactionRelations relations, AggroSettings? setti
             if (task is (byte)CharacterTask.Attack or (byte)CharacterTask.Treat || task == (byte)CharacterTask.Rest && !AiSleeper(table.Cold(i))) continue;
             if (table.Cold(i) is not { IsPlayer: false, InCombat: false, Fleeing: false, IsImprisoned: false, Fighter.CanAttack: true, Medical.Incapacitated: false, Carrying.IsNone: true } cold || !Relations.Contains(cold.Faction)) continue;
             var stance = cold.Ai?.Stance ?? Ai.AiStance.Aggressive;
-            if (stance < Ai.AiStance.Territorial && raider[cold.Faction]) stance = Ai.AiStance.Aggressive;
             var war = cold.SquadId >= 0 && world.Squads.Find(cold.SquadId) is { War.IsSet: true } assaulting ? assaulting.War : WarTargets.None;
             if (stance == Ai.AiStance.Passive || !hasEnemy[cold.Faction] && stance != Ai.AiStance.AggressiveNeutrals && !war.IsSet) continue;
             float range = RangeOf(cold, Settings.SightRange);
