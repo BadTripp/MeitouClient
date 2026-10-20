@@ -22,6 +22,9 @@ public enum FixtureKind : byte
 /// <summary>A container with an inventory as the host picks it: its fixture id, BUILDING record and position.</summary>
 public sealed record ContainerSpot(string Id, string Record, Vector3 Position);
 
+/// <summary>A door for the host's picking: its fixture id, its key in <see cref="WorldSnapshot.Doors"/>, its owner faction and where its leaf is (else its building's origin).</summary>
+public sealed record DoorPick(string Id, string Building, int Door, int Owner, Vector3 Position);
+
 /// <summary>The door's motion state as saved in <c>state&lt;i&gt;</c> (docs/game/locks.md "Doors"; not the DoorState enum): 0 closed, 1 open, 2 opening, 3 closing.</summary>
 public enum DoorMotion : byte { Closed = 0, Open = 1, Opening = 2, Closing = 3 }
 

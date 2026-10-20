@@ -188,6 +188,8 @@ public sealed record WorldSnapshot(long Tick, IReadOnlyList<CharacterSnapshot> C
     public IReadOnlyList<Items.GroundItemSnapshot> GroundItems { get; init; } = [];
     /// <summary>The containers with an inventory (a building interior's chests and boxes), where they stand.</summary>
     public IReadOnlyList<Locks.ContainerSpot> Containers { get; init; } = [];
+    /// <summary>Every door, where its leaf is, for the right click (<see cref="Locks.DoorOrder"/>); its state is in <see cref="Doors"/>.</summary>
+    public IReadOnlyList<Locks.DoorPick> DoorPicks { get; init; } = [];
     /// <summary>Bumped when an item is dropped or goes: the host diffs <see cref="GroundItems"/> by id when it changes.</summary>
     public long GroundItemsRevision { get; init; }
     /// <summary>BUILDING ids the player's research has unlocked (the build menu's list).</summary>

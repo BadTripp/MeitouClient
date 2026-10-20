@@ -32,6 +32,9 @@ public sealed class PlayerState
     public CharacterId ContainerOpener { get; set; } = CharacterId.None;
     public string? OpeningContainer { get; set; }
     public CharacterId ContainerWalker { get; set; } = CharacterId.None;
+    /// <summary>The door (<see cref="Locks.Fixture.Id"/>) a character is walking to open or close (<see cref="Locks.DoorOrder"/>), and who. Not hashed and not saved, as the container walk.</summary>
+    public string? DoorTarget { get; set; }
+    public CharacterId DoorWalker { get; set; } = CharacterId.None;
     /// <summary>
     /// What the player knows of each placed town (<see cref="PopulationData.Sites"/> order): discovered, explored, recently discovered (docs/game/ui-screens.md "Map").
     /// Replaced, never changed in place, so a snapshot may hold it. Not hashed: it follows from positions and nothing in the simulation reads it.

@@ -63,6 +63,9 @@ public sealed partial class LockSystem(GameConstants constants, BodyOptions opti
                 case ToggleDoorsOrder or ToggleDoorLocksOrder:
                     DoorInputs(world, command);
                     break;
+                case DoorOrder door:
+                    DoorOrderInput(world, door);
+                    break;
             }
         }
     }
@@ -81,11 +84,12 @@ public sealed partial class LockSystem(GameConstants constants, BodyOptions opti
             if (world.Fixtures.Find(id) is not { } f || c.Medical is { Incapacitated: true } || !c.CarriedBy.IsNone) { c.PickingLock = null; continue; }
             if (!c.IsImprisoned)
             {
-                float d = Vector2.Distance(new Vector2(next[s].Position.X, next[s].Position.Z), new Vector2(f.Position.X, f.Position.Z));
-                if (d > f.UseRange + Reach)
+                var (at, reach) = WorkSpot(world, f, new Vector2(next[s].Position.X, next[s].Position.Z));
+                float d = Vector2.Distance(new Vector2(next[s].Position.X, next[s].Position.Z), at);
+                if (d > reach)
                 {
                     // Still walking; another order (a new goal) or a failed path ends it.
-                    if (next[s].Task != (byte)CharacterTask.GoTo || Vector2.Distance(next[s].Goal, new Vector2(f.Position.X, f.Position.Z)) > 1) c.PickingLock = null;
+                    if (next[s].Task != (byte)CharacterTask.GoTo || Vector2.Distance(next[s].Goal, at) > (f.Kind == FixtureKind.Door ? reach : 1)) c.PickingLock = null;
                     continue;
                 }
                 if (next[s].Task == (byte)CharacterTask.GoTo) MovementSystem.Stop(table, s);

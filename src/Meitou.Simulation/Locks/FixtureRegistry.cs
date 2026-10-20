@@ -48,6 +48,11 @@ public sealed class FixtureRegistry
     /// <summary>Where the containers with an inventory stand, for the host's picking; rebuilt (serial phases) only when a building registers or goes.</summary>
     public IReadOnlyList<ContainerSpot> ContainerSpots => containerSpots ??= [.. all.Where(f => f.Contents is not null).Select(f => new ContainerSpot(f.Id, f.RecordId, f.Position))];
 
+    IReadOnlyList<DoorPick>? doorPicks;
+
+    /// <summary>Every door, for the host's picking (<see cref="PublishedDoors"/> leaves closed unlocked town doors out); rebuilt (serial phases) only when a building registers or goes.</summary>
+    public IReadOnlyList<DoorPick> DoorPicks => doorPicks ??= [.. all.Where(f => f.Kind == FixtureKind.Door).Select(f => new DoorPick(f.Id, f.Building, f.DoorIndex, f.Owner, DoorSpotOf(f)?.Centre ?? f.Position))];
+
     public int Count => all.Count;
     /// <summary>Every fixture, in registration order.</summary>
     public IReadOnlyList<Fixture> All => all;
@@ -63,6 +68,7 @@ public sealed class FixtureRegistry
         set
         {
             doors = value;
+            doorPicks = null;
             foreach (var b in buildings) SyncDoors(b);
         }
     }
@@ -116,6 +122,7 @@ public sealed class FixtureRegistry
         buildings.Add(b.Key);
         foreach (var f in list) { all.Add(f); byId[f.Id] = f; }
         containerSpots = null;
+        doorPicks = null;
         if (Saved?.GetValueOrDefault(b.Key) is { } state) Restore(state, b.Key, list);
         SyncDoors(b.Key);
     }
@@ -152,6 +159,7 @@ public sealed class FixtureRegistry
         buildings.Add(site.Id);
         foreach (var f in list) { all.Add(f); byId[f.Id] = f; }
         containerSpots = null;
+        doorPicks = null;
         if (Saved?.GetValueOrDefault(site.Id) is { } state) Restore(state, site.Id, list);
         SyncDoors(site.Id);
     }
@@ -163,6 +171,7 @@ public sealed class FixtureRegistry
         buildings.Remove(buildingInstance);
         foreach (var f in list) { all.Remove(f); byId.Remove(f.Id); }
         containerSpots = null;
+        doorPicks = null;
         initialApplied.Remove(buildingInstance);
         doors?.SetDoorsBlocked(buildingInstance, false);
     }

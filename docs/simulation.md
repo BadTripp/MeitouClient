@@ -419,8 +419,10 @@ unload, hashed only once non-empty. Facts: [locks](game/locks.md), [economy 11.5
   `AutoOpened`/`LastPass` are engine state, not saved (a loaded open door stays open), hashed only while set.
   The player's finished buildings register their doors (`RegisterPlayerBuilding`, site -1, unregistered when no longer finished;
   keys written by `BuildingSave`); the site menu has Open/Close Doors (`ToggleDoorsOrder`) and Lock/Unlock Doors
-  (`ToggleDoorLocksOrder`), the door panel's buttons for all doors at once. `WorldSnapshot.Doors` publishes the player's doors and
-  every door that is not closed and unlocked; the object renderer slides door parts by `DoorLeaf.LocalOffset` ([render-objects](render-objects.md)).
+  (`ToggleDoorLocksOrder`), the door panel's buttons for all doors at once. Any door: `DoorOrder` (a quick right click,
+  [ui-input](game/ui-input.md)) walks the nearest selected to the leaf's near side (12 out, reach 20) and opens or closes it, or picks another
+  faction's locked lock (`PickingLock` on the door; a door is worked from that spot). `WorldSnapshot.DoorPicks` lists every door's leaf for picking
+  (rebuilt when buildings register or go); `WorldSnapshot.Doors` publishes the player's doors and every door that is not closed and unlocked; the object renderer slides door parts by `DoorLeaf.LocalOffset` ([render-objects](render-objects.md)).
 - **Cages/beds**: `FindCage` (original weights; engine: skips a cage the carrier can't reach, `Reachable`: its building
   shut by another faction's doors, or a walk of that faction there failed in the last 24 game hours, `MarkUnreachable`;
   no path query runs in a tick), `Imprison` (state 2, `CharacterTable.Place` at the item's origin, cage

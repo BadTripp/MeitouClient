@@ -313,7 +313,10 @@ selectable over its whole hull and there are no interior floors. The character s
 is drawn (as the original). Selecting or inspecting a character clears it, Shift
 included (the original keeps the slot); a site that disappears clears it. Not built: a house's first-door focus, the select sound, the
 building windows, the Dismantle / pause / door buttons in the panel (the right-click menu has them), the For sale line, the Door and Building
-Condition bars, hover pointers over world buildings, and quick right-click orders on them.
+Condition bars, hover pointers over world buildings, and quick right-click orders on them, except doors: a door (picked within 40 px of its leaf
+centre, `PlayerInterface.Doors.cs`) shows `door` / `lock` / `lockpick` as in the table and a quick right click gives `DoorOrder` (the nearest selected
+walks to the door's near side and opens or closes it, "It's locked." at a locked one; another faction's locked door: Alt picks the lock, else the hint
+and a walk there).
 
 ### Debug menu
 

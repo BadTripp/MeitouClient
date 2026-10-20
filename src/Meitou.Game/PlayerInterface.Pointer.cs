@@ -54,6 +54,7 @@ sealed partial class PlayerInterface
             else if (QuickOrder(mouse) is { } order) chosen = (order.Pointer, order.Target);
             else if (PickGroundItem(mouse) is not null) chosen = ("pick_item", null);
             else if (PickContainer(mouse) is not null) chosen = ("search", null);
+            else if (PickDoor(mouse) is { } door) chosen = (DoorPointer(door), null);
             else if (SitePointer(mouse) is { } siteMode) chosen = (siteMode, null);
         }
         chosen.Target ??= PickWhere(mouse, _ => true);
