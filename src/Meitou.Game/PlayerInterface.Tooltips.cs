@@ -389,6 +389,11 @@ sealed partial class PlayerInterface
             // Armour: grade, class and material, resistances (ArmourTooltip; docs/game/ui-screens.md "Item tooltip").
             if (type == Meitou.Data.Fcs.FcsRecordType.ARMOUR && combat?.Armour(t.Record) is { } armour) lines.AddRange(ArmourTooltip.Head(armour, t.Quality).Select(ArmourRow));
             if (type == Meitou.Data.Fcs.FcsRecordType.LIMB_REPLACEMENT) lines.AddRange(LimbRows(Meitou.Data.Gameplay.Bodies.LimbReplacement.From(record!), t.Level));
+            if (type == Meitou.Data.Fcs.FcsRecordType.CROSSBOW)
+            {
+                int grade = ArmourTooltip.GradeOf(t.Level);
+                lines.Add(new(Loc.Tr("{1} Grade", Loc.Tr(ArmourTooltip.GradeNames[grade])), "", GradeTone(grade)));
+            }
             // "{n} x {unit} kg ({total} kg)" for a stack.
             weightText = (t.Quantity > 1 ? $"{t.Quantity} x " : "") + Number(unitWeight) + " kg" + (t.Quantity > 1 ? $" ({Number(t.Weight)} kg)" : "");
             lines.Add(Row("Weight", weightText));

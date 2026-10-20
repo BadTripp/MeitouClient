@@ -460,7 +460,7 @@ unless marked; Meitou: `PlayerInterface.Squads.cs`, commands in `SquadManagement
     right, a vertical scrollbar, no other panels; the HUD stays. The character panel reads `Disguise: None`. Its text boxes and empty cells are dark, where the install's skins draw parchment; the cause (a UI mod or setting) is **Unknown**.
 - **Item tooltip** ([Tooltips](#tooltips); **Observed**, decompile): name, then `Value` (`c.{1,num}` with ` (+N%)`/` (-N%)` when the price factor is not 1) and `Sell value` (`FUN_14079e7a0`); weight `{1,num} kg`,
   quality, charges, damage, nutrition and kind lines (`FUN_1407ae130`); armour classes and resistances (`FUN_1407a1650`); `Stolen` / `Stolen from:` (`FUN_1407a0ea0`); `Buyback` (`FUN_1407a13a0`).
-  Meitou: the rows listed under Tooltips ("Meitou item rows"); armour also gets (`ArmourTooltip`): the grade name in its `ItemGrade` colour,
+  Meitou: the rows listed under Tooltips ("Meitou item rows"); armour also gets (`ArmourTooltip`): the grade name in its `ItemGrade` colour (a crossbow only that, from its `level`),
   `[Heavy Armour Class]` / `[Metal Plate]`, Blunt resistance, Cut resistance, Cut resistance efficiency (1 - cut into stun), Harpoon resistance (flat pierce, `pts`), `-Weight` (two decimals), a
   `[Coverage]` list (Chest, Stomach, Right Arm, Left Arm; percentages) and a `[Skills]` list of the effects that are not neutral: Crossbows and Precision shooting (both the record's `ranged skill mult`), Dodge
   skill, Attack damage (`damage output mult`), Assassination skill, Melee attack bonus (`combat attk bonus`), Martial arts bonus (`unarmed bonus`). **Observed** on a screenshot of the Samurai Armour at all six
