@@ -28,7 +28,7 @@ sealed partial class PlayerInterface
                 var host = new UiControl("inventory-tooltip-rows", "Widget", new(box.X + 4 * scale, box.Y + 6 * scale + row, box.Width - 8 * scale, row * (lines.Length - 1)), "", "", "", true,
                     new Dictionary<string, string>(), Vector4.Zero, Pickable: false);
                 controls.Add(host);
-                AddLines(controls, host.Name, lines.Skip(1).Select(l => l.Split('\t') is [var label, var value] ? new HudLine(label, value) : new HudLine(l, "")).ToArray(), row);
+                AddLines(controls, host.Name, lines.Skip(1).Select(TooltipRow).ToArray(), row);
             }
         }
     }
