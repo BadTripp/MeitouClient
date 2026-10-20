@@ -260,6 +260,10 @@ New move orders preserve reusable paths; attack pursuit reschedules target paths
 hold translation while facing changes. Original speeds/encumbrance and research are in
 [pathfinding.md](game/pathfinding.md); footprint clearance/water costs come from nav queries.
 Heights use the character's (or clicked) Y to pick stacked floors; long paths have a provisional tail.
+Body contact (engine choice): standing bodies are solid over `BodyShare` 0.6 of the footprint (2.4 for a human). After its step, each
+character takes half the overlap with each separation neighbour's predicted position (last position + last velocity × dt), so a walker
+shoves a stander aside; one in a bed or cage does not give, lying and carried bodies are not in the way, a character closing on its spot
+is not stopped, and an unwalkable result falls back to its own step.
 
 ## Navmesh
 
@@ -393,7 +397,8 @@ when the host passes `CharacterRigs` (the game does; tests and goldens do not). 
 - **Hash**: mask, frozen, age, blend and body poses in system order.
 
 Gaps: no ragdoll state in saves (a loaded downed character's ragdoll starts from the lying clip);
-ragdolls collide with each other but not with characters that have none; the building gather's
+ragdolls collide with each other but not with characters that have none (as the original if its groups 0/1 are the characters' shapes:
+ragdoll group 3/4 skips them, [ragdolls](game/ragdolls.md#collision-groups)); the building gather's
 timing can change a live game's hash (goldens have no environment).
 
 ## Crimes and bounties
