@@ -260,8 +260,9 @@ constant bytes):
   lerp(level x 0.01, X, X 1).
 - `overall mult` is looked up and discarded; any other use is **Unknown**.
 
-**Observed**: METARU's Scout Legs (`level` 0, `quality` 95) give legs of 50 HP, the low end of 50/150. Crafted and
-shop limbs get level 0 in Meitou; how the original grades them is **Unknown**.
+**Observed**: METARU's Scout Legs (`level` 0, `quality` 95) give legs of 50 HP, the low end of 50/150. Crafted limbs
+take the bench's grade roll ([buildings-production](buildings-production.md)), shop limbs the template's `robotics levels`
+spread ([economy](economy.md) 9.1).
 
 Per limb slot k (0 L arm, 1 R arm, 2 L leg, 3 R leg) the character holds a state (0 original, 1 stump, 2
 replaced, 3 crushed) and the fitted item (holder `FUN_1400cd3f0`; **Verified** by the save code below).

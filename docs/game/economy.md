@@ -167,6 +167,7 @@ sale, and the same flag selects which price is computed).
 | `vendor money` | the building-shop vendor's purse (building fillers only, see 9.2); 0 = derive from the stock | 0 x954, 1000 x4, 250 x1 (the five non-zero templates all come from mods of the probe load order, none from `gamedata.base`) |
 | `vendors refresh time` | game hours between stock refreshes (<= 0 means 24000) | 24 x874, 12 x15, 48 x13, 72 x13, 70 x10, 99 x10, some 99999 |
 | `buy mult`, `buys stolen`, `buys illegal` | section 6 and 8 | |
+| `robotics levels`, `crossbow levels` | average grade g (ArmourRarity 0..5, editor default 1) of stocked limbs / crossbows. Limbs (`FUN_140955370`, **Verified**): weights g 100, g-2 22 (g > 1), g-1 44 (g > 0), g+1 44 (g < 5), g+2 22 (g < 4), an int roll against the running sums; the grade's 5/20/40/60/80/95 (`FUN_140952320`) is the limb's `level` (the factory's grade argument). Crossbows (`FUN_140955210`) weigh 20/33/33/5 instead and are not wired | values not surveyed |
 | `special items`, `special map items` | extra guaranteed stock (`read_special_items_n3` `FUN_140958740`) | not decoded |
 
 ### 11.1 Ledger

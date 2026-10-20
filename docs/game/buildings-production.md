@@ -352,7 +352,9 @@ Function 10, `CraftingBuilding` (**Observed** unless noted).
   **Verified** by the bytes. `total coverage` (`FUN_14082fd80`): sum of `part coverage` v0, chest `101-gamedata.quack`
   x1.5 truncated, 0 -> 100.
 - **Quality.** Armour (`FUN_14082e6b0`): tier from the int skill (20, 40, 60, 80 -> 1..4), +1 on a critical, at most 5;
-  quality by tier 5, 20, 40, 60, 80, 95 (**Verified**, jump table). Critical chance (`FUN_1402b5900`): (skill -
+  quality by tier 5, 20, 40, 60, 80, 95 (**Verified**, jump table). A robotic limb (type 111) takes the same roll as
+  its `level` (`FUN_1402bcac0` passes it to the item factory, whose limb branch hands it to the Gear constructor;
+  **Verified**, decompile); Meitou caps it at `tech level` as for armour. Critical chance (`FUN_1402b5900`): (skill -
   threshold)/50, none below 0; threshold for stats 8 and 38 the floor of the skill's tier (80/60/40/20, else 5), else
   the item level. A weapon below the crafter's skill with no critical comes out as a lower model
   (`uses_weapon_crafts_weapon_models`; which model is **Unknown**, Meitou takes the best at or below the skill).

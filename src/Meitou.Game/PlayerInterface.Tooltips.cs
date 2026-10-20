@@ -314,6 +314,30 @@ sealed partial class PlayerInterface
     static string Number(float v) => v.ToString("0.#", CultureInfo.InvariantCulture);
 
     /// <summary>
+    /// A prosthetic's rows (Meitou's; the original's limb rows are not decoded): the grade of its level in the grade colour, its HP, unarmed bonus and every multiplier that is not 1 at
+    /// that level (<see cref="Meitou.Data.Gameplay.Bodies.LimbReplacement.Multiplier"/>), a bonus in the good colour and a penalty in the bad one.
+    /// </summary>
+    static IEnumerable<TooltipLine> LimbRows(Meitou.Data.Gameplay.Bodies.LimbReplacement limb, int level)
+    {
+        int grade = ArmourTooltip.GradeOf(level);
+        yield return new(Loc.Tr("{1} Grade", Loc.Tr(ArmourTooltip.GradeNames[grade])), "", GradeTone(grade));
+        float t = Math.Clamp(level * 0.01f, 0, 1);
+        yield return new("-Max HP", Number(MathF.Floor(limb.Hp(t))), TooltipTone.Title, TooltipTone.Ink);
+        if (limb.UnarmedDamageBonus(t) is not 0 and var unarmed)
+            yield return new("-Martial arts bonus", unarmed.ToString(CultureInfo.InvariantCulture), TooltipTone.Title, unarmed < 0 ? TooltipTone.Bad : TooltipTone.Good);
+        (Meitou.Data.Gameplay.Bodies.StatsEnumerated Stat, string Label)[] stats = limb.IsLeg
+            ? [(Meitou.Data.Gameplay.Bodies.StatsEnumerated.Athletics, "Athletics"), (Meitou.Data.Gameplay.Bodies.StatsEnumerated.Stealth, "Stealth"), (Meitou.Data.Gameplay.Bodies.StatsEnumerated.Swimming, "Swimming")]
+            : [(Meitou.Data.Gameplay.Bodies.StatsEnumerated.Strength, "Strength"), (Meitou.Data.Gameplay.Bodies.StatsEnumerated.Dexterity, "Dexterity"),
+               (Meitou.Data.Gameplay.Bodies.StatsEnumerated.Thieving, "Thievery"), (Meitou.Data.Gameplay.Bodies.StatsEnumerated.Crossbows, "Crossbows"), (Meitou.Data.Gameplay.Bodies.StatsEnumerated.Swimming, "Swimming")];
+        foreach (var (stat, label) in stats)
+        {
+            float m = limb.Multiplier(stat, t);
+            if (MathF.Abs(m - 1) < 0.005f) continue;
+            yield return new("-" + label, m.ToString("0.00", CultureInfo.InvariantCulture) + "x", TooltipTone.Title, m < 1 ? TooltipTone.Bad : TooltipTone.Good);
+        }
+    }
+
+    /// <summary>
     /// The rows of an item's tooltip, in the order the item classes write them (<b>Observed</b>, decompile of <c>FUN_1407ae130</c>, the weapon and armour functions): the name (with the stack
     /// count), kind markers, the stolen mark, the class's own rows, the weight, then the prices while trading, the charges and the quality. A row's label carries a leading hyphen as the
     /// original's do (docs/game/ui-screens.md "Tooltips"). What Meitou has no data for is left out (listed there).
@@ -364,6 +388,7 @@ sealed partial class PlayerInterface
         {
             // Armour: grade, class and material, resistances (ArmourTooltip; docs/game/ui-screens.md "Item tooltip").
             if (type == Meitou.Data.Fcs.FcsRecordType.ARMOUR && combat?.Armour(t.Record) is { } armour) lines.AddRange(ArmourTooltip.Head(armour, t.Quality).Select(ArmourRow));
+            if (type == Meitou.Data.Fcs.FcsRecordType.LIMB_REPLACEMENT) lines.AddRange(LimbRows(Meitou.Data.Gameplay.Bodies.LimbReplacement.From(record!), t.Level));
             // "{n} x {unit} kg ({total} kg)" for a stack.
             weightText = (t.Quantity > 1 ? $"{t.Quantity} x " : "") + Number(unitWeight) + " kg" + (t.Quantity > 1 ? $" ({Number(t.Weight)} kg)" : "");
             lines.Add(Row("Weight", weightText));

@@ -611,7 +611,7 @@ Code: `UiTooltips` (data, layout), `PlayerInterface.Tooltips.cs` (hover runtime,
   Value rows' key colour is `#140806` normally and `#afa68b` when `FUN_140710e10` returns non-null (a trade window?, **Unknown**).
 - **Meitou item rows:** name (a weapon's model name before it) and stack count, the kind marker (`[Food]`, `Possibly Edible`, `[Book]`, `[Ammunition]`), `Stolen from:` / `Stolen`, for a weapon the class, `Cutting damage`, `Blunt damage` (the
   stats' multipliers as two decimals, **Observed** reading), `Blood loss` (the record's bleed multiplier), `Armour penetration` (x 100 as a percentage), the attack, defence and indoors modifiers and the weight in whole kg;
-  for armour the weight class; the weight; `Value` and `Sell value` with the mark-up while trading (outside a trade Meitou has no shop to price against; the original lists them always); `Charges` and `Quality`
+  for armour the weight class; for a prosthetic its grade (from its `level`), `Max HP`, `Martial arts bonus` and each multiplier not 1 at that level (Meitou's rows; the original's limb rows are not decoded); the weight; `Value` and `Sell value` with the mark-up while trading (outside a trade Meitou has no shop to price against; the original lists them always); `Charges` and `Quality`
   as above (quality only when above 0 and not 100). **Not shown (Unknown data or format):** `Buyback`, research artifact / unique flags, `Nutrition` and `Ingredients` values, ammunition `Damage:` / `Shots`,
   `Avg. Price` / mark-up, the `Damage vs` rows (their number format is in the helper `FUN_14079f650`, not read), armour material / grade / resistances / coverage / weather protections, the race list of special food,
   containers' and limbs' own rows (`FUN_1407aa090`, `FUN_1407a9080`).
