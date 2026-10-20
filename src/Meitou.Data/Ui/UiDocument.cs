@@ -2,7 +2,8 @@ using System.Numerics;
 
 namespace Meitou.Data.Ui;
 
-public sealed record UiListItem(string Id, string Caption);
+/// <summary>A list row; <paramref name="Cells"/> are its per-column texts in a MultiListBox (null: the caption is the first column).</summary>
+public sealed record UiListItem(string Id, string Caption, IReadOnlyList<string>? Cells = null);
 
 public sealed record UiControl(string Name, string Type, UiRect Bounds, string Caption, string Action,
     string Skin, bool Enabled, IReadOnlyDictionary<string, string> Properties, Vector4 Background,
@@ -10,7 +11,7 @@ public sealed record UiControl(string Name, string Type, UiRect Bounds, string C
     bool? Pickable = null, string Argument = "", float? TextScale = null, UiRect? Clip = null);
 
 /// <summary>A frame shared by both frontends; bindings supply data and visibility without changing source documents.</summary>
-public sealed class UiBindings
+public sealed partial class UiBindings
 {
     /// <summary>Scale pixel-based template chrome along with viewport-relative layouts.</summary>
     public float TemplateScale { get; set; } = 1;
@@ -33,11 +34,12 @@ public sealed class UiBindings
     public Dictionary<string, float> ScrollOffsets { get; } = new(StringComparer.Ordinal);
 }
 
-public static class MyGuiPresentation
+public static partial class MyGuiPresentation
 {
     public static IReadOnlyList<UiControl> Arrange(MyGuiLayout layout, int width, int height, UiBindings bindings, IReadOnlyList<string> layers)
     {
         var result = new List<UiControl>();
+        var deferred = new List<Action>();   // popups (combo lists), visited after every root so they draw last
         void Visit(MyGuiWidget w, UiRect parent, UiRect clip, bool parentEnabled = true, float parentAlpha = 1)
         {
             if (bindings.Hidden.Contains(w.Name) || bindings.HiddenWidgets.Contains(w)) return;
@@ -55,7 +57,7 @@ public static class MyGuiPresentation
                         .AlignTo(parent, float.Parse(rw, System.Globalization.CultureInfo.InvariantCulture) * bindings.TemplateScale, float.Parse(rh, System.Globalization.CultureInfo.InvariantCulture) * bindings.TemplateScale, w.Align)
                     : w.Position.RelativeTo(parent, false);
             if (bindings.Progress.TryGetValue(w.Name, out float fraction)) bounds = bounds with { Width = bounds.Width * Math.Clamp(fraction, 0, 1) };
-            string caption = bindings.Text.GetValueOrDefault(w.Name) ?? props.GetValueOrDefault("Caption") ?? "";
+            string caption = bindings.Text.GetValueOrDefault(w.Name) ?? PartText(bindings, props) ?? props.GetValueOrDefault("Caption") ?? "";
             if (props.TryGetValue("CaptionOwner", out string? owner))
             {
                 caption = bindings.Text.GetValueOrDefault(owner) ?? layout.Find(owner)?.Properties.GetValueOrDefault("Caption") ?? "";
@@ -90,26 +92,13 @@ public static class MyGuiPresentation
                         new Dictionary<string, string> { ["State"] = i == selected ? "normal_checked" : "normal", ["FontName"] = "Kenshi_PaintedTextFont_Medium", ["TextAlign"] = "Center" }, default, Clip: clip));
                 if (pages.Length > 0) Visit(pages[captions is null ? selected : 0], bounds, childClip, enabled, alpha);
             }
-            else foreach (var child in w.Children) Visit(child, bounds, childClip, enabled, alpha);
-            if (bindings.Lists.TryGetValue(w.Name, out var items))
-            {
-                var client = result.LastOrDefault(c => c.Properties.GetValueOrDefault("TemplateOwner") == w.Name && c.Properties.GetValueOrDefault("TemplatePart") == "Client");
-                var area = client?.Bounds ?? bounds;
-                var rowClip = area.Intersect(clip);
-                float offset = bindings.ScrollOffsets.GetValueOrDefault(w.Name);
-                for (int i = 0; i < items.Count; i++)
-                {
-                    var row = new UiRect(area.X + 3, area.Y + i * 22 - offset, Math.Max(0, area.Width - 6), 22);
-                    if (row.Intersect(rowClip).Height <= 0) continue;
-                    result.Add(new(w.Name + "@row" + i, "Button", row, items[i].Caption, $"mygui:list:{w.Name}:{i}", "", enabled,
-                        new Dictionary<string, string> { ["ListOwner"] = w.Name, ["ListCount"] = items.Count.ToString(System.Globalization.CultureInfo.InvariantCulture), ["FontName"] = "Kenshi_StandardFont_Medium", ["TextAlign"] = "Left VCenter",
-                            ["TextColour"] = props.GetValueOrDefault("TextColour") ?? MyGuiColours.InkText, ["TextPadding"] = "4 2 4 2" },
-                        bindings.SelectedItems.GetValueOrDefault(w.Name, -1) == i ? new(0.25f, 0.24f, 0.16f, 0.95f) : default, Argument: items[i].Id, Clip: rowClip));
-                }
-            }
+            else if (w.Type == "ScrollView") VisitScrollView(result, bindings, w, props, bounds, childClip, enabled, alpha, Visit);
+            else foreach (var child in w.Children) Visit(child, ChildParent(props, bounds), childClip, enabled, alpha);
+            AddWidgetContent(result, bindings, w, props, bounds, clip, enabled, alpha, new(0, 0, width, height), Visit, deferred);
         }
         foreach (var root in layout.Roots.OrderBy(w => { int i = layers.IndexOfLayer(w.Layer); return i < 0 ? 0 : i; }))
             Visit(root, new(0, 0, width, height), new(0, 0, width, height));
+        for (int i = 0; i < deferred.Count; i++) deferred[i]();
         return result;
     }
 

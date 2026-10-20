@@ -147,6 +147,7 @@ sealed partial class PlayerInterface
             BindCraftTab(b);
             // Editor preview markers are unrelated to the current camera and orders.
             b.Hidden.Add("CameraMarker"); b.Hidden.Add("MovemementMarker");
+            b.NativeScroll.Add("MapScrollView");   // the map pans and zooms itself (PlayerInterface.Map.cs); the canvas is not the layout's 4096 px
         }
         if (id is "inventory" or "bag" or "limbs" or "trader") BindInventoryGeometry(id, b);
         return b;

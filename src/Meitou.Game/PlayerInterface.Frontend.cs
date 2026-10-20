@@ -175,7 +175,12 @@ sealed partial class PlayerInterface
         {
             Enable("CancelButton");
             var visibleSlots = slots.Where(s => id != "save" || s.Writable).ToArray();
-            b.Lists["GamesList"] = visibleSlots.Select(s => new UiListItem(s.Folder, $"{s.Name}   {s.ModifiedUtc.ToLocalTime():yyyy-MM-dd HH:mm}   [{(s.Writable ? "Meitou" : "Kenshi")}]")).ToArray();
+            // The original's save list (LoadSaveWindow, decompile of FUN_140480100, Observed): two columns, the first filling the width, the second fixed at 180; the captions are localised strings
+            // (the pot has "Name" and "Date", Unknown which the window uses). Initially sorted by the second, newest first. Meitou adds the save's origin to the name.
+            b.Columns["GamesList"] = [new("Name", 170, Fill: true), new("Date", 180)];
+            b.Sorts["GamesList"] = (1, false);
+            b.Lists["GamesList"] = visibleSlots.Select(s => new UiListItem(s.Folder, $"{s.Name}   {s.ModifiedUtc.ToLocalTime():yyyy-MM-dd HH:mm}",
+                [$"{s.Name}   [{(s.Writable ? "Meitou" : "Kenshi")}]", s.ModifiedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)])).ToArray();
             b.SelectedItems["GamesList"] = Array.FindIndex(visibleSlots, s => s == selectedSlot);
             Paragraph("InfoPanel", slotDetails);
             if (id == "save") Enable("SaveButton"); else if (selectedSlot is not null && slotReadable) Enable("LoadButton");
