@@ -38,6 +38,8 @@ sealed partial class PlayerInterface
         var focus = BuildingFocus();
         var m = focus?.SiteId is { } id && session.CurrentSnapshot.Buildings.FirstOrDefault(s => s.Id == id) is { Complete: true } ? Machine(id) : null;
         if (m is not null && m.Inputs.Count == 0 && m.Output is null && m.Storage is null && m.Craft is null) m = null;
+        // An open container takes the window.
+        m = session.CurrentSnapshot.Machines.FirstOrDefault(c => c.IsContainer) ?? m;
         if (closedMachine is not null && closedMachine != m?.Site) closedMachine = null;
         if (shownMachine is not null && (m is null || m.Site != shownMachine))
         {
@@ -48,6 +50,7 @@ sealed partial class PlayerInterface
         }
         if (shownMachine is not null && Machine(shownMachine) is { } shown && !faithfulScreens.IsOpen(MachineScreen(shown)))
         {
+            if (shown.IsContainer) Say(new Meitou.Simulation.Items.CloseContainer { Tick = session.World.Tick });
             closedMachine = shownMachine;
             shownMachine = null;
             machineDrag = null;
@@ -65,11 +68,12 @@ sealed partial class PlayerInterface
     void BindMachineScreen(string id, UiBindings b)
     {
         var m = Machine(shownMachine);
-        b.Text["Root"] = (selectedBuilding?.Name ?? "BUILDING").ToUpperInvariant();
+        b.Text["Root"] = (m is { IsContainer: true } ? buildHost?.ItemName(m.Record) ?? "CONTAINER" : selectedBuilding?.Name ?? "BUILDING").ToUpperInvariant();
         if (id == "bench")
         {
             b.Disabled.Remove("ResearchButton");
             b.Actions["ResearchButton"] = "ResearchButton";
+            if (m is { IsContainer: true }) b.Hidden.Add("ResearchButton");
             b.Disabled.Remove("ArrangeButton");
             b.Hidden.Add("ArrangeButton");
             if (m?.Storage is { } grid)

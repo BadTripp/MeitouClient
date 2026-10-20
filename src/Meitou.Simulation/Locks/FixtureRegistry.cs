@@ -43,6 +43,11 @@ public sealed class FixtureRegistry
     long cagingsTick = -1;
     IDoorGate? doors;
 
+    IReadOnlyList<ContainerSpot>? containerSpots;
+
+    /// <summary>Where the containers with an inventory stand, for the host's picking; rebuilt (serial phases) only when a building registers or goes.</summary>
+    public IReadOnlyList<ContainerSpot> ContainerSpots => containerSpots ??= [.. all.Where(f => f.Contents is not null).Select(f => new ContainerSpot(f.Id, f.RecordId, f.Position))];
+
     public int Count => all.Count;
     /// <summary>Every fixture, in registration order.</summary>
     public IReadOnlyList<Fixture> All => all;
@@ -90,8 +95,8 @@ public sealed class FixtureRegistry
             if (Lockable(db, record) is { } own) list.Add(Make(world, db, own, b.Key, b.Key, record, site, owner, faction, b.Position, b.Yaw));
         }
         foreach (var f in b.Fixtures)
-            if (db.Find(f.RecordId) is { } item && Lockable(db, item) is { } kind)
-                list.Add(Make(world, db, kind, f.Id, b.Key, item, site, owner, faction, f.Position, f.Yaw));
+            if (db.Find(f.RecordId) is { } item && (Lockable(db, item) ?? (f.StorageWidth > 0 && f.StorageHeight > 0 ? FixtureKind.Container : null)) is { } kind)
+                list.Add(Make(world, db, kind, f.Id, b.Key, item, site, owner, faction, f.Position, f.Yaw, f.StorageWidth, f.StorageHeight));
         int bed = 0;
         foreach (var spot in b.Spots)
         {
@@ -107,6 +112,7 @@ public sealed class FixtureRegistry
         byBuilding[b.Key] = list;
         buildings.Add(b.Key);
         foreach (var f in list) { all.Add(f); byId[f.Id] = f; }
+        containerSpots = null;
         if (Saved?.GetValueOrDefault(b.Key) is { } state) Restore(state, b.Key, list);
         SyncDoors(b.Key);
     }
@@ -142,6 +148,7 @@ public sealed class FixtureRegistry
         byBuilding[site.Id] = list;
         buildings.Add(site.Id);
         foreach (var f in list) { all.Add(f); byId[f.Id] = f; }
+        containerSpots = null;
         if (Saved?.GetValueOrDefault(site.Id) is { } state) Restore(state, site.Id, list);
         SyncDoors(site.Id);
     }
@@ -152,6 +159,7 @@ public sealed class FixtureRegistry
         if (!byBuilding.Remove(buildingInstance, out var list)) return;
         buildings.Remove(buildingInstance);
         foreach (var f in list) { all.Remove(f); byId.Remove(f.Id); }
+        containerSpots = null;
         initialApplied.Remove(buildingInstance);
         doors?.SetDoorsBlocked(buildingInstance, false);
     }
@@ -162,14 +170,16 @@ public sealed class FixtureRegistry
         return record.GetBool("has lock") ? FixtureKind.Container : null;
     }
 
-    Fixture Make(World world, GameDatabase db, FixtureKind kind, string id, string building, GameRecord record, int site, int owner, FactionData? faction, Vector3 at, float yaw)
+    Fixture Make(World world, GameDatabase db, FixtureKind kind, string id, string building, GameRecord record, int site, int owner, FactionData? faction, Vector3 at, float yaw, int storageWidth = 0, int storageHeight = 0)
     {
         var functionality = TownBuildings.FunctionOf(db, record, functions);
+        bool locked = kind != FixtureKind.Container || record.GetBool("has lock");
         return new Fixture
         {
             Id = id, Building = building, Kind = kind, RecordId = record.StringId, Site = site, Owner = owner, Position = at, Yaw = yaw,
             Restrains = functionality?.GetBool("restrains movement") ?? false, UseRange = functionality is null ? 25 : FloatOf(functionality, "use range", 25),
-            Lock = new LockState { Level = RollLevel(world.Seed, id, faction, IntOf(record, "lock level bonus"), door: false), Hardness = FloatOf(record, "hardness") },
+            Contents = kind == FixtureKind.Container && storageWidth > 0 && storageHeight > 0 ? new Items.Inventory(storageWidth, storageHeight) : null,
+            Lock = !locked ? null : new LockState { Level = RollLevel(world.Seed, id, faction, IntOf(record, "lock level bonus"), door: false), Hardness = FloatOf(record, "hardness") },
         };
     }
 

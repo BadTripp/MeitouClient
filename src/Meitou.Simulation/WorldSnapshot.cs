@@ -179,6 +179,8 @@ public sealed record WorldSnapshot(long Tick, IReadOnlyList<CharacterSnapshot> C
     public long BuildingsRevision { get; init; }
     /// <summary>Loose items lying in the world (<see cref="Items.GroundItems"/>), oldest first.</summary>
     public IReadOnlyList<Items.GroundItemSnapshot> GroundItems { get; init; } = [];
+    /// <summary>The containers with an inventory (a building interior's chests and boxes), where they stand.</summary>
+    public IReadOnlyList<Locks.ContainerSpot> Containers { get; init; } = [];
     /// <summary>Bumped when an item is dropped or goes: the host diffs <see cref="GroundItems"/> by id when it changes.</summary>
     public long GroundItemsRevision { get; init; }
     /// <summary>BUILDING ids the player's research has unlocked (the build menu's list).</summary>

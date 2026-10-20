@@ -730,8 +730,43 @@ public sealed partial class ProductionSystem : ITickSystem
         return false;
     }
 
+    /// <summary>Put an item into a container's grid (<see cref="PlayerSystem.ContainerFor"/>): the cell must be free; a bag or limb item is refused like the machine's.</summary>
+    static void PutInContainer(World world, Locks.Fixture container, CharacterCold cold, PutInMachine put)
+    {
+        var root = cold.Inventory!;
+        var storage = container.Contents!;
+        var item = root.All().ElementAtOrDefault(put.Item.Index);
+        var token = put.Item;
+        if (item is null || item.Record != token.Record || item.Section != token.Section || item.X != token.X || item.Y != token.Y || item.Quantity != token.Quantity || item.LockedOn ||
+            !InventoryCommands.IsMovableSection(item.Section) || item.Contents is not null && item.Section == "backpack_attach") return;
+        var owner = root.Items.Contains(item) ? root : root.Backpack?.Contents;
+        if (owner is null || put.X < 0 || put.Y < 0 || put.X > storage.Width - item.Width || put.Y > storage.Height - item.Height || !storage.IsFree("main", put.X, put.Y, item.Width, item.Height)) return;
+        owner.Remove(item);
+        item.Section = "main";
+        item.X = put.X;
+        item.Y = put.Y;
+        storage.Items.Add(item);
+        world.Machines.Touch();
+    }
+
+    /// <summary>Take an item out of a container into the character's inventory; what does not fit stays in the container.</summary>
+    static void TakeFromContainer(World world, Locks.Fixture container, CharacterCold cold, TakeFromMachine take)
+    {
+        var storage = container.Contents!;
+        if (take.Index < 0 || take.Index >= storage.Items.Count) return;
+        var item = storage.Items[take.Index];
+        storage.Items.RemoveAt(take.Index);
+        if (!cold.Inventory!.Add(item) && item.Quantity > 0 && storage.FindCell("main", item.Width, item.Height, out int x, out int y)) { item.Section = "main"; item.X = x; item.Y = y; storage.Items.Add(item); }
+        world.Machines.Touch();
+    }
+
     void Put(World world, PutInMachine put)
     {
+        if (PlayerSystem.ContainerFor(world, put.Site, put.Character, out var holder) is { } container)
+        {
+            if (holder is not null && put.Slot == -1) PutInContainer(world, container, holder, put);
+            return;
+        }
         if (world.Buildings.Find(put.Site) is not { Complete: true } site || Ensure(world, site) is not { } m || !Near(world, put.Character, site, out var cold)) return;
         var root = cold.Inventory!;
         var item = root.All().ElementAtOrDefault(put.Item.Index);
@@ -770,6 +805,11 @@ public sealed partial class ProductionSystem : ITickSystem
 
     void Take(World world, TakeFromMachine take)
     {
+        if (PlayerSystem.ContainerFor(world, take.Site, take.Character, out var holder) is { } container)
+        {
+            if (holder is not null && take.Slot == -1) TakeFromContainer(world, container, holder, take);
+            return;
+        }
         if (world.Buildings.Find(take.Site) is not { Complete: true } site || world.Machines.Find(take.Site) is not { } m || !Near(world, take.Character, site, out var cold)) return;
         var root = cold.Inventory!;
         if (take.Slot == -1)

@@ -176,6 +176,15 @@ Same targets as picking; Task_CutLock / Task_BruteForceLock share the shackle ta
 - Character save keys: `in something` (= +0x2f8) and `in what` (handle +0x300) (**Verified**, `FUN_1406280a0`); platoons
   save `imprisoned` (`FUN_140372ef0`).
 
+## Containers (Meitou)
+
+Interior items with `has inventory` (storage size from the record, 18 x 18 by default) are container fixtures with their own grid, locked or not (`has lock`).
+**Engine choices**, not Verified against the original: they start empty (what the original stocks them with is **Unknown**); a right click with a selection walks the nearest
+character to one (`OpenContainerOrder`, reach 20) and opens a storage window beside the inventory, closing when the opener walks 1.5 x the reach away; a locked one refuses
+("It's locked."; pick it first); a building shop's containers refuse too, their stock being the shop's one merged inventory (`Shop.ForBuilding`). Items move with
+`PutInMachine` / `TakeFromMachine` addressed by the fixture id. Contents are **not saved** (the interior ids are not mapped to the original's). Theft rolls
+([carry-loot](carry-loot.md)) for taking from another faction's container are not modelled.
+
 ## Save keys
 
 Building records in `zone/*.zone` (**Verified** keys by census of 51 zone files, **Observed** meanings): the building's own lock
