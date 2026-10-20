@@ -366,14 +366,14 @@ public sealed partial class PopulationSystem : IStateHashed
         Gather(world, m, c, inst, made);
         if (inst.Men <= inst.Required)
         {
-            if (inst.Enemy == player && player >= 0) world.Post($"Assault to {c.DisplayName} canceled due to faction weakness");
+            if (inst.Enemy == player && player >= 0) world.Post(Loc.Tr("Assault to {1} canceled due to faction weakness", c.DisplayName));
             Disband(world, inst, made);
             Log($"{data.Factions[m.Faction].Name}: {c.Name} against {NameOf(world, target)} canceled ({inst.Men} of {inst.Required} men)");
             return StartResult.Weak;
         }
         m.Actives.Add(inst);
         if (inst.Enemy == player && player >= 0)
-            world.Post(c.IsHostile ? $"Warning: {c.DisplayName} moving towards {NameOf(world, target)}" : $"{c.DisplayName} on the way to {NameOf(world, target)}");
+            world.Post(c.IsHostile ? Loc.Tr("Warning: {1} moving towards {2}", c.DisplayName, NameOf(world, target)) : Loc.Tr("{1} on the way to {2}", c.DisplayName, NameOf(world, target)));
         m.Know(c.Id).LastStart = now;
         Log($"{data.Factions[m.Faction].Name}: {c.Name} against {NameOf(world, target)} from {NameOf(world, home)}, {inst.Platoons.Count} squad(s), {inst.Men} men");
         foreach (var allyId in c.TriggerPlayerAlly)
@@ -704,7 +704,7 @@ public sealed partial class PopulationSystem : IStateHashed
                 if (Vector2.Distance(leader.Position, CentreOf(world, inst.Target)) > 0.8f * RadiusOf(inst.Target)) return false;
                 if (inst.ArrivedAt < 0)
                 {
-                    world.Post($"{c.DisplayName} has arrived at {NameOf(world, inst.Target)}");
+                    world.Post(Loc.Tr("{1} has arrived at {2}", c.DisplayName, NameOf(world, inst.Target)));
                     inst.ArrivedAt = now;
                 }
                 // With an announcement, a loaded leader waits for it, then while its negotiation is pending (engine choice for the Unknown event-2 state: up to
@@ -796,7 +796,7 @@ public sealed partial class PopulationSystem : IStateHashed
     {
         inst.Phase = 2;
         inst.PhaseStart = now;
-        if (c.IsHostile) world.Post($"{c.DisplayName} against {NameOf(world, inst.Target)} has ended");
+        if (c.IsHostile) world.Post(Loc.Tr("{1} against {2} has ended", c.DisplayName, NameOf(world, inst.Target)));
         Log($"{data.Factions[m.Faction].Name}: {c.Name} against {NameOf(world, inst.Target)} won");
         FollowUp(world, m, c.VictoryTriggers, inst, now, 1);
     }
@@ -806,7 +806,7 @@ public sealed partial class PopulationSystem : IStateHashed
         inst.Phase = 2;
         inst.PhaseStart = now;
         string target = NameOf(world, inst.Target);
-        world.Post(!c.IsHostile ? $"{c.DisplayName} was defeated on their way to {target}" : inst.FoughtPlayer ? $"{c.DisplayName} against {target} has been defeated" : $"{c.DisplayName} to {target} has failed");
+        world.Post(!c.IsHostile ? Loc.Tr("{1} was defeated on their way to {2}", c.DisplayName, target) : inst.FoughtPlayer ? Loc.Tr("{1} against {2} has been defeated", c.DisplayName, target) : Loc.Tr("{1} to {2} has failed", c.DisplayName, target));
         Log($"{data.Factions[m.Faction].Name}: {c.Name} against {target} lost");
         if (c.IsHostile && inst.Reached || inst.FoughtPlayer) FollowUp(world, m, c.LossTriggers, inst, now, 2);
         else if (c.IsHostile)

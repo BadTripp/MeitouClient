@@ -556,7 +556,7 @@ public sealed class FixtureRegistry
         Clear(c);
         c.Escaped = false;
         SetSlave(world, c, 0, -1);   // a release or bail frees a slave (FUN_1406add20, FUN_1406ae170)
-        if (c.IsPlayer) world.Post($"{c.Name} has been released from prison.");
+        if (c.IsPlayer) world.Post(Loc.Tr("{1} has been released from prison.", c.Name));
         return true;
     }
 
@@ -615,7 +615,7 @@ public sealed class FixtureRegistry
     /// </summary>
     static void SetSlave(World world, CharacterCold c, byte state, int owner)
     {
-        if (c.SlaveState == 0 && state == 1 && (c.IsPlayer || world.Player.Faction >= 0 && c.Faction == world.Player.Faction)) world.Post($"{c.Name} has been enslaved");
+        if (c.SlaveState == 0 && state == 1 && (c.IsPlayer || world.Player.Faction >= 0 && c.Faction == world.Player.Faction)) world.Post(Loc.Tr("{1} has been enslaved", c.Name));
         if (state == 2) c.RecentlyWanted = Crime.CrimeSystem.RecentlyWantedSeconds;
         c.SlaveState = state;
         c.SlaveOwner = state == 0 ? -1 : owner;

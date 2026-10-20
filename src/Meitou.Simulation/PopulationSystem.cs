@@ -178,7 +178,7 @@ public sealed partial class PopulationSystem : ITickSystem, IDisposable
                 if (site.Town.Type is TownType.NestMarker or TownType.Null) continue;   // never on the map
                 float d2 = Vector2.DistanceSquared(at, new(site.Position.X, site.Position.Z)), far = DiscoverRangeOf(site.Town.Type);
                 if (d2 <= ExploreRange * ExploreRange) player.Know(site.Index, TownKnowledge.Discovered | TownKnowledge.Explored);
-                else if (d2 <= far * far && player.Know(site.Index, TownKnowledge.Discovered) && site.Town.Type != TownType.Nest) world.Post($"Discovered {site.Town.Name}");
+                else if (d2 <= far * far && player.Know(site.Index, TownKnowledge.Discovered) && site.Town.Type != TownType.Nest) world.Post(Loc.Tr("Discovered {1}", site.Town.Name));
             }
             var wild = WildSites;
             for (int w = 0; w < wild.Count && w < wildCentres.Length; w++)

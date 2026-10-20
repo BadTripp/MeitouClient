@@ -171,7 +171,7 @@ public sealed class PopulationData
         }
         var factions = FactionData.LoadAll(db);
         var byId = BuildFactionIndex(factions);
-        int player = factions.FindIndex(f => f.Name == "Nameless");
+        int player = factions.FindIndex(f => f.BaseName == "Nameless");
         var relations = FactionRelations.Build(factions);
         relations.PlayerFaction = player;
         return new PopulationData

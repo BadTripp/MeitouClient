@@ -56,6 +56,7 @@ static class Program
         // A native splash at once, until the game window draws (docs/engine.md "Loading"); not for pictures or a listing.
         using var splash = world.Screenshot is null && !game.ListStarts ? SplashWindow.Show(install.DataDirectory) : null;
         var config = UserConfig.Load();
+        Meitou.Localisation.Loc.Use(install);   // the language of settings.cfg: texts from locale/<code>/LC_MESSAGES/main.mo (docs/formats/localisation.md)
         Meitou.Data.GameDatabase? db = null;
         Meitou.Data.Gameplay.NewGameStart? start = null;
         if (game.Sandbox > 0)

@@ -46,7 +46,7 @@ sealed partial class PlayerInterface
             verbs.Add(("Attack Target", () => Say(new Meitou.Simulation.Combat.AttackOrder(selection, id) { Tick = session.World.Tick })));
             // The original's "Stealth KO" (order 228), offered while a selected character sneaks; the chance is in the caption (the original shows it at the pointer).
             if (target.StealthKoChance is { } chance)
-                verbs.Add(($"Stealth KO ({Math.Clamp(chance, 0, 100):0}%)", () => Say(new Meitou.Simulation.Carrying.StealthKoOrder(selection, id) { Tick = session.World.Tick })));
+                verbs.Add(($"{Loc.Tr("Stealth KO")} ({Math.Clamp(chance, 0, 100):0}%)", () => Say(new Meitou.Simulation.Carrying.StealthKoOrder(selection, id) { Tick = session.World.Tick })));
         }
         if (target.Body is { Dead: false, NeedsAid: true })
             verbs.Add(("First Aid", () => Say(new Meitou.Simulation.FirstAid.TreatOrder(selection, id) { Tick = session.World.Tick })));
@@ -136,7 +136,7 @@ sealed partial class PlayerInterface
         controls.Add(new("context-title", "TextBox", new(x + 6, y + 2, w - 12, titleH), menu.Title, "", "", true,
             new Dictionary<string, string> { ["FontName"] = "Kenshi_PaintedTextFont_Medium", ["TextAlign"] = "Center" }, default, ink));
         for (int i = 0; i < menu.Verbs.Count; i++)
-            controls.Add(new($"context-verb-{i}", "Button", new(x + w * 0.0208333f, y + titleH + i * optionH + optionH * 0.05f, w * 0.958f, optionH * 0.9f), menu.Verbs[i].Caption,
+            controls.Add(new($"context-verb-{i}", "Button", new(x + w * 0.0208333f, y + titleH + i * optionH + optionH * 0.05f, w * 0.958f, optionH * 0.9f), Loc.Tr(menu.Verbs[i].Caption),
                 "meitou:context", "Kenshi_Button1Skin", true, new Dictionary<string, string> { ["FontName"] = "Kenshi_PaintedTextFont_Medium", ["TextAlign"] = "Center" },
                 default, ink, Pickable: true, Argument: i.ToString(CultureInfo.InvariantCulture)));
     }

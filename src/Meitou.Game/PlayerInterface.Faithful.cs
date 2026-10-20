@@ -167,7 +167,9 @@ sealed partial class PlayerInterface
             StatsEnumerated.SmithingWeapon, StatsEnumerated.SmithingArmour, StatsEnumerated.SmithingBow, StatsEnumerated.Labouring, StatsEnumerated.Farming, StatsEnumerated.Cooking],
     ];
 
-    static string StatLabel(StatsEnumerated stat) => stat switch
+    static string StatLabel(StatsEnumerated stat) => Loc.Tr(StatLabelEnglish(stat));
+
+    static string StatLabelEnglish(StatsEnumerated stat) => stat switch
     {
         StatsEnumerated.Thieving => "Thievery", StatsEnumerated.HeavyWeapons => "Heavy weapons",
         StatsEnumerated.MeleeAttack => "Melee attack", StatsEnumerated.MeleeDefence => "Melee defence",
@@ -248,7 +250,7 @@ sealed partial class PlayerInterface
         for (int i = 0; i < (lead?.Jobs.Count ?? 0); i++)
         {
             var job = lead!.Jobs[i];
-            string text = Meitou.Simulation.Production.PermaJobs.Text(job.Type) ?? job.Type.ToString();
+            string text = Loc.Tr(Meitou.Simulation.Production.PermaJobs.Text(job.Type) ?? job.Type.ToString());
             if (job.Site is { } id && session.CurrentSnapshot.Buildings.FirstOrDefault(s => s.Id == id) is { } site) text += ": " + SiteName(site);
             jobs.Add(new("job:" + i.ToString(CultureInfo.InvariantCulture), text));
         }
@@ -256,7 +258,7 @@ sealed partial class PlayerInterface
         // A few rows never overflow the box, and MyGUI shows an ItemBox's scroll bars only on overflow.
         foreach (var bar in faithfulHud.Find("JobsPanel")?.Children.Where(w => w.Type == "ScrollBar") ?? []) b.HiddenWidgets.Add(bar);
         if (jobs.Count > 0) b.Hidden.Add("JobsPanelInfo");
-        else b.Text["JobsPanelInfo"] = "[No jobs assigned]\n[To add jobs, hold shift key when giving an order]";
+        else b.Text["JobsPanelInfo"] = Loc.Tr("[No jobs assigned]") + "\n" + Loc.Tr("[To add jobs, hold shift key when giving an order]");
     }
 
     /// <summary>The X at the right end of each jobs row (the original's remove button, its tutorial: "remove a job at any time by pressing the X button").</summary>

@@ -46,7 +46,7 @@ public sealed class BuildMenu(IReadOnlyList<BuildingBuildData> catalog)
         var lines = new List<(string, string)> { ("Materials cost:", building.Materials.Count == 0 ? "Nothing" : "") };
         foreach (var m in building.Materials)
             lines.Add(("  " + itemName(m.Item), "x" + m.Required.ToString("0.##", CultureInfo.InvariantCulture)));
-        lines.Add(("Estimated build time:", EstimatedHours(building).ToString(CultureInfo.InvariantCulture) + " hrs"));
+        lines.Add(("Estimated build time:", Loc.Plural("{1,num} hr", "{1,num} hrs", EstimatedHours(building), EstimatedHours(building))));
         return lines;
     }
 }
