@@ -18,6 +18,8 @@ Do not clamp before HDR lighting/composite. FSR/DLSS mip bias=log2(scale)-1; TAA
 Motion uses previous camera/depth plus moving-object/grass paths; near/far depth reconstruction
 must use the corresponding projection. `sun-motion` adds clock-driven sky motion near the sun.
 Reset temporal histories after cuts, target resize or incompatible setting changes.
+DLSS (the default) where Streamline reports it unsupported runs FSR, then TAA. TAA zeroes NaN/Inf
+in its inputs and output: GLSL `max` need not drop NaN (AMD keeps it), and one in the history spreads.
 
 Game/viewer builds and publishes copy the five Streamline/DLSS DLLs from `MEITOU_STREAMLINE_PATH`
 or the git-ignored root `dlss-runtime/` folder when present; `-p:StreamlineRuntimePath=...`

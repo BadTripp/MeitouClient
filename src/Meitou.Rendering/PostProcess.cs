@@ -547,9 +547,21 @@ public sealed unsafe partial class PostProcess : IDisposable
     public Func<UpscalerKind, IUpscaler?>? UpscalerFactory { get; set; }
     readonly HashSet<UpscalerKind> unavailable = [];
 
+    /// <summary>The vendor upscaler for <paramref name="kind"/>; DLSS where it is missing (not an NVIDIA card) is FSR, then TAA.</summary>
     IUpscaler? ExternalFor(UpscalerKind kind)
     {
         if (kind is not (UpscalerKind.Fsr or UpscalerKind.Dlss)) return null;
+        var external = Create(kind);
+        if (external is null && kind == UpscalerKind.Dlss && (external = Create(UpscalerKind.Fsr)) is not null && !warnedFallback)
+        {
+            Console.WriteLine("upscaler  DLSS is not available here; using FSR");
+            warnedFallback = true;
+        }
+        return external;
+    }
+
+    IUpscaler? Create(UpscalerKind kind)
+    {
         if (External?.Kind == kind) return External;
         if (unavailable.Contains(kind) || UpscalerFactory is null) return null;
         External?.Dispose();
