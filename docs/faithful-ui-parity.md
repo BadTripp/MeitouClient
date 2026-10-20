@@ -69,7 +69,7 @@ found the front end, inventory, bag and limb windows sharing one set of bindings
 | Orders/AI policy | Medic/rescue/stop, Block, Passive, Hold, Sneak, Ranged, Taunt and the move speed act ([Order toggles](simulation.md#order-toggles)); Chase is stored only; editable jobs need commands |
 | Inventory mutations | Validated pocket/bag/equipment moves and arrangement, paused interface commands, worn appearance/combat refresh; stack/split, swaps, race constraints, prosthetics and character transfers remain |
 | Advanced new-game options | Start records/spawning exist; per-session option overrides need integration |
-| Character creation | `Kenshi_CharacterEditor` after a new game (all start characters, `force race`) and at plastic surgeons (context menu stand-in for the dialogue line); validated `EditCharacter` commands ([characters](characters.md#character-editor)); the idle stance slider and the hit-points stats line remain |
+| Character creation | `Kenshi_CharacterEditor` after a new game (all start characters, `force race`) and at plastic surgeons (context menu stand-in for the dialogue line); validated `EditCharacter` commands ([characters](characters.md#character-editor)); the hit-points stats line remains |
 | Import/reset squad positions | Save loading exists; import/reset rules need a separate backend |
 
 ## Validation
