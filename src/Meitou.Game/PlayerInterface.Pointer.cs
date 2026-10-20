@@ -14,7 +14,7 @@ sealed partial class PlayerInterface
 
     /// <summary>
     /// The mouse pointer (kenshi_pointers.xml) for what the right button would do under the cursor (docs/game/ui-input.md, pointers): the quick order's pointer
-    /// (<see cref="QuickOrder"/>: talk, attk, med, lift), with Ctrl lift and with Alt search over a downed character; over the interface, while dragging or with no
+    /// (<see cref="QuickOrder"/>: talk, attk, med, lift, search), with Ctrl lift and with Alt search over a downed character; over the interface, while dragging or with no
     /// selection, the arrow.
     /// </summary>
     public string PointerName => Point().Name;

@@ -104,7 +104,7 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
                 Say(new Meitou.Simulation.Carrying.PutDownOrder(carriers) { Tick = session.World.Tick });
             else if (ctrl && downed is { } lift && SelectedIds() is { Count: > 0 })
                 Say(new Meitou.Simulation.Carrying.PickUpOrder([], lift) { Tick = session.World.Tick });
-            // On a character: the quick order (trade with a trader, attack anyone else, treat a hurt ally, pick up a downed one of yours) is given when the button comes up
+            // On a character: the quick order (trade with a trader, attack anyone else, treat a hurt ally, pick up a downed one of yours, loot anyone else's) is given when the button comes up
             // before the context menu's hold time; held longer, the menu opens instead (PlayerInterface.ContextMenu.cs).
             else if (QuickOrder(p)?.Do is var quick && ContextPress(p, quick)) { }
             else if (quick is not null) quick();
@@ -140,6 +140,8 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
         if (PickTarget(p) is { } victim && Hostile(victim)) return ("attk", victim, () => Say(new Meitou.Simulation.Combat.AttackOrder(selection, victim) { Tick = session.World.Tick }));
         if (PickHurtAlly(p) is { } patient) return ("med", patient, () => Say(new Meitou.Simulation.FirstAid.TreatOrder(selection, patient) { Tick = session.World.Tick }));
         if (PickDowned(p, ownOnly: true) is { } ally) return ("lift", ally, () => Say(new Meitou.Simulation.Carrying.PickUpOrder([], ally) { Tick = session.World.Tick }));
+        // Anyone else's knocked-out or dead body is looted (take all, as Alt + right click).
+        if (PickDowned(p) is { } body) return ("search", body, () => Say(new Meitou.Simulation.Carrying.LootOrder([], body) { Tick = session.World.Tick }));
         return null;
     }
 
