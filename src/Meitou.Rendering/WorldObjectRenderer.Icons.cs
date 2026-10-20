@@ -52,9 +52,9 @@ public sealed unsafe partial class WorldObjectRenderer
     {
         if (!buildingIcons.TryGetValue(record, out var entry))
         {
-            bool added = false;
-            entry = buildingIcons.GetOrAdd(record, r => { added = true; return new BuildingIconEntry { Record = r, Parts = parts }; });
-            if (added) buildingIconRequests.Enqueue(entry);
+            var made = new BuildingIconEntry { Record = record, Parts = parts };
+            if (buildingIcons.TryAdd(record, made)) buildingIconRequests.Enqueue(made);
+            entry = buildingIcons[record];
         }
         icon = entry.Drawn ? (entry.Colour!, entry.Sampled) : default;
         return entry.Drawn;

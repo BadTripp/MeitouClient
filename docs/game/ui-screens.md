@@ -523,7 +523,7 @@ unless marked; Meitou: `PlayerInterface.Squads.cs`, commands in `SquadManagement
   - **Meitou** (`BuildingIcons`, `BuildingIconStyle`, `WorldObjectRenderer.Icons.cs`): the saved picture, else the ghost's parts (interior ones left out; whether the preview keeps them is
     **Unknown**) drawn into a texture through the objects' program, framed from the loaded meshes' bounds (many files lack a bounds chunk), no weather, lit from the camera.
     Against twelve base-game pictures (headless render, not a test): silhouettes agree to 0.999 or better, mean brightness within 10 % on ten, 17 % darker on Outpost s-IV; Stairs (`1092`)
-    draws near-white: its material's `Severe_C_10.dds` averages 226 grey while the saved picture is dark, so the game tints it somehow (**Unknown**). Not done: writing pictures to disk.
+    (the only one of them that takes the second yaw, and its framing matches) draws near-white: its material's `Severe_C_10.dds` averages 226 grey while the saved picture is dark, so the game tints it somehow (**Unknown**). Not done: writing pictures to disk.
 - Build window: categories, groups, research gating and the stats panel are in [buildings-production](buildings-production.md#build-menu);
   placement checks and messages (`FUN_1404e27e0`) and the build-map controls in [placement](buildings-production.md#placement).
 
