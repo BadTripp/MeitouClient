@@ -52,6 +52,7 @@ sealed partial class PlayerInterface
         CharacterTask.DeliverMaterials => "Delivering materials",
         CharacterTask.Operate => "Operating machine",
         CharacterTask.Haul => "Hauling",
+        CharacterTask.Prospect => "Prospecting",
         _ => "Aimless",
     };
 
