@@ -18,7 +18,7 @@ public sealed class WorldEmitters(WwisePlayer player)
     {
         public readonly string Key = key;
         public readonly AmbientSound Sound = sound;
-        public readonly Vector3 Position = position;
+        public Vector3 Position = position;
         /// <summary>The game object; 0 until the first start registers it (the game registers lazily).</summary>
         public ulong Object;
         public bool Started;
@@ -64,6 +64,14 @@ public sealed class WorldEmitters(WwisePlayer player)
     }
 
     public bool Contains(string key) => emitters.ContainsKey(key);
+
+    /// <summary>Moves an emitter that follows something (an effect's node, <c>FUN_140258120</c>): the next <see cref="Update"/> measures the range from the new place, and a registered object is placed there.</summary>
+    public void Move(string key, Vector3 position)
+    {
+        if (!emitters.TryGetValue(key, out var e)) return;
+        e.Position = position;
+        if (e.Object != 0) player.SetPosition(e.Object, position);
+    }
 
     public void Clear()
     {

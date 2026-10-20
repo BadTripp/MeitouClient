@@ -3,7 +3,7 @@
 How Kenshi drives its sound, and how Meitou plays it. The bank and WEM formats are in [formats/wwise-bnk.md](formats/wwise-bnk.md); this
 page is the runtime: what the game sends to Wwise, and Meitou's player (`src/Meitou.Audio`). Only the ambience (biome beds, weather beds) and the music
 play from the games' own rules (in the viewer and the game); the player also does pause ducking, game objects with 3D positions, attenuation and reverb,
-and the game's settings menu has the audio sliders. The game also plays the interior ambience and the building emitters (campfires, torches, water tanks). The characters (footsteps, combat, voices) and the interface sound too; the task and effect sounds are still to do.
+and the game's settings menu has the audio sliders. The game also plays the interior ambience and the building emitters (campfires, torches, water tanks). The characters (footsteps, combat, voices) and the interface sound too, as do the sky beams (effect emitters), the robot spiders and the movement of manned turrets.
 
 The facts about the exe come from its decompiled camera update and audio manager, traced 2026-10-10 (functions named per claim). Facts
 about the banks are checked against the 24 banks of the Steam install.
@@ -141,6 +141,16 @@ power, `FUN_140258260` destroys), the building set-up `FUN_14055c240`, its loade
   Wwise object (also used by door sounds) and makes **one** emitter from the **first** `sounds` entry only (a Peeler Machine lists Generator and Grind; only Generator sounds), if the building is complete (the first
   byte of its state struct is `is complete`) and `chance` > `rand()` (rolled once). Position = the building's position + its orientation × (the entry's values × the building's `scale`) (the Wind Generator's (0, 240, 0)
   lifts it onto the rotor). Torn down with the building (`FUN_140549920`).
+- **Effects** (`EffectHandler::vfunc_1` = `uses_sound` `140102870`, `vfunc_2` `140100a50`, `FUN_140258120`, `EffectHandlerWandering::vfunc_1`). The handlers that make one are the base handler's (point, wandering, global-point effects; the camera and global
+  handlers override the update and make none). On its first update after being activated a handler creates its particle system and, from the **first** `sound` entry of its EFFECT, an emitter at its position: no chance roll, no game object of a building
+  (an object of its own from the counter, registered at the first start), `needs power` and `efficiency multiplier` forced to 0, base `intensity` kept. Every frame `vfunc_2` copies the handler's position into the emitter (and calls `SetPosition` once registered),
+  then runs the range test above, so a wandering beam's sound moves with it. The emitter ends (`Stop_Emitter`, `StopAll`, unregister) with the handler's particle system: after the handler's life is over, its fade-out has run (`FUN_1400f8d10` at 1 or more) and no particle
+  of the system is left alive. Base data: EFFECT `SkyBeam` and `venge beam` (type 9, WANDERING_GAS) and `beam1` (type 3, WANDERING) have `Sun_Beams` (AMBIENT_SOUND `Inferno`: cutoff 300, so range 3000; `intensity` 1, so `Intensity` 100 is sent); no other EFFECT has a `sound`.
+- **Races** (`uses_ambient_sound` `140629940`, `FUN_1405cfd90`). A character's emitter is made from the **first** `ambient sound` of its RACE on the character's own Wwise object (shared: the emitter registers and unregisters nothing), for a living character only (the corpse
+  flag `+0x5bc` clear); every call of `uses_ambient_sound` destroys the old emitter and makes a new one. Who calls it is **Unknown** (no caller or vtable entry in the dump). `FUN_1405cfd90` (the character's frame update) copies the character's position into the emitter (no
+  `SetPosition`: the character's object is placed right after) and runs the range test. Base data: the two robot spiders (`Robot Spider Worker`, `Robot Guard Spider`) have `Iron_Spider` (cutoff 50, range 500; `intensity` 0, so the object hears the global `Intensity`).
+  A corpse gets a sound too (**Observed**, `CharacterHuman::vfunc_29` `1405ccd90`): AMBIENT_SOUND `Corpse Flies` (`95425-sfx.mod`, emitter `Corpse_Flies`, cutoff 50, `intensity` 1) and the `Fly-Particle` effect (`55393-Newwworld.mod`), made once the body has lain more than 4 of the game's time units
+  (`FUN_14066cc00`, hours) in an active zone and removed with the effect; **not done in Meitou**.
 - **Meitou** (`WorldEmitters`, `BuildingEmitters`, `WorldObjects.Emitters`; `GameHost.AudioWorld.cs`). Every emitter gets its own object (ids from 2³²) and the same rules; the roll is a stable hash of the placement (the exe
   uses `rand()`); the level's buildings with a destroyed or incomplete state get none, a player-built building gets its emitter when its site is complete. The level's emitters are read once for the whole world
   (a worker task, about 0.2 s) and culled by distance, where the exe makes and tears them down with the zone. They also cover the furniture of each building's interior and exterior layout (`WorldObjects.Emitters`
@@ -148,18 +158,36 @@ power, `FUN_140258260` destroys), the building set-up `FUN_14055c240`, its loade
   718 from layout furniture. 585 play by distance: 333 `Fire` (campfires, torch posts, streetlights), 157 `Oven` (bread ovens, cooking stoves) and 95 `Water_Tank`. 667 need power (265 `Generator`, 96 `Windmill_Large`,
   94 `Battery_Bank`, 44 `Water_Well`, 36 `Electronics_Bench`, 32 `Research_bench`, 28 `Windmill_Small`, 17 `Auto_Mine`, 14 `Medical_Bench`, 14 `Stone_Processor`, 12 `BioFuel`, 8 `Rum_Still`, 4 `Silo_Grind`, 3 `Furnace`)
   and stay silent because Meitou has no machines (`WorldEmitters.SetPower` is the call for them). Rendered: `Fire` at `Intensity` 10 is −58, −66, −81 dBFS and silent at 50, 200, 400 and 600 units from the listener
-  (**Observed**); in the game, with the sound eye moved 84 units from two campfires both started and at 904 units both stopped (a temporary log line). Not done: EFFECT, RACE (spider), FOLIAGE_MESH and MAP_FEATURES emitters.
+  (**Observed**); in the game, with the sound eye moved 84 units from two campfires both started and at 904 units both stopped (a temporary log line).
+  **Effects** (`EffectRecord.Sound`, `GameHost.AudioEffects.cs`): each live effect unit of a group whose EFFECT has a `sound` (the weather's and the placers' groups) gets an emitter `effect/N` at the unit's position, moved to it each frame (`WorldEmitters.Move`) and
+  removed when the unit is done. The sky beams (`beam1` in the weather, `SkyBeam`, `venge beam`) therefore play `Sun_Beams` within 3000 units. **Robot spiders** (`CharacterSounds`, `CharacterSoundProfile.Ambient`): the profile's race `ambient sound` starts when a
+  living character is within its range of the eye (the character's own object, the current position) and stops when it is out of range or down; the call frequency of `uses_ambient_sound` being Unknown, the emitter is simply kept as long as the rule holds. Not done: FOLIAGE_MESH and MAP_FEATURES emitters, corpse flies.
 
 ### Other world-side events
 
 From the same trace (**Verified**; hashes in [wwise-bnk.md](formats/wwise-bnk.md)). **Doors** register a Wwise object at construction (the door class sets the flag that buildings with `sounds` get) and set `Door_Type` from `door type`
 (DoorMaterial 0 Wood, 1 `Mechanical_Metal`, 2 `Gate`). On the door's object: `Door_Open` when it starts to open (state 0 to 2), `Door_Close` when it starts to close (1 to 3), `Door_Shut` when closing ends (3 to 0) **and**
-when opening ends (2 to 1), and `Break` for doors and walls whose integrity falls to 0 (`DoorStuff::vfunc_62`, `WallBuilding::vfunc_62`). Turrets post `Turret_Mvt_Start` / `Turret_Mvt_Stop` (`TurretBuilding::vfunc_28`) and the
-gun's shot sounds on the building's object. `UI_Generator` (`FarmBuilding::vfunc_161`), the `Building_*` build-mode sounds and `Building_Click` (select sound) belong to the interface.
+when opening ends (2 to 1), and `Break` for doors and walls whose integrity falls to 0 (`DoorStuff::vfunc_62`, `WallBuilding::vfunc_62`; see **Break** below). Turrets post `Turret_Mvt_Start` / `Turret_Mvt_Stop` (`TurretBuilding::vfunc_28`) and the
+gun's shot sounds on the building's object (see **Turrets**). `UI_Generator` (`FarmBuilding::vfunc_161`), the `Building_*` build-mode sounds and `Building_Click` (select sound) belong to the interface.
 **Meitou:** door sounds as above (`Meitou.Audio.DoorSounds`, fed each frame by `GameHost.UpdateDoorSounds` from the snapshot's doors, which carry each door's
 position, record and broken flag). A door object takes the leaf's centre, else its building's origin. A door missing from the snapshot is closed, since the
 snapshot leaves out plainly closed doors. A door seen for the first time is assumed to have been closed (if it is opening) or open (if it is closing); one at rest is taken as it is, so a load is quiet. Doors over 3000 units from the eye are skipped
-(**engine choice**; the exe posts for every door). F11 counts the door sounds. **Not done:** walls never break and there are no turrets, so their sounds have no trigger.
+(**engine choice**; the exe posts for every door). F11 counts the door sounds.
+
+**Break** (**Verified**, `DoorStuff::vfunc_62` `14029d690`, `WallBuilding::vfunc_62` `14029d560`; the damage entry of the building, called through the vtable). Given a hit's two floats (`p0`, `p1`; `p1` is the heavier term): a door that is not already broken takes
+`clamp(2·p1 + 0.5·p0, 20, 60)` and loses 0.015 × that of its integrity (wall: half the sum, clamped 10 to 60, 0.003 ×); when the integrity is 0 or less it is marked broken (virtual `+0x310`/`+0x340`) and `Break` posts on the building's object. **Neither
+function sets the `Break` switch group** (cases `Door` and `Gate`, bank `SFX_General_Bank`): no other code in the exe sets it (**Verified**, no `SetSwitch` string `Break`), so with the group never set the original plays the container's default, which
+is silent (**Observed**, rendered). **Meitou:** `DoorSounds` posts `Break` when a door becomes broken (the lock bash `LockSystem.Bash` and a lockpick's break set `DoorBroken`), after setting `Break` to `Gate` for door type 2 and `Door` otherwise
+(**engine choice**: it fixes the exe's omission). **Walls: no trigger**: nothing in Meitou damages walls (no damage model is invented).
+
+**Turrets** (`TurretBuilding::vfunc_28` `140434b70`, `RotatingEnt::vfunc_2`). **Verified:** each frame of an active turret with a target the largest angle its turning parts still have to turn (`FUN_1404cc0d0`, degrees) is kept; with the counter at 0 and that angle over 0.1 it posts `Turret_Mvt_Start` and sets
+the counter to 8; the counter counts down every frame and posts `Turret_Mvt_Stop` on reaching 0 (so a turret that keeps turning posts a start and a stop every 8 frames; no fade on either). Both post on the building's object (`+0x208`, registered when the gun first asks for it).
+The turning parts are the BUILDING_PART records with `rotation function` 5 (ROTATION_TARGET): in order, each takes the aim point in its own frame and turns by its error (yaw part, `rotation axis` Y: `atan2(x, z)`; pitch part: `atan2(-y, √(x²+z²))`) limited to
+±`aim speed` (GUN_DATA) × efficiency × frame time. The shot's own sounds (the `Weapons` switch group and `Attack` on the building's object) belong to a turret firing. **Unknown:** the exe's target choice for a manned turret (`FUN_140437f40`, not traced), the
+idle behaviour of a manned turret without a target, and the wall bonus to the turning speed. **Meitou:** the simulation has no turret damage or firing model and does not turn turrets; it publishes only who stands at which turret
+(`CharacterSnapshot.Turret`, read from the AI's turret claims, outside the hash). `GameHost.AudioTurrets.cs` keeps a display-only aim for each manned turret within 4000 units: the nearest living, free hostile in the gun's `range` plus 5 units up (**engine choice**), the parts turned by the
+rule above in game time (`TurretSounds`), and posts the two events on an object of its own at the turret (a start beyond 3000 units from the eye is dropped; **engine choice**). The gun mesh does not turn (the renderer has no rotating parts). **Turret shots: no trigger.**
+To hear it: put a gunner on a town turret with a hostile character in range.
 
 ### Weather
 
@@ -383,7 +411,7 @@ Open for the next wave: which event each game action posts and on which object, 
 
 ### Not done
 
-The emitters of effects, spiders, foliage and map features, machines (nothing calls `WorldEmitters.SetPower`, so the emitters that need power stay silent), turret and wall-break sounds (nothing in Meitou triggers them), the callers that post effects, building floors as footstep surfaces, the task and interface sounds whose trigger Meitou lacks (listed under [Characters](#characters-footsteps-combat-voices) and [Interface](#interface)) (the engine is ready:
+The emitters of foliage and map features, corpse flies, machines (nothing calls `WorldEmitters.SetPower`, so the emitters that need power stay silent), turret shots and wall-break sounds (nothing in Meitou triggers them), the callers that post effects, building floors as footstep surfaces, the task and interface sounds whose trigger Meitou lacks (listed under [Characters](#characters-footsteps-combat-voices) and [Interface](#interface)) (the engine is ready:
 [API](#api-for-event-sources)), voice limits, obstruction and occlusion (the game uses none), the radio, serial effect slots and the cone as Wwise draws it, and unloading ambience
 banks left behind (they stay loaded: about 5 to 14 MB of Ogg each; the music banks unload as above).
 
@@ -410,7 +438,7 @@ main theme or the remembered biome music, seconds until the timer next posts it,
     rain and wind end) and `StartMainTheme` runs again, so the menu sounds as at start-up; the next game's first update re-enters its biome.
   - **World sounds** (`GameHost.AudioWorld.cs`, each frame after the ambience): the building under the pivot (`InteriorSounds`, [Interiors](#interiors)) and the building emitters (`WorldEmitters`,
     [Point emitters](#point-emitters)) with the eye as the distance origin. The level's emitters are read once on a worker (`WorldObjects.Emitters`), a player-built site's when it completes. The main menu ends the
-    interior ambience and stops the emitters. The console prints the number of emitters read; the statistics line `world audio` (F11 and the end-of-run `audio     world:`) shows indoors or outdoors, emitters playing of
+    interior ambience and stops the emitters. `GameHost.AudioEffects.cs` adds the effect emitters (sky beams) and `GameHost.AudioTurrets.cs` the turrets' movement sounds ([Other world-side events](#other-world-side-events)); robot spiders are in `CharacterSounds`. The console prints the number of emitters read; the statistics line `world audio` (F11 and the end-of-run `audio     world:`) shows indoors or outdoors, emitters playing of
     all, and the nearest one's name and distance.
   - **Characters and interface.** `UpdateAudio` also calls `UpdateCharacterAudio` (`GameHost.AudioCharacters.cs`, [Characters](#characters-footsteps-combat-voices)); the interface sounds are on from `AttachAudio`, also on the
     title screen (`GameHost.AudioUi.cs`). `VO_Bank` loads with the first character. F11 and the `--quit-after` log show `characters: N characters, N footsteps, N swings, N impacts, N voices, N interface sounds`.

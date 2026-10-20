@@ -3,6 +3,7 @@ using System.Numerics;
 using Meitou.Data;
 using Meitou.Data.Characters;
 using Meitou.Data.Fcs;
+using Meitou.Data.World;
 
 namespace Meitou.Audio;
 
@@ -24,15 +25,18 @@ public sealed class CharacterSoundProfile
     public bool Robot { get; init; }
     /// <summary>The material of the heaviest body armour worn (0 cloth, 1 leather, 2 chain, 3 plate): the footsteps' <c>Armor_Worn</c> switch.</summary>
     public int ArmourMaterial { get; init; }
+    /// <summary>The race's looping sound on the character's own object (RACE <c>ambient sound</c>, its first entry: the robot spiders' <c>Iron_Spider</c>); null for none.</summary>
+    public AmbientSound? Ambient { get; init; }
 
     /// <summary>
     /// Reads a profile (<b>Verified</b> against the exe: <c>uses_sounds</c> for the voice, <c>FUN_1405d28b0</c> for the armour, the appearance rebuild for <c>barefoot</c>, <c>uses_bare_sword</c> for the weapon).
     /// A person: RACE <c>sounds</c> 0..3 name Human, Shek, Hive, Robot (anything else Human); <c>_Male</c> / <c>_Female</c> follows unless the race has a single gender.
-    /// An animal: <c>sounds</c> less 4 indexes the creature names; below 4 it is Dog.
+    /// An animal: <c>sounds</c> less 4 indexes the creature names; below 4 it is Dog. With a database the race's <c>ambient sound</c> is read too.
     /// </summary>
-    public static CharacterSoundProfile From(CharacterAppearance look)
+    public static CharacterSoundProfile From(CharacterAppearance look, GameDatabase? db = null)
     {
         int sounds = look.Race.GetInt("sounds");
+        var ambient = db is null ? null : AmbientSound.FirstOf(db, look.Race, "ambient sound");
         bool boots = false;
         int armour = 0;
         string? weapon = null;
@@ -49,7 +53,7 @@ public sealed class CharacterSoundProfile
         if (look.Animal is not null)
         {
             string creature = CharacterSounds.CreatureName(sounds);
-            return new CharacterSoundProfile { Animal = true, Voice = creature, Weapons = creature, Barefoot = false, ArmourMaterial = 0 };
+            return new CharacterSoundProfile { Animal = true, Voice = creature, Weapons = creature, Barefoot = false, ArmourMaterial = 0, Ambient = ambient };
         }
         string race = CharacterSounds.PersonName(sounds);
         return new CharacterSoundProfile
@@ -59,6 +63,7 @@ public sealed class CharacterSoundProfile
             Weapons = string.IsNullOrEmpty(weapon) ? null : weapon,
             Barefoot = look.Race.GetBool("barefoot") && !boots,
             ArmourMaterial = Math.Clamp(armour, 0, 3),
+            Ambient = ambient,
         };
     }
 }
@@ -122,6 +127,8 @@ public sealed class CharacterSounds
         public float Speed = -1;
         public double NextPassive;
         public bool Down;
+        /// <summary>The race's ambient emitter: its switch is set, and it is started.</summary>
+        public bool AmbientSet, AmbientOn;
         public CharacterLoop Loop;
         public readonly List<Cursor> Cursors = [];
     }
@@ -238,9 +245,30 @@ public sealed class CharacterSounds
             player.SetParameter("Movement_Speed", speed, e.Object);
         }
         if (speed > 0) UpdateSurface(e, position, d2);
+        if (e.Profile.Ambient is { } ambient) UpdateAmbient(e, ambient, d2);
         SetLoop(e, loop, d2);
         ProcessLayers(e, layers, d2);
         if (e.Profile.Animal) PassiveVoice(e, d2);
+    }
+
+    /// <summary>
+    /// The race's looping sound (docs/audio.md "Point emitters"; <c>uses_ambient_sound</c>, updated by <c>FUN_1405cfd90</c> every frame): <c>Start_Emitter</c> on the character's own object while the eye
+    /// is within the sound's range (the squared distance not beyond <c>cutoff² × 100</c>), <c>Stop_Emitter</c> beyond it, none for a body that is down (the exe makes it for a living character only).
+    /// The sound needs no power; its base intensity is 0 for the robot spiders, so <c>Intensity</c> is not set on the object and the global one (the wind's) is heard.
+    /// </summary>
+    void UpdateAmbient(Entry e, AmbientSound sound, float d2)
+    {
+        bool want = !e.Down && d2 <= sound.Range * sound.Range;
+        if (want == e.AmbientOn) return;
+        e.AmbientOn = want;
+        if (!want) { player.Post("Stop_Emitter", e.Object); return; }
+        if (!e.AmbientSet)
+        {
+            e.AmbientSet = true;
+            player.SetSwitch("Emitters", sound.Emitter, e.Object);
+            if (sound.Intensity != 0) player.SetParameter("Intensity", sound.Intensity * 100, e.Object);
+        }
+        player.Post("Start_Emitter", e.Object);
     }
 
     void UpdateSurface(Entry e, Vector3 position, float d2)

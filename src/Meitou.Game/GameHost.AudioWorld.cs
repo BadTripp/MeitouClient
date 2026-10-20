@@ -43,6 +43,7 @@ sealed partial class GameHost
         interiorSounds!.Update(volume is null ? null : new InteriorHit(volume.PlacementId, volume.Ambience, volume.Integrity, volume.Cavernous));
 
         UpdateEmitters();
+        UpdateEffectEmitters(worldEmitters!);
         worldEmitters!.Update(eye);
         UpdateDoorSounds(eye);
     }

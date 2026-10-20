@@ -68,7 +68,12 @@ public sealed class DoorSounds(WwisePlayer player)
         if (Vector3.DistanceSquared(at.Position, eye) > Range * Range) return;
         player.SetPosition(door.Object, at.Position);
         player.SetSwitch("Door_Type", TypeNames[Math.Clamp(at.Type, 0, TypeNames.Length - 1)], door.Object);
-        if (breaks) Post("Break", door);
+        if (breaks)
+        {
+            // The exe never sets the Break switch group, so its Break plays nothing (docs/audio.md "Other world-side events"); the bank's cases are Door and Gate.
+            player.SetSwitch("Break", at.Type == 2 ? "Gate" : "Door", door.Object);
+            Post("Break", door);
+        }
         // A state skipped between two frames still gets its sounds: closed to open is a start and an end, and so on.
         if (motion == 2 || (motion == 1 && before == 0)) Post("Door_Open", door);
         if (motion == 3 || (motion == 0 && before == 1)) Post("Door_Close", door);

@@ -89,7 +89,7 @@ sealed partial class GameHost
             }
             position += CarriedOffset(c, yaw);
             if (!soundProfiles.TryGetValue(look, out var profile))
-                soundProfiles.Add(look, profile = CharacterSoundProfile.From(look));
+                soundProfiles.Add(look, profile = CharacterSoundProfile.From(look, db));
             soundLayers.Clear();
             foreach (var layer in c.Animations)
             {
