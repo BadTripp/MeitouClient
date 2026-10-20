@@ -28,14 +28,14 @@ sealed partial class PlayerInterface
         EngineKey.Z when ctrl => UiEditKey.Undo, EngineKey.Y when ctrl => UiEditKey.Redo, _ => null,
     };
 
-    /// <summary>A key with an edit box focused: it takes every key, except that a read-only box lets the keys it has no use for (the hotkeys) go on.</summary>
+    /// <summary>A key with an edit box focused: it takes every key, except that a read-only box takes only the edit keys, so Tab, Enter and the hotkeys go on as without a focus.</summary>
     bool EditFocusKey(EngineKey key, bool ctrl, bool shift)
     {
-        bool readOnly = faithfulScreens.FocusReadOnly;
         var editing = EditKeyFor(key, ctrl, shift);
         if (editing is { } editKey) faithfulScreens.EditKey(editKey, shift);
+        if (faithfulScreens.FocusReadOnly) return editing is not null;
         if (key == EngineKey.Tab) faithfulScreens.FocusNext(shift);
-        if (key == EngineKey.Enter && !faithfulScreens.EditEnter(ctrl)) return faithfulScreens.Submit();
-        return !readOnly || editing is not null || key == EngineKey.Tab;
+        if (key == EngineKey.Enter) faithfulScreens.EditEnter(ctrl);
+        return true;
     }
 }

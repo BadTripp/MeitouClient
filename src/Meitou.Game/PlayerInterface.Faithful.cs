@@ -30,7 +30,7 @@ sealed partial class PlayerInterface
             UpdateMenuPause();
             return true;
         }
-        if (faithfulScreens.HasKeyboardFocus) return EditFocusKey(key, ctrl, shift);
+        if (faithfulScreens.HasKeyboardFocus && EditFocusKey(key, ctrl, shift)) return true;
         if (key == Meitou.Engine.Input.Key.Tab && faithfulScreens.FocusNext(shift)) return true;
         if (key == Meitou.Engine.Input.Key.Enter && faithfulScreens.Submit()) return true;
         if (key == Meitou.Engine.Input.Key.Space && faithfulScreens.ActivateFocused()) return true;

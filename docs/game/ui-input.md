@@ -317,7 +317,7 @@ Condition bars, hover pointers over world buildings, and quick right-click order
 
 ### Edit boxes and keyboard focus
 
-**Verified** against the MyGUI 3.2.2 source (tag `MyGUI3.2.2`: `EditBox`, `InputManager`, `Button`, `TextIterator`; MIT). That Kenshi's `MyGUIEngine_x64.dll` is exactly 3.2.2 is **Unknown**.
+**Verified** against the MyGUI 3.2.2 source (tag `MyGUI3.2.2`: `EditBox`, `InputManager`, `Button`, `TextIterator`; MIT). Kenshi's own `MyGUI.log` says "MyGUI version 3.2.3" (**Observed**; upstream has no 3.2.3 tag, so the 3.2.2 source is the nearest public one and any difference is **Unknown**).
 - A mouse press gives key focus to the nearest widget that needs it; there is no traversal: `InputManager` handles no Tab or arrows, `Button` has no key handling and no key-focus state.
 - **Static** boxes ignore every key. **ReadOnly** boxes take focus, selection and copy (Cut copies only); typing, Backspace, Delete, Enter and Paste do nothing. **Password** boxes copy and cut nothing but paste.
 - Keys (Windows/Linux table; the Apple build uses Meta): Left/Right one character with **no** Ctrl word jump (3.2.2 has none; later versions do); Home/End line start/end, with Ctrl text start/end; Up/Down/PageUp/PageDown
@@ -325,19 +325,19 @@ Condition bars, hover pointers over world buildings, and quick right-click order
   (the `eventEditSelectAccept`); Ctrl+A select all, Ctrl+C / Ctrl+Insert copy, Ctrl+X / Shift+Delete cut, Ctrl+V / Shift+Insert paste, Ctrl+Z undo, Ctrl+Y redo (Shift is not looked at). With Ctrl held a key never types.
   Escape drops the key focus; Tab types a tab only with `TabPrinting`.
 - Copy with no selection clears MyGUI's clipboard entry. Typed text and pastes delete the selection first, then insert; a box already at `MaxTextLength` (default 2048) rejects the insert, else the text is cut back from the end
-  (`OverflowToTheLeft`: from the start). `TextIterator`: CR+LF is one break, and a box that is not multi-line (nor word-wrapped) turns each break into a space; tabs and other controls pass through.
+  (`OverflowToTheLeft`: from the start, **Observed**: read from function names). `TextIterator`: CR+LF is one break, and a box that is not multi-line (nor word-wrapped) turns each break into a space; tabs and other controls pass through.
 - Undo keeps 128 steps. A keystroke is one step; deleting a selection and inserting is one step; edits, pastes and cuts clear the redo steps, undo and copy do not; `setText` and a mode change clear both.
 - **Observed** (grep of the installed `data/gui/layout`): `MaxTextLength` is set once (the character editor's `NameText`, 30), `Password` only `false`, `ReadOnly` `true` on 7 boxes (descriptions, the message log), `OverflowToTheLeft` only in the interior-mode layout.
 
 Meitou (`UiTextBuffer`, `MyGuiScreenHost.Keyboard.cs`, `PlayerInterface.Keyboard.cs`; the shortcuts above are all implemented, Ctrl on every system): the clipboard is the window's system clipboard (Silk keyboard `ClipboardText`; the boxes keep their own
 without one); an empty Copy leaves it alone; pasted tabs become spaces and other control characters are dropped; the host gives a box its `MaxTextLength`, else 2048 (`UiTextBuffer` alone defaults to 512); the history is a stack of text
-and caret snapshots with MyGUI's step rules. Read-only boxes can be focused by a click (caret at the end; Ctrl+A, Ctrl+C), take only edit keys and let hotkeys through; Esc still closes the window. Ctrl+C / Ctrl+V reach the free camera's code only
+and caret snapshots with MyGUI's step rules. Read-only boxes can be focused by a click (caret at the end; Ctrl+A, Ctrl+C), take only edit keys, so Tab, Enter and the hotkeys work as without a focus; Esc still closes the window. Ctrl+C / Ctrl+V reach the free camera's code only
 when no box is focused. Not built: caret placing and selecting with the pointer, a password mask (no layout turns it on), `OverflowToTheLeft`, `TabPrinting`, pixel-exact Up/Down in wrapped multi-line boxes (they move by `\n` lines).
 
 **Button traversal (Meitou only)**: Tab / Shift+Tab walk the top window's editable boxes and its enabled, visible buttons (not close/pin, scroll bar parts, tab headers or list rows) in layout order; the first Tab goes to the first edit box, else the first
-button. A window that is not modal and has no edit box leaves Tab to change-squad until a button has the focus. Enter presses the focused button (else the `DefaultAction` button), Space too; the press runs as a click on the button's middle. A click or a
+button. Buttons are reached on modal windows and on windows with an editable box; any other window leaves Tab to change-squad. Enter presses the focused button (else the `DefaultAction` button), Space too; the press runs as a click on the button's middle. A click or a
 new window ends it (Esc is unchanged). Look: the Meitou UI mode draws a 2 px `brass-light` ring offset 2 ([meitou-ui](../meitou-ui.md)); the Faithful mode draws nothing (the original has no key-focus look: **Unknown**, `Button` has no such state), so the focus is invisible there.
-Key repeat presses again. The settings panel and the native Meitou UI have their own keyboard focus ([native-ui](../native-ui.md)).
+The settings panel and the native Meitou UI have their own keyboard focus ([native-ui](../native-ui.md)).
 
 ### Debug menu
 
