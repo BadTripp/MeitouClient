@@ -15,8 +15,8 @@ sealed partial class PlayerInterface
     /// <summary>Where interface sounds go (the host's audio); null without audio.</summary>
     public Action<UiSoundEvent>? UiSound { get; set; }
 
-    void Sound(string name, string? group = null, string? value = null, bool state = false, string? item = null) =>
-        UiSound?.Invoke(new UiSoundEvent(name, group, value, state, item));
+    void Sound(string name, string? group = null, string? value = null, bool state = false, string? item = null, string? building = null) =>
+        UiSound?.Invoke(new UiSoundEvent(name, group, value, state, item, building));
 
     readonly HashSet<string> soundScreens = [];
     int soundOverviewTab = -1;
@@ -157,6 +157,7 @@ sealed partial class PlayerInterface
             case "editor":
                 if (e.Widget == "ConfirmButton") Sound("Create_Character");
                 else if (e.Widget is "BodyTabButton" or "FaceTabButton" or "HairTabButton") Sound("Tab");
+                // Slider: the first event of each drag. A data-panel slider (the host's Slider property) is not built yet; its drag events would sound here the same way.
                 else if (e.Action.StartsWith("editor-slider:", StringComparison.Ordinal)) { if (e.Action != lastSliderSound) Sound("Slider"); lastSliderSound = e.Action; }
                 else if (e.Widget.EndsWith("Button", StringComparison.Ordinal) || e.Widget.EndsWith("Arrow", StringComparison.Ordinal)) Sound("General_Click");
                 break;

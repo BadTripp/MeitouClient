@@ -44,12 +44,13 @@ public sealed partial class MyGuiScreenHost(MyGuiResources resources)
         if (!screens.ContainsKey(id)) throw new KeyNotFoundException(id);
         open.Remove(id);
         open.Add(id);
-        focus = null; edit = null;
+        focus = null; edit = null; keyButton = null;
     }
     public void Close(string id)
     {
         open.Remove(id);
         if (focus?.Screen == id) { focus = null; edit = null; }
+        if (keyButton?.Screen == id) keyButton = null;
         if (drag?.Screen == id) drag = null;
         if (slide?.Screen == id) slide = null;
         frame = frame.Where(f => f.Id != id).ToArray();
@@ -63,7 +64,7 @@ public sealed partial class MyGuiScreenHost(MyGuiResources resources)
     public string GetText(string id, string widget) => screens[id].Text.GetValueOrDefault(widget) ?? "";
     public int GetTab(string id, string widget) => screens[id].Tabs.GetValueOrDefault(widget);
     /// <summary>Ends typing in the focused edit box (a press the screen's decoration took).</summary>
-    public void Blur() { focus = null; edit = null; }
+    public void Blur() { focus = null; edit = null; keyButton = null; }
     /// <summary>The edit box being typed in (also one a screen's decoration added): its screen, name, caret and selection; null: none.</summary>
     public (string Screen, string Widget, int Caret, int SelectionStart, int SelectionLength)? Focus =>
         focus is { } f && edit is not null ? (f.Screen, f.Widget, edit.Caret, edit.SelectionStart, edit.SelectionLength) : null;
@@ -100,6 +101,7 @@ public sealed partial class MyGuiScreenHost(MyGuiResources resources)
             }
             var controls = MyGuiPresentation.Arrange(s.Layout, width, height, b, resources.Layers).ToList();
             decorate?.Invoke(id, controls);
+            ArrangeKeyboard(id, controls);
             result.Add(new(id, controls));
         }
         frame = result;
@@ -119,6 +121,7 @@ public sealed partial class MyGuiScreenHost(MyGuiResources resources)
     public (string Screen, UiControl Control)? HitTest(Vector2 p) => Pick(p);
     public bool PointerDown(Vector2 p)
     {
+        keyButton = null;
         if (Pick(p) is not { } picked) { focus = null; edit = null; return false; }
         var (id, c) = picked;
         var s = screens[id];
@@ -138,13 +141,7 @@ public sealed partial class MyGuiScreenHost(MyGuiResources resources)
             }
             return true;
         }
-        if (c.Type == "EditBox" && c.Properties.GetValueOrDefault("Static") != "true" && c.Properties.GetValueOrDefault("ReadOnly") != "true")
-        {
-            focus = (id, c.Name);
-            s.Text.TryAdd(c.Name, c.Caption);
-            edit = new(s.Text[c.Name]);
-            return true;
-        }
+        if (c.Type == "EditBox" && c.Properties.GetValueOrDefault("Static") != "true") { FocusEdit(id, c); return true; }
         focus = null; edit = null;
         if (c.Properties.GetValueOrDefault("Slider") == "true")
         {
@@ -201,29 +198,23 @@ public sealed partial class MyGuiScreenHost(MyGuiResources resources)
     }
     void PublishEdit()
     {
-        if (focus is not { } f || edit is null) return;
+        if (focus is not { } f || edit is null || edit.ReadOnly) return;
         screens[f.Screen].Text[f.Widget] = edit.Text;
         Activated?.Invoke(new(f.Screen, f.Widget, "text", edit.Text));
     }
     public bool EditKey(UiEditKey key, bool extend = false)
     {
         if (focus is null || edit is null) return false;
+        if (key >= UiEditKey.Copy) return Clipboard(key);
         edit.Key(key, extend); PublishEdit();
         return true;
     }
     public bool Backspace() => EditKey(UiEditKey.Backspace);
-    public bool FocusNext(bool backwards = false)
-    {
-        if (frame.LastOrDefault() is not { } top) return false;
-        var fields = top.Controls.Where(c => c.Enabled && c.Type == "EditBox" && c.Properties.GetValueOrDefault("Static") != "true" && c.Properties.GetValueOrDefault("ReadOnly") != "true").ToArray();
-        if (fields.Length == 0) return false;
-        int index = Array.FindIndex(fields, c => focus == (top.Id, c.Name));
-        var next = fields[(index + (backwards ? fields.Length - 1 : 1)) % fields.Length];
-        focus = (top.Id, next.Name); screens[top.Id].Text.TryAdd(next.Name, next.Caption); edit = new(screens[top.Id].Text[next.Name]);
-        return true;
-    }
+    /// <summary>Tab (Shift+Tab): the next edit box or button of the top window (<see cref="CycleFocus"/>).</summary>
+    public bool FocusNext(bool backwards = false) => CycleFocus(backwards);
     public bool Submit()
     {
+        if (ActivateFocused()) return true;
         if (frame.LastOrDefault() is not { } top) return false;
         var button = top.Controls.FirstOrDefault(c => c.Type == "Button" && c.Enabled && c.Properties.GetValueOrDefault("DefaultAction") == "true");
         if (button is null) return false;

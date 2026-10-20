@@ -164,6 +164,9 @@ sealed partial class GameHost
         };
 
         var silkInput = Silk.NET.Input.InputWindowExtensions.CreateInput(window);
+        // The faithful windows' edit boxes copy and paste through the first keyboard's system clipboard.
+        player.ClipboardRead = () => silkInput.Keyboards.Count > 0 ? silkInput.Keyboards[0].ClipboardText : null;
+        player.ClipboardWrite = text => { if (silkInput.Keyboards.Count > 0) silkInput.Keyboards[0].ClipboardText = text; };
         Vector2? lastMouse = null;
         var windowCursor = Silk.NET.Input.CursorMode.Normal;
         bool panelDrag = false, shiftDown = false;
@@ -201,8 +204,8 @@ sealed partial class GameHost
                     return;
                 }
                 // Ctrl+C copies the free camera's position as a viewer camera code, Ctrl+V flies the free camera to the code in the clipboard.
-                // Only in the free camera: elsewhere Ctrl+C and Ctrl+V keep their own meaning.
-                if (k is SilkKey.C or SilkKey.V && session.Camera.IsFree && (keyboard.IsKeyPressed(SilkKey.ControlLeft) || keyboard.IsKeyPressed(SilkKey.ControlRight)))
+                // Only in the free camera: elsewhere Ctrl+C and Ctrl+V keep their own meaning, and so do they in a focused edit box.
+                if (k is SilkKey.C or SilkKey.V && session.Camera.IsFree && !player.UiEditing && (keyboard.IsKeyPressed(SilkKey.ControlLeft) || keyboard.IsKeyPressed(SilkKey.ControlRight)))
                 {
                     if (k == SilkKey.C)
                     {
