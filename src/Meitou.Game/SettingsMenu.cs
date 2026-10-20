@@ -107,7 +107,7 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
         if (label is "Time of day" or "Time speed") return "Advanced";
         if (label is "VSync" or "Full screen" || WorldFrame.UpscalerSliders.Contains(label) || label == WorldFrame.FilteringSlider || label == WorldFrame.TextureQualitySlider) return "Display";
         if (label.Contains("water", StringComparison.OrdinalIgnoreCase) || label.Contains("Reflection", StringComparison.Ordinal)) return "Water";
-        if (label.StartsWith("Shadow", StringComparison.Ordinal) || label.StartsWith("Light shafts", StringComparison.Ordinal) || label.StartsWith("Planetshine", StringComparison.Ordinal) || label.StartsWith("Haze", StringComparison.Ordinal)) return "Lighting";
+        if (label.StartsWith("Shadow", StringComparison.Ordinal) || label.StartsWith("Light shafts", StringComparison.Ordinal) || label.StartsWith("Planetshine", StringComparison.Ordinal) || label.StartsWith("Haze", StringComparison.Ordinal) || label.StartsWith("Ambient", StringComparison.Ordinal)) return "Lighting";
         if (label.Contains("Tone", StringComparison.OrdinalIgnoreCase) || label.Contains("Grading", StringComparison.OrdinalIgnoreCase) || label.StartsWith("Heat", StringComparison.Ordinal) || WorldFrame.ParticleSliders.Contains(label)) return "Effects";
         return "World";
     }
