@@ -45,7 +45,16 @@ sealed partial class PlayerInterface
         machineDrag = null;
         if ((buying is null && moving is null && taking is null) || !UiVisible) return;
         ArrangeUi();
-        if (faithfulScreens.HitTest(p) is not { } hit) return;
+        if (faithfulScreens.HitTest(p) is not { } hit)
+        {
+            // A character's item let go over the world (no window, no HUD): dropped on the ground at its feet.
+            if (moving is { } dropped && !OverHud(p))
+            {
+                var i = dropped.Item;
+                Say(new DropInventoryItem(dropped.Character, new InventoryItemToken(i.Index, i.Record, i.Section, i.X, i.Y, i.Quantity, i.Quality)) { Tick = session.World.Tick });
+            }
+            return;
+        }
         if (taking is { } t) { MachineDrop(t, hit.Screen); return; }
         var trade = session.CurrentSnapshot.Trade;
 

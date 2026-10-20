@@ -181,6 +181,7 @@ sealed partial class PlayerInterface
         switch (command)
         {
             case Meitou.Simulation.Items.MoveInventoryItem move: Sound("Item_Drop", item: move.Item.Record); return;
+            case Meitou.Simulation.Items.DropInventoryItem drop: Sound("Item_Drop", item: drop.Item.Record); return;
             case Meitou.Simulation.Trading.BuyItem buy: Sound("Sell_Item", item: buy.Item.Record); return;
             case Meitou.Simulation.Trading.SellItem sell: Sound("Sell_Item", item: sell.Item.Record); return;
             // The sound the exe posts after giving the selection a job (FUN_1407f5a90).

@@ -202,6 +202,23 @@ public sealed partial class PlayerSystem(PopulationData? data = null) : ITickSys
                 case Items.PickUpItemOrder pick:
                     PickUpInput(world, pick);
                     break;
+                case Items.DropInventoryItem drop:
+                    if (table.TryResolveNext(drop.Character, out int dropper) && table.Cold(dropper) is { IsPlayer: true, Inventory: { } held } holder &&
+                        held.All().ElementAtOrDefault(drop.Item.Index) is { } item && item.Record == drop.Item.Record && item.Section == drop.Item.Section && item.X == drop.Item.X &&
+                        item.Y == drop.Item.Y && item.Quantity == drop.Item.Quantity && Items.InventoryCommands.IsMovableSection(item.Section))
+                    {
+                        if (item.LockedOn) { world.Post("This item is locked in place and cannot be removed. You can try to pick the lock, find a saw, or use brute strength."); break; }
+                        bool worn = Items.InventoryCommands.IsEquipmentSection(item.Section);
+                        held.Remove(item);
+                        item.Section = "main";
+                        // At the feet, a little ahead (engine choice), on the ground.
+                        ref var hot = ref table.Next[dropper];
+                        var at = hot.Position + new System.Numerics.Vector3(MathF.Sin(hot.Yaw), 0, MathF.Cos(hot.Yaw)) * 3;
+                        at.Y = world.Walkability.GroundHeight(at.X, at.Z, hot.Position.Y);
+                        world.GroundItems.Drop(item, at, hot.Yaw);
+                        if (worn) assembly?.RefreshEquipment(holder);
+                    }
+                    break;
                 case Items.ArrangeInventory arrange:
                     if (table.TryResolveNext(arrange.Character, out int character) && table.Cold(character) is { IsPlayer: true, Inventory: { } carried } &&
                         !Items.InventoryCommands.Arrange(carried)) world.Post("Cannot arrange inventory: the items do not fit.");
