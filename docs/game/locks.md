@@ -182,7 +182,8 @@ Same targets as picking; Task_CutLock / Task_BruteForceLock share the shackle ta
 ## Containers (Meitou)
 
 Interior items with `has inventory` (storage size from the record, 18 x 18 by default) are container fixtures with their own grid, locked or not (`has lock`).
-**Engine choices**, not Verified against the original: they start empty (what the original stocks them with is **Unknown**); a right click with a selection walks the nearest
+A resident squad with `vendors` has its home's stock containers filled and unlocked by the building filler, trader or not ([building shops](economy.md#building-shops-observed-decompile));
+the others start empty (what else the original stocks them with is **Unknown**). **Engine choices**, not Verified against the original: a right click with a selection walks the nearest
 character to one (`OpenContainerOrder`, reach 20) and opens a storage window beside the inventory, closing when the opener walks 1.5 x the reach away; a locked one refuses
 ("It's locked."; pick it first); a building shop's containers refuse too, their stock being the shop's one merged inventory (`Shop.ForBuilding`). Items move with
 `PutInMachine` / `TakeFromMachine` addressed by the fixture id. Contents are saved in Meitou's own GAMESTATE_BUILDING string `meitou container <layout index>` (the index of the fixture id; JSON list of items with cell, quality, level,

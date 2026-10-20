@@ -89,6 +89,8 @@ public sealed class StoredSquad
     public bool Pinned { get; init; } = true;
     public Meitou.Data.World.TownBuilding? HomeBuilding { get; init; }
     public Trading.Shop? Shop { get; set; }
+    /// <summary>The squad's <see cref="Squad.NextHomeFillTick"/>, so an emptied home is not refilled when it comes back.</summary>
+    public long NextHomeFillTick { get; set; }
     /// <summary>The AI package it ran (saved as <c>currentPackage</c>; null: none).</summary>
     public string? Package { get; set; }
     /// <summary>The platoon position the members' places belong to (a stand-in that travelled since takes them along), and the tick they were stored at.</summary>

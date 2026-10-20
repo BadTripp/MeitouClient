@@ -118,6 +118,22 @@ public sealed class DialogueSet
     public IReadOnlyDictionary<int, IReadOnlyList<DialogueNode>> ByEvent { get; }
     public IReadOnlySet<string> Packages { get; }
     public IReadOnlyList<DialogueNode> For(int ev) => ByEvent.GetValueOrDefault(ev) ?? [];
+
+    int trades;   // 0 not yet known, 1 no, 2 yes
+    /// <summary>A line under its event-1 dialogue has the Trade effect (conditions not checked): the character trades when talked to, as only the shopkeeper of most trader squads does.</summary>
+    public bool Trades
+    {
+        get
+        {
+            if (trades == 0)
+            {
+                var seen = new HashSet<DialogueNode>();
+                bool Walk(DialogueNode n) => seen.Add(n) && (n.Effects.Any(e => e.Action == DialogueActions.Trade) || n.Children.Any(Walk));
+                trades = For(DialogueEvents.PlayerTalkToMe).Any(Walk) ? 2 : 1;
+            }
+            return trades == 2;
+        }
+    }
 }
 
 /// <summary>

@@ -105,6 +105,7 @@ public sealed partial class PopulationSystem
             HomeRadius = homeRadius,
             HomeBuilding = stored.HomeBuilding,
             Shop = stored.Shop,
+            NextHomeFillTick = stored.NextHomeFillTick,
         };
         // A stand-in that travelled since takes its members along, each on walkable ground (else at the stand-in).
         var walk = world.Walkability;

@@ -52,11 +52,27 @@ money-item branches are scoped in the expressions/field tables and undecoded que
   The base game's CONTAINER `Shopkeepers Backpack` (`910-gamedata.base`) has storage 20 x 20 (raw read of `gamedata.base`); which characters wear it is not traced.
   The window's grid is 18 x 18 for a squad trader and the building containers' merged size for a building shop (**Observed**, `FUN_140953850`; details in ui-screens).
   Meitou's squad shops hold one 18 x 18 stock (`Shop`). The 2026-10-17 reference screenshot's trader (Ronin Construction Trader) shows about 28 columns.
+- **Stock stacks** (**Observed**, `ShopTraderInventory::vfunc_1` = `FUN_140955f50`, the stock section's constructor): stack bonus minimum 1, mult 50, so a stock cell holds
+  50 x the item's `stackable` (Building Material, `stackable` 1: 50). Meitou: `Shop.StockStackMult` on both shop kinds.
+
+### Who trades
+
+- `IS_A_TRADER` (dialogue condition 9, `FUN_1405cff70`) and the stock are the squad's: they read the SQUAD_TEMPLATE `is trader` through the character's platoon (**Observed**, `uses_is_trader`).
+  The CHARACTER field `is trader` (fcs.def) is read by no function through its string (**Observed**: string xrefs list only the three platoon readers).
+- A trade is opened by a dialogue line with effect 1 (DA_TRADE). In the data only the shopkeeper's dialogue has one (**Observed**, walk of the dialogue references): Thieves Guild, Shinobi
+  Trader 3 lines, Thief Boss, Thief, Ninja Guard and the squad's `dialog squad` (TOUGH 1234) none; Skeleton Barman, Smuggler Barman, Stone Camp Trader yes; Shop Guard, Traders Guard, Slaver,
+  Samurai no. Of 125 trader templates with vendors in the probe load order, 89 mark a member CHARACTER `is trader`.
+- Meitou (the right-click Trade verb, engine): a member of a shop squad whose record sets `is trader` or whose dialogue reaches a Trade line (`DialogueSet.Trades`, conditions not checked).
 
 ### Building shops (**Observed**, decompile)
 
-- **Which** (squad factory `FUN_140583a10`): a trader squad (`vendors`) with a home building that made no prisoner or slave squads is filled by `FUN_14095b210` into its home;
-  any other trader by the squad filler `FUN_1404ff5e0`. A faction test (`+0x250 == 0`, meaning **Unknown**) gates both.
+- **Which** (squad factory `FUN_140583a10`): a squad whose template has `vendors` (or passes `FUN_140953f60`, **Unknown**; `is trader` is not tested) with a home building that made no
+  prisoner or slave squads is filled by `FUN_14095b210` into its home; any other by `FUN_1404ff5e0`, which fills a squad stock only for `is trader` and otherwise the home's containers.
+  A faction test (`+0x250 == 0`, meaning **Unknown**) gates both. So a resident without `is trader` (e.g. `flotsam refuge`, vendors `house contents`) gets its home's containers stocked.
+- **Restock** (`ActivePlatoon::vfunc_4` calls `FUN_1404ff5e0(platoon, 0)` once `inventory refresh time` passes): the home branch skips a building whose interior object's `+0x10` is set
+  (meaning **Unknown**); the first fill passes 1 and never skips.
+- Meitou, non-traders (`TradeSystem.FillHome`, engine choices): the stock rolls as a building shop's, then each unit goes into the first stock container with room (their own grids and
+  stack bonus), what fits nowhere is lost, the containers are unlocked, the purse is untouched; refilled every `vendors refresh time` only while every container is empty.
 - **Containers** (`FUN_1409562f0`): the home's interior objects whose functionality is 2 BF_RESOURCE_STORAGE, 9 BF_SHOP or 13 BF_GENERAL_STORAGE and that have an inventory.
   The filler unlocks their locks, sorts them (key **Unknown**), optionally clears them, puts special items first, then the vendor items; what fits nowhere is destroyed.
 - **Count**: n = round(U(0.8, 1.2) x `vendors fill total amount` x wealth), at least 1. Items: the vendor lists share n by weight as for squads (`FUN_140959800`), but every list's

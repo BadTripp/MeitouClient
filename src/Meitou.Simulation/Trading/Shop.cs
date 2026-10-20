@@ -16,8 +16,10 @@ namespace Meitou.Simulation.Trading;
 public sealed class Shop
 {
     public const int Width = 18, Height = 18;
+    /// <summary>The stock section's stack bonus (<c>ShopTraderInventory::vfunc_1</c> sets the section's minimum 1 and mult 50, <b>Observed</b> decompile): a cell holds 50 x the item's <c>stackable</c>.</summary>
+    public const float StockStackMult = 50;
 
-    public Inventory Stock { get; init; } = new(Width, Height);
+    public Inventory Stock { get; init; } = new(Width, Height) { StackBonusMult = StockStackMult };
     public required Trader Terms { get; init; }
     /// <summary>A building shop's building (<see cref="Meitou.Data.World.TownBuilding.Key"/>): its stock is the merged storage of the building's containers; null for a squad shop.</summary>
     public string? Building { get; init; }
@@ -40,7 +42,7 @@ public sealed class Shop
             width = Math.Max(width, f.StorageWidth);
             cells += f.StorageWidth * f.StorageHeight;
         }
-        return cells == 0 ? null : new Shop { Terms = terms, Building = building.Key, Stock = new Inventory(width, (cells + width - 1) / width) };
+        return cells == 0 ? null : new Shop { Terms = terms, Building = building.Key, Stock = new Inventory(width, (cells + width - 1) / width) { StackBonusMult = StockStackMult } };
     }
 
     internal void Hash(ref StateHasher h)

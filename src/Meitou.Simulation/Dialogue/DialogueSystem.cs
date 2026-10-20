@@ -231,6 +231,14 @@ public sealed partial class DialogueSystem : ITickSystem, IStateHashed, IDialogu
         return dialogue.SetFor(cold.RecordId, squad?.TemplateId, squad is not null && squad.Leader == world.Characters.IdOf(slot), cold.IsPlayer, animal, playerFaction);
     }
 
+    /// <summary>
+    /// The character offers Trade: its squad has a shop, and its record says <c>is trader</c> or its dialogue reaches a Trade line (docs/game/economy.md "Who trades"); the
+    /// guards and other members of a trader squad do not.
+    /// </summary>
+    public bool Trades(World world, int slot) =>
+        world.Characters.Cold(slot) is { IsPlayer: false, SquadId: >= 0 } cold && world.Squads.Find(cold.SquadId)?.Shop is not null
+        && (data.Db.Find(cold.RecordId)?.GetBool("is trader") == true || SetOf(world, slot).Trades);
+
     public bool CanTalk(World world, int slot, CharacterId? talker = null)
     {
         if (world.Characters.Cold(slot) is not { IsPlayer: false }) return false;

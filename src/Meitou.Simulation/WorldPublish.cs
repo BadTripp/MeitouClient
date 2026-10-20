@@ -32,6 +32,7 @@ public sealed partial class World
         var aggro = koSlot >= 0 ? systems.OfType<AggroSystem>().FirstOrDefault() : null;
         var arrest = systems.OfType<Crime.ArrestSystem>().FirstOrDefault();
         var surgeons = systems.OfType<PlayerSystem>().FirstOrDefault()?.Data?.Surgeons;
+        var talk = systems.OfType<Dialogue.DialogueSystem>().FirstOrDefault();
         for (int i = 0; i < state.Length; i++)
         {
             if (!state[i].Alive) continue;
@@ -49,7 +50,7 @@ public sealed partial class World
                 Name = cold?.Name ?? "",
                 SquadId = cold?.SquadId ?? -1,
                 IsPlayer = cold?.IsPlayer ?? false,
-                IsTrader = cold is { IsPlayer: false, SquadId: >= 0 } && Squads.Find(cold.SquadId)?.Shop is not null,
+                IsTrader = talk?.Trades(this, i) ?? (cold is { IsPlayer: false, SquadId: >= 0 } && Squads.Find(cold.SquadId)?.Shop is not null),
                 SurgeryCost = cold is { IsPlayer: false } && surgeons is not null ? Editing.CharacterEditing.SurgeryCost(this, surgeons, id, cold) : null,
                 Selected = selected,
                 Inspected = inspected,

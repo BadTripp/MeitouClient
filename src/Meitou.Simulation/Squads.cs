@@ -49,6 +49,8 @@ public sealed class Squad
     public long Money { get; set; }
     /// <summary>The squad's shop, when it is a trader (<see cref="Trading.TradeSystem"/>); null otherwise.</summary>
     public Trading.Shop? Shop { get; set; }
+    /// <summary>When a squad that is no trader but has <c>vendors</c> next fills its home's containers (<see cref="Trading.TradeSystem"/>). Not hashed and not saved: the containers are.</summary>
+    public long NextHomeFillTick { get; set; }
     /// <summary>The squad's AI packages and the one running (<see cref="Ai.AiSystem"/>); null for a squad the AI does not run.</summary>
     public Ai.Blackboard? Ai { get; set; }
     /// <summary>Whom a campaign squad in its assault also treats as enemies (<see cref="WarTargets"/>; written by the population's serial look, read by the aggro).</summary>

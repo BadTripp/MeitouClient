@@ -93,7 +93,7 @@ public sealed class TradeSystem : ITickSystem, ITradeSource
 {
     readonly PopulationData data;
     readonly CharacterAssembly assembly;
-    readonly Dictionary<string, SquadTemplate?> templates = new(StringComparer.Ordinal);
+    readonly Dictionary<string, SquadTemplate?> templates = new(StringComparer.Ordinal), homeTemplates = new(StringComparer.Ordinal);
     Market? market;
     CharacterId customer = CharacterId.None, trader = CharacterId.None;
     bool open, traderWandered;
@@ -219,7 +219,38 @@ public sealed class TradeSystem : ITickSystem, ITradeSource
                     ?? new Shop { Terms = terms };
                 Refill(world, squad, squad.Shop, template);
             }
+            else if (squad.HomeBuilding is { } home && HomeTemplateOf(squad.TemplateId) is { } contents) FillHome(world, squad, contents, home);
         }
+    }
+
+    SquadTemplate? HomeTemplateOf(string id)
+    {
+        if (!homeTemplates.TryGetValue(id, out var t))
+            homeTemplates[id] = t = data.Db.Find(id) is { } r && SquadFactory.IsTemplate(r) && SquadTemplate.From(r) is { IsTrader: false, Vendors.Count: > 0 } fill ? fill : null;
+        return t;
+    }
+
+    /// <summary>
+    /// A housed squad with <c>vendors</c> that is no trader (a resident's <c>house contents</c>): the building filler fills its home's storage containers as a trader's (the squad factory
+    /// <c>FUN_140583a10</c> tests <c>vendors</c>, not <c>is trader</c>, <b>Observed</b>), unlocking them; here each unit goes into the first container with room and what fits nowhere is
+    /// lost. Engine choice: again every <c>vendors refresh time</c> hours, but only while every container is empty (a loaded save keeps what they hold); the purse is not touched.
+    /// </summary>
+    void FillHome(World world, Squad squad, SquadTemplate template, Meitou.Data.World.TownBuilding home)
+    {
+        if (world.Tick < squad.NextHomeFillTick) return;
+        squad.NextHomeFillTick = world.Tick + (long)(template.VendorsRefreshTime / BodySystem.HoursPerTick);
+        var boxes = new List<Locks.Fixture>();
+        foreach (var f in home.Fixtures)
+            if (f.HoldsShopStock && world.Fixtures.Find(f.Id) is { Contents: not null } box) boxes.Add(box);
+        if (boxes.Count == 0 || boxes.Any(b => b.Contents!.Items.Count > 0)) return;
+        if (Shop.ForBuilding(home, new Trader(squad.Town, squad.Faction, template.BuyMult, template.BuysStolen, template.BuysIllegal)) is not { } merged) return;
+        merged.Fills = (int)world.Tick;
+        ShopFiller.Fill(merged, template, Market(world), data, world.Seed, (ulong)squad.Id);
+        foreach (var item in merged.Stock.Items)
+            foreach (var box in boxes)
+                if (box.Contents!.Add(item)) break;
+        foreach (var box in boxes)
+            if (box.Lock is { } l) l.Locked = false;
     }
 
     void Refill(World world, Squad squad, Shop shop, SquadTemplate template)
