@@ -50,7 +50,7 @@ public sealed record StartContract(int SquadId, string PackageId, float Hours) :
 /// choice, the patrol's progress and the crowding counts.</item>
 /// </list>
 /// </summary>
-public sealed class AiSystem(PopulationData data, AiSettings? settings = null) : ITickSystem
+public sealed partial class AiSystem(PopulationData data, AiSettings? settings = null) : ITickSystem
 {
     /// <summary>Every character's default goal (docs/game/ai.md "Default tasks per character", Observed): IDLE at the fluff tier, weight 0.1.</summary>
     public static readonly AiGoal Idle = new(new AiTask("", "IDLE", TaskType.IDLE, TaskPriority.Fluff, TaskTargetType.Specific, TaskEndEvent.Nothing), 0, 100, 0.1f);
@@ -98,7 +98,7 @@ public sealed class AiSystem(PopulationData data, AiSettings? settings = null) :
             }
             ref var n = ref table.Next[i];
             if (!Holds(n, cold)) continue;
-            var goal = Choose(world, id, mind, squad, board, roles, hour);
+            var goal = Choose(world, i, id, mind, squad, board, roles, hour);
             Act(world, i, mind, goal, board);
         }
     }
@@ -145,13 +145,18 @@ public sealed class AiSystem(PopulationData data, AiSettings? settings = null) :
         return any ? stance : AiStance.Aggressive;
     }
 
-    AiGoal Choose(World world, CharacterId id, AiMind mind, Squad squad, Blackboard board, IReadOnlyList<AiGoal> roles, int hour)
+    /// <summary>
+    /// The goal to act out, with its plan in <see cref="AiMind.Plan"/>: by tier (urgent, non-urgent, fluff), the goals with a positive score highest first,
+    /// leaving out one whose list A already holds; the first whose plan succeeds wins (docs/game/ai-tasks.md "Planner": the pick). Idle when none does.
+    /// </summary>
+    AiGoal Choose(World world, int slot, CharacterId id, AiMind mind, Squad squad, Blackboard board, IReadOnlyList<AiGoal> roles, int hour)
     {
         var race = mind.RaceGoals;
+        var candidates = Candidates;
+        var plans = PlanContext.Local.Bind(this, world, slot, mind, board);
         foreach (var tier in Tiers)
         {
-            AiGoal? best = null;
-            float bestScore = 0;
+            candidates.Clear();
             void Consider(AiGoal g)
             {
                 if (g.Task.Priority != tier || !g.InWindow(hour)) return;
@@ -166,16 +171,25 @@ public sealed class AiSystem(PopulationData data, AiSettings? settings = null) :
                     // A goal it committed to holds at least 0.4 until the commitment runs out, then at most 0.05 (docs/game/ai.md "Packages and goals", Observed).
                     if (profile.Commits) score = world.GameHours < mind.CommitUntil ? MathF.Max(score, 0.4f) : MathF.Min(score, 0.05f);
                 }
-                if (score > bestScore) (best, bestScore) = (g, score);
+                if (score <= 0) return;
+                // Highest first; a tie keeps the order the goals are listed in.
+                int at = candidates.Count;
+                while (at > 0 && candidates[at - 1].Score < score) at--;
+                candidates.Insert(at, (g, score, desire));
             }
             // Index loops: a foreach over the interface would box an enumerator per list and pass.
             for (int k = 0; k < roles.Count; k++) Consider(roles[k]);
             for (int k = 0; k < race.Count; k++) Consider(race[k]);
             Consider(Idle);
-            if (best is not null) return best;
+            for (int k = 0; k < candidates.Count; k++)
+                if (plans.TryPlan(candidates[k].Goal, candidates[k].Desire)) return candidates[k].Goal;
         }
+        mind.Plan.Clear();
         return Idle;
     }
+
+    [ThreadStatic] static List<(AiGoal Goal, float Score, float Desire)>? candidates;
+    static List<(AiGoal Goal, float Score, float Desire)> Candidates => candidates ??= [];
 
     /// <summary>
     /// How much the character wants a goal: its type's desire (<see cref="TaskProfiles"/>; a type with a desire function of its own, 1), times what the goal's target
@@ -357,6 +371,16 @@ public sealed class AiSystem(PopulationData data, AiSettings? settings = null) :
         mind.SitClip = null;   // set again below while it stays on its chair
         ref var n = ref table.Next[slot];
         bool leader = mind.Squad.Leader == table.IdOf(slot);
+        // Steps of the plan before the goal's own act-out: getting out of bed, sheathing (one think each); the walk and the rest are the goal's.
+        switch (mind.Step)
+        {
+            case TaskType.GET_OUT_OF_BED or TaskType.GET_OUT_OF_BED_IF_ITS_EMERGENCY or TaskType.GET_OUT_OF_BED_ONCE_HEALED:
+                Become(table, slot, CharacterTask.Idle);
+                return;
+            case TaskType.UNEQUIP_WEAPON:
+                table.Cold(slot)!.DrawnWeapon = WeaponKinds.None;
+                return;
+        }
         switch (behaviour)
         {
             case AiBehaviour.Mill:

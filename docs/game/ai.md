@@ -20,7 +20,8 @@ condition can add1.25 when score<1 (unknown). Drop nonpositive candidates; B-sat
 branch also drops. Resolve key ties by0.0001 increments. Desire, commitment and crowd factor per
 type: [ai-tasks](ai-tasks.md#desire-and-commitment); exact A/B meanings remain unresolved.
 
-GOAP requests unmet B states, finds tasks/effects and evaluates completion/cost through TaskData.
+The planner (`TaskPathfinder`, [ai-tasks](ai-tasks.md#planner), Observed) chains rows from a goal's effect and unmet B states to the
+rows whose list A achieves them, best-first by desire, and queues the chain leaf first.
 Squad toggles inject sleep/ditch/sit goals; slave obedience uses role4. Player commands and job
 queues must coexist without erasing urgent state. Squad-shared sensing, retreat and off-screen
 routing use [perception](perception.md), [population](factions-squads-towns.md), [pathfinding](pathfinding.md).
@@ -100,7 +101,7 @@ vtable is the RTTI class named here; the editor's enum names are matched to the 
 
 ## Unknowns
 
-- Roles of the six category sets that flag bits 1, 2, 4, 0x10, 0x20, 0x40 register into; the meaning of the `*` marker on some
+- Which of the six category registries (flag bits 1, 2, 4, 0x10, 0x20, 0x40; [planner](ai-tasks.md#planner)) a character plans with; the meaning of the `*` marker on some
   condition entries (the entry's second flag byte) and of the TaskData flag +0x14.
 - The extra x1.25 under an owner-object condition in scoring; the rule that drops a candidate whose B list holds with no effect.
 - The "AI flag +0xbc" that lets kind-2 (turret) perma-jobs run before urgent tasks; +0x70 of `OrdersReceiver` is the one-shot order list ([perma-jobs](ai-tasks.md#perma-jobs)).
@@ -113,4 +114,3 @@ vtable is the RTTI class named here; the editor's enum names are matched to the 
 - Why 37 task types have no TaskData; types 289 and 290 (no enum name).
 - `ending` events (DA/DC behaviour: [dialogue](dialogue.md#unknowns)).
 - What squad-template slots 1..4 mean beyond descending priority.
-- The planner's search method and costs.

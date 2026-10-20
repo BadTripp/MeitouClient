@@ -900,8 +900,24 @@ to the next tick. A hostile target is attacked instead.
 
 `AiSystem`, blackboards/minds, package/task data: slot/class/time/weight selection, homes/beds/nodes,
 patrol/bar/shop/sleep/retreat/contracts, combat stances and off-screen roaming jobs. Data and
-TaskData semantics: [ai.md](game/ai.md), [ai-tasks.md](game/ai-tasks.md). Full planner, wars,
-prisoners and resident town simulation off screen are incomplete. Hash blackboards/minds/jobs when present.
+TaskData semantics: [ai.md](game/ai.md), [ai-tasks.md](game/ai-tasks.md). Wars, prisoners and resident
+town simulation off screen are incomplete. Hash blackboards/minds/jobs when present.
+
+### Planner
+
+`TaskPlanner` runs the original's search ([ai-tasks](game/ai-tasks.md#planner)) over `TaskDataTable` (all 253 rows) for the
+goals the engine acts out. The think orders each tier's goals by score, leaves out one whose list A holds, and takes the first
+whose plan succeeds (`AiSystem.Choose`); `AiMind.Plan` holds it leaf first and `AiMind.Step` (hashed) its first step. The goal's
+act-out does the walk and the goal's own action; steps of their own are getting out of bed and sheathing (one think each). A plan
+whose first step is neither the goal nor a step the engine carries out (`AiSystem.Carried`) fails. Engine choices:
+- Everyone plans with category 0x1; no character is squadless, so restricted rows (lockpicking, cutting, opening gates) never
+  enter a plan. A row without a finder wants its effect for its own target. At most 64 nodes per search.
+- Only the step being carried out counts as queued, and only while it can run (Meitou's steps do not end on their own).
+- Finders: the spots, beds, seats, turrets and towns the act-outs already pick (`PlanContext.Find`); other finders find nothing,
+  so such goals do not plan. Rows on the way have their `TaskProfiles` desire, else 1.
+- States (`PlanContext.Holds`): location, distance, bed, sitting, home (within 20 of the home), home town, town, weapon drawn and
+  carrying are evaluated; moving, getting up, arms, power, buildings, doors, gates, accessibility, machine slots and readiness are
+  held true (movement and the lock-up round deal with doors); every other state is false.
 
 Scoring follows the original (`TaskProfiles`: desire, commitment, crowding per goal type); a desire
 the original computes in a function of its own counts as 1. Town goals ([ai-tasks.md](game/ai-tasks.md#town-goals)):

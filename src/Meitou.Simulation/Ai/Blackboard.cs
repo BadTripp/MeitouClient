@@ -252,6 +252,10 @@ public sealed class AiMind
     public int MemberIndex { get; init; }
     /// <summary>The goal being acted out (null before the first think).</summary>
     public AiGoal? Goal { get; set; }
+    /// <summary>The goal's plan (<see cref="TaskPlanner"/>), leaf first: the step carried out is the first. Planned again at every think.</summary>
+    public List<PlanStep> Plan { get; } = [];
+    /// <summary>The plan's first step (None without a plan).</summary>
+    public TaskType Step => Plan.Count > 0 ? Plan[0].Type : TaskType.None;
     public AiBehaviour Behaviour { get; set; }
     public AiStance Stance { get; set; } = AiStance.Aggressive;
     /// <summary>The <see cref="Blackboard.Version"/> the goal was chosen under.</summary>
@@ -286,6 +290,7 @@ public sealed class AiMind
     internal void Hash(ref StateHasher hasher)
     {
         hasher.Add((int)(Goal?.Task.Type ?? TaskType.None));
+        hasher.Add((int)Step);
         hasher.Add((int)Behaviour);
         hasher.Add((int)Stance);
         hasher.Add(Version);
