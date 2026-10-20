@@ -36,7 +36,7 @@ In the game a --low-end run neither applies nor overwrites the sliders and switc
 
 ## Keys
 
-F10 key list is the current authority; F11 stats,F12 profiler,Tab settings,Alt+Enter fullscreen.
+F10 key list is the current authority; F11 stats,F12 profiler,Tab settings,Alt+Enter fullscreen (a borderless window at the monitor's own corner on Windows, since GLFW's bounds are the work area and a taskbar or panel at the top or left would offset it; off Windows the window manager is asked for full screen, **Verified** on KDE: panel covered).
 F11 includes the opaque UI coverage: the share of the screen under fully opaque controls (solid
 backgrounds, alpha-255 atlas slices at alpha 1; `UiPainter.OpaqueCoverage`), overlaps counted once.
 Panel skins have ragged translucent borders around a solid middle, so a slice counts as its largest
