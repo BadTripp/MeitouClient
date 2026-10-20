@@ -9,7 +9,8 @@ items); the launcher never downloads or hosts mods.
 
 - One repository, two tag families: the game `v<version>` (`release.yml`), the launcher `launcher-v<version>`
   (`launcher-release.yml`, changelog `launcher/CHANGELOG.md`). A full launcher release is marked Latest and game releases never
-  are, so `/releases/latest` (README's link) is the newest launcher. Full releases of both pass
+  are, so `/releases/latest` (README's link) is the newest launcher; README's
+  setup links are `/releases/latest/download/<name>`, so the Setup/AppImage/pkg names must stay free of the version. Full releases of both pass
   `--notes-start-tag` with the previous tag of their own family, so the generated notes never span the other family's tag.
 - Nightlies: `release.yml` also runs daily (02:00 UTC, or by hand with `nightly`) and publishes `v<X.Y.Z+1>-nightly.<yyyymmdd>`
   (patch after the newest full release) as a pre-release without a changelog section; its notes list every

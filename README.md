@@ -14,9 +14,12 @@ Website: [meitou.martinvlcek.sk](https://meitou.martinvlcek.sk/).
 
 ## Download and requirements
 
-The easiest way to get the game is the [Meitou Launcher](https://github.com/VlcekM/MeitouClient/releases/latest)
-(Windows Setup.exe, Linux AppImage or macOS package): it installs and updates the game and
-manages mods. By hand: [releases](https://github.com/VlcekM/MeitouClient/releases) for Windows, Linux and macOS, unzip and run
+The easiest way to get the game is the [Meitou Launcher](https://github.com/VlcekM/MeitouClient/releases/latest): it installs and
+updates the game and manages mods. Download the newest one for
+[Windows](https://github.com/VlcekM/MeitouClient/releases/latest/download/MeitouLauncher-win-x64-Setup.exe) (Setup.exe),
+[Linux](https://github.com/VlcekM/MeitouClient/releases/latest/download/MeitouLauncher-linux-x64.AppImage) (AppImage),
+[macOS Apple silicon](https://github.com/VlcekM/MeitouClient/releases/latest/download/MeitouLauncher-osx-arm64-Setup.pkg) or
+[macOS Intel](https://github.com/VlcekM/MeitouClient/releases/latest/download/MeitouLauncher-osx-x64-Setup.pkg) (unsigned, Gatekeeper warns). By hand: [releases](https://github.com/VlcekM/MeitouClient/releases) for Windows, Linux and macOS, unzip and run
 the game or meitou-viewer (debug world viewer); prebuilt packages need no separate .NET install.
 Needs a Vulkan1.3 GPU with required descriptor-indexing/indirect-draw features, and Kenshi.
 DLSS and FSR are Windows-only; optional ray-query GI falls back on unsupported GPUs.
