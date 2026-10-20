@@ -140,7 +140,7 @@ sealed partial class GameHost
             Cinema.GameFile, lensKeysAlways: IsDuel);   // the duel has no floors: PageUp/PageDown zoom the lens there
         bool cinemaHolds = false, interfaceHidden = false;
         cinema.Moved = () => cinemaHolds = true;
-        // PageUp/PageDown are the game's floor keys and never the cinema's (its lens keys are the viewer's); Home puts the lens back in these cameras.
+        // PageUp/PageDown zoom the lens and Home puts it back in these cameras; in the strategy camera PageUp/PageDown are the game's floor keys.
         cinema.LensKeys = () => session.Camera.IsFree || cinemaHolds;
         cinema.Load();
         // Numpad / flies the camera across the squad in portrait order (docs/viewer.md "Squad tour"); it holds the camera like the cinema does.
@@ -361,7 +361,7 @@ sealed partial class GameHost
             if (actions.Pressed(InputAction.ToggleFps)) fpsVisible = !fpsVisible;
             if (actions.Pressed(InputAction.QuickSave)) quickSaveRequested = true;
             if (actions.Pressed(InputAction.QuickLoad)) quickLoadRequested = true;
-            // PageUp / PageDown step the viewed floor in every camera: the cinema does not take them.
+            // PageUp / PageDown step the viewed floor in the strategy camera: in the free camera and on a held one the cinema takes them for the lens.
             if (actions.Pressed(InputAction.FloorUp)) StepFloor(1);
             if (actions.Pressed(InputAction.FloorDown)) StepFloor(-1);
             if (actions.Pressed(InputAction.CycleProfiler) && profiler is not null) profiler.Showing = (FrameProfiler.Mode)(((int)profiler.Showing + 1) % 3);
