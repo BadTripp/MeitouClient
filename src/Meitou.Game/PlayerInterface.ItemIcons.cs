@@ -31,7 +31,7 @@ sealed partial class PlayerInterface
         {
             if (choice is { Source: ItemIconSource.File, File: { } file } && painter.IconReady(file))
                 image = new() { ["ImageTexture"] = UiPainter.IconTexture(file) };
-            else if (choice.Source == ItemIconSource.Render && UiPainter.RenderedIconTexture(record, material) is { } rendered && painter.RenderedIconReady(rendered))
+            else if (choice.Source == ItemIconSource.Render && UiPainter.RenderedIconTexture(record, material, choice.Colour) is { } rendered && painter.RenderedIconReady(rendered))
                 image = new() { ["ImageTexture"] = rendered, ["ImageFlipV"] = "true" };
         }
         bool shown = image is not null;

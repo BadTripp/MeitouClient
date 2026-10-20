@@ -18,8 +18,8 @@ sealed partial class GameHost
         player.SetItemIcons(ItemIconsOfInstall());
         player.SetRenderedIcons(name =>
         {
-            if (UiPainter.TryParseRenderedIcon(name, out string record, out string material))
-                return gpu.Characters is { } characters && characters.TryGetIcon(new IconKey(record, material), out var icon) ? icon : null;
+            if (UiPainter.TryParseRenderedIcon(name, out string record, out string material, out string colour))
+                return gpu.Characters is { } characters && characters.TryGetIcon(new IconKey(record, material, colour), out var icon) ? icon : null;
             if (UiPainter.TryParseRenderedBuildingIcon(name, out string building) && gpu.Objects is { } objects && player.BuildHost is { } host)
                 return objects.TryGetBuildingIcon(building, host.Parts(building), out var picture) ? picture : null;
             return null;

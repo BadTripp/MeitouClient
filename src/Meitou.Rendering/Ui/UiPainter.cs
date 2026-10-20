@@ -497,7 +497,7 @@ public sealed partial class UiPainter : IDisposable
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> failedIcons = new(StringComparer.Ordinal);
 
     /// <summary>The <c>ImageTexture</c> name of the icon the renderer draws from an item's mesh (<see cref="RenderedIcons"/>), shown once it exists; flip it (<c>ImageFlipV</c>), as the renderer's targets are upside down.</summary>
-    public static string RenderedIconTexture(string record, string material) => RenderedIconPrefix + record + "|" + material;
+    public static string RenderedIconTexture(string record, string material, string colour = "") => RenderedIconPrefix + record + "|" + material + "|" + colour;
     public const string RenderedIconPrefix = "meitou:icon:";
 
     /// <summary>The <c>ImageTexture</c> name of the picture the renderer draws of a BUILDING (<see cref="RenderedIcons"/> looks it up too); flip it like <see cref="RenderedIconTexture"/>.</summary>
@@ -511,12 +511,12 @@ public sealed partial class UiPainter : IDisposable
         return record.Length > 0;
     }
 
-    /// <summary>The record and material of a <see cref="RenderedIconTexture"/> name.</summary>
-    public static bool TryParseRenderedIcon(string name, out string record, out string material)
+    /// <summary>The record, material and colour of a <see cref="RenderedIconTexture"/> name.</summary>
+    public static bool TryParseRenderedIcon(string name, out string record, out string material, out string colour)
     {
-        (record, material) = ("", "");
-        if (!name.StartsWith(RenderedIconPrefix, StringComparison.Ordinal) || name.IndexOf('|') is not (>= 0 and var bar)) return false;
-        (record, material) = (name[RenderedIconPrefix.Length..bar], name[(bar + 1)..]);
+        (record, material, colour) = ("", "", "");
+        if (!name.StartsWith(RenderedIconPrefix, StringComparison.Ordinal) || name.Split('|') is not [var r, var m, var c]) return false;
+        (record, material, colour) = (r[RenderedIconPrefix.Length..], m, c);
         return record.Length > 0;
     }
 
