@@ -16,7 +16,7 @@ unless marked. Engine: [Meitou design](#meitou-design).
 | Character | Packages |
 |---|---|
 | any | CHARACTER `dialogue` (161 uses): each DIALOGUE goes straight to event 1 (fcs.def says the same, **Verified** text) |
-| NPC squad leader (member 0) | SQUAD_TEMPLATE `dialog leader` (157), else CHARACTER `dialogue package` (793) |
+| NPC squad leader (member 0) | SQUAD_TEMPLATE `dialog leader` (157), else CHARACTER `dialogue package` (793), else `dialog squad` (**Observed**, decompile) |
 | other NPC members (and a leader with neither) | SQUAD_TEMPLATE `dialog squad` (216), else CHARACTER `dialogue package` |
 | animal | SQUAD_TEMPLATE `dialog animal` (4) |
 | player character, not an animal | CHARACTER `dialogue package player` (179), else the player faction's FACTION `dialog default` (25 records have one), else the package `5369-gamedata.base` ("player character default", **Verified** by probe) |

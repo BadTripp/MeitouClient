@@ -182,7 +182,7 @@ public sealed class DialogueDatabase(GameDatabase db)
     /// <summary>
     /// What a character answers (docs/game/dialogue.md "Who has which dialogue"): its CHARACTER <c>dialogue</c> list at event 1, plus one package: a player character's
     /// <c>dialogue package player</c>, else <paramref name="playerFactionId"/>'s <c>dialog default</c>, else <c>5369-gamedata.base</c>; an animal its template's <c>dialog animal</c>;
-    /// an NPC leader its template's <c>dialog leader</c> and the others <c>dialog squad</c>, else the character's <c>dialogue package</c>.
+    /// an NPC leader its template's <c>dialog leader</c>, else its own <c>dialogue package</c>, else <c>dialog squad</c>; the others <c>dialog squad</c>, else the character's <c>dialogue package</c>.
     /// </summary>
     public DialogueSet SetFor(string characterId, string? templateId, bool leader, bool player, bool animal, string? playerFactionId = null) =>
         sets.GetOrAdd((characterId, templateId ?? "", leader, player, animal, playerFactionId ?? ""), Make);
@@ -203,6 +203,8 @@ public sealed class DialogueDatabase(GameDatabase db)
         else
         {
             packages = key.Leader ? [.. Refs(template, "dialog leader")] : [];
+            // A leader's own package comes before the squad's (FUN_14062b210): a shopkeeper leading guards keeps its trade lines.
+            if (packages.Count == 0 && key.Leader) packages = [.. Refs(character, "dialogue package")];
             if (packages.Count == 0) packages = [.. Refs(template, "dialog squad")];
             if (packages.Count == 0) packages = [.. Refs(character, "dialogue package")];
         }
