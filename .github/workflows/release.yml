@@ -188,7 +188,7 @@ jobs:
           gh release create "v$env:VERSION" @zips --target $env:GITHUB_SHA `
             --title "Meitou $env:VERSION" --notes $notes @flags
 
-      # Only the newest 7 nightlies are kept: the launcher lists the newest 100 releases, which old nightlies would crowd out.
+      # Only the newest 7 nightlies are kept, so the releases page and the launcher's Versions list stay short.
       - name: Prune old nightlies
         if: needs.version.outputs.nightly == 'true'
         shell: pwsh

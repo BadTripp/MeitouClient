@@ -14,11 +14,11 @@ items); the launcher never downloads or hosts mods.
   (patch after the newest full release) as a pre-release, never Latest, without a changelog section; its notes list every
   commit since the newest game tag (GitHub's generated notes cover only merged pull requests, so nightlies don't use them). It is skipped when nothing
   outside `news/`, `site/`, `launcher/` and their workflows changed since the newest game tag (nightly or full). Only the newest 7
-  nightlies are kept, since the launcher lists only the newest 100 releases. The launcher shows them with the Nightly builds checkbox beside Play ticked ("Play latest nightly"; ticking it asks first, with Yes under the pointer, warning of crashes and corrupted saves) (GitHub pre-releases; `IncludePrereleases` in `launcher.json`).
+  nightlies are kept, so the releases page and the launcher's Versions list stay short. The launcher shows them with the Nightly builds checkbox beside Play ticked ("Play latest nightly"; ticking it asks first, with Yes under the pointer, warning of crashes and corrupted saves) (GitHub pre-releases; `IncludePrereleases` in `launcher.json`).
 - Game assets: `Meitou-<version>-<rid>.zip`, `<rid>` as .NET's `RuntimeInformation.RuntimeIdentifier` (`win-x64`, `linux-x64`,
   `osx-x64`, `osx-arm64`). A release with no zip for the machine's RID is listed but not installable.
-- The list comes from the REST API without a token (60 requests an hour per IP). The answer and its ETag are cached in
-  `releases-cache.json`, so an unchanged list is a 304 that costs no quota. Downloads use the asset URLs, which don't count
+- The list comes from the REST API without a token (60 requests an hour per IP). Every page is read (`per_page=100`, until a short page),
+  cached together with page 1's ETag in `releases-cache.json`; an unchanged page 1 is a 304 that costs no quota and keeps the cache. Downloads use the asset URLs, which don't count
   against the quota.
 - A download is checked against the asset's `digest` (`sha256:<hex>`) when GitHub lists one. The zip's single top folder becomes
   `versions/<version>/`. The game is `MeitouClient[.exe]` since 0.15 (`meitou[.exe]` before; the launcher takes either); on Unix

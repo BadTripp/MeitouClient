@@ -57,23 +57,60 @@ public sealed class Releases(HttpClient http)
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeout.CancelAfter(TimeSpan.FromSeconds(20));
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"https://api.github.com/repos/{Repository}/releases?per_page=100");
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-            if (cached?.ETag is { } etag) request.Headers.TryAddWithoutValidation("If-None-Match", etag);
-            using var response = await http.SendAsync(request, timeout.Token);
-            if (response.StatusCode == HttpStatusCode.NotModified) { }
-            else if (response.IsSuccessStatusCode)
+            // Page 1 is asked for with the cached ETag: unchanged (304, free of rate limit) means a new release came or went nowhere, so
+            // the cached list of every page stands. Otherwise every page is read until a short one, and the cache holds them as one array.
+            var pages = new List<string>();
+            string? etag = null;
+            for (int page = 1; page <= MaxPages; page++)
             {
-                body = await response.Content.ReadAsStringAsync(timeout.Token);
-                WriteCache(new Cache(response.Headers.ETag?.ToString(), body));
+                using var request = new HttpRequestMessage(HttpMethod.Get, $"https://api.github.com/repos/{Repository}/releases?per_page={PageSize}&page={page}");
+                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+                if (page == 1 && cached?.ETag is { } cachedTag) request.Headers.TryAddWithoutValidation("If-None-Match", cachedTag);
+                using var response = await http.SendAsync(request, timeout.Token);
+                if (page == 1 && response.StatusCode == HttpStatusCode.NotModified) break;
+                if (!response.IsSuccessStatusCode)
+                {
+                    problem = $"GitHub answered {(int)response.StatusCode} {response.ReasonPhrase}" + (body is null ? "" : "; showing the last list");
+                    pages.Clear();
+                    break;
+                }
+                if (page == 1) etag = response.Headers.ETag?.ToString();
+                var text = await response.Content.ReadAsStringAsync(timeout.Token);
+                pages.Add(text);
+                using var doc = JsonDocument.Parse(text);
+                if (doc.RootElement.GetArrayLength() < PageSize) break;
             }
-            else problem = $"GitHub answered {(int)response.StatusCode} {response.ReasonPhrase}" + (body is null ? "" : "; showing the last list");
+            if (pages.Count > 0)
+            {
+                body = Join(pages);
+                WriteCache(new Cache(etag, body));
+            }
         }
         catch (Exception e) when (e is HttpRequestException or OperationCanceledException or IOException)
         {
             problem = $"GitHub not reachable ({e.Message})" + (body is null ? "" : "; showing the last list");
         }
         return (body is null ? [] : Parse(body), problem);
+    }
+
+    // GitHub's largest page; the page cap only guards against a runaway loop (5000 releases).
+    const int PageSize = 100, MaxPages = 50;
+
+    /// <summary>The pages' JSON arrays as one array.</summary>
+    static string Join(List<string> pages)
+    {
+        using var stream = new MemoryStream();
+        using (var json = new Utf8JsonWriter(stream))
+        {
+            json.WriteStartArray();
+            foreach (var page in pages)
+            {
+                using var doc = JsonDocument.Parse(page);
+                foreach (var release in doc.RootElement.EnumerateArray()) release.WriteTo(json);
+            }
+            json.WriteEndArray();
+        }
+        return System.Text.Encoding.UTF8.GetString(stream.ToArray());
     }
 
     static List<Release> Parse(string json)
