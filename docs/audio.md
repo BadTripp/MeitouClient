@@ -213,9 +213,9 @@ it is outside the state hash. Overlay tiles for the ground load on a worker (6 k
 Task sounds in Meitou (`CharacterLoop`, `CharacterSounds.Job` / `.Carried`; `GameHost.AudioCharacters.cs`). The snapshot carries the movement task, whether a lock is being picked and whether the character is in a bed (read-only, outside the hash):
 `Task.Build` is the `Character_Build_Loop_Start` / `_Stop` loop, `Task.Treat` the `Character_Medic_*` loop, a lock being picked (not while walking to it) the `Character_Unlock` loop (a change of job stops the old loop first; a character that gets its object mid-job starts it
 then). One-shots: `Character_Loot` when `Task.Loot` starts; `Character_Bed` (`Bed` = `Get_In` / `Get_Out`) when the bed state changes; `Character_Pick_Up_Person` when a body is lifted and `Character_Drop_Person` when a put-down order sets it down (both on the carried person, with
-its `Armor_Worn`; a drop by knock-out or ragdoll is silent, as in the exe); from `World.Sounds`: `Character_Consume` (`Consume` = `Eat`, 200 units) when `FeedSystem` feeds, `Character_Unlock_Success` when a pick works or a warden unlocks a door or cage, `Character_Lock` when a
+its `Armor_Worn`; a drop by knock-out or ragdoll is silent, as in the exe); from `World.Sounds`: `Character_Consume` (`Consume` = `Eat`, 200 units) when `FeedSystem` feeds, `Character_Unlock_Success` when a pick works, a character is freed from shackles (picked, cut or broken) or a warden unlocks a door or cage, `Character_Lock` when a
 warden locks one. The RE found no task sound for dismantling (order 96; only `Task_Build`, orders 2 and 95, loops: **Observed**), so it is silent but for `Thing_Complete` when done. **No trigger in Meitou:** `Character_Pick_Up_Ground` (no ground items), `Character_Inspect` (loot targets
-only characters), `Character_Unlock_Fail` as a failed-pick sound (the exe posts nothing for a failed attempt either), picking, cutting and brute-forcing shackles, `Character_Building_Materials` (no bank has it), `Sell_Item` from NPC shoppers, `Character_Drop_Person` from the corpse machine.
+only characters), `Character_Unlock_Fail` as a failed-pick sound (the exe posts nothing for a failed attempt either), the `Character_Unlock` loop while picking or cutting shackles, putting shackles on, `Character_Building_Materials` (no bank has it), `Sell_Item` from NPC shoppers, `Character_Drop_Person` from the corpse machine.
 Meitou's wardens have no unlock loop (their rounds only start the click); the player's lock picking loops as the exe's `Task_PickLock`.
 
 **Unarmed `Weapons`** (`FUN_1402b4570`, when a technique is chosen): the switch becomes `HtH_Punch` when the technique's last blow uses limb 0 or 1 (the arms, **Verified**) else `HtH_Kick`, with `_Robot` appended for a robot (**Observed**: the exe also appends it when a limb check on the attacker's race says robotic limbs). Meitou applies it when the animation of a COMBAT_TECHNIQUE valid
@@ -252,9 +252,9 @@ Hover and Slider; whether the editor's speed reset posts `Game_Speed_Normal`; wh
 
 Meitou (`UiSounds` in `Meitou.Audio`, `PlayerInterface.Sounds.cs`, `GameHost.AudioUi.cs`): the host plays what `PlayerInterface.UiSound` receives. Hooks: `ExecuteUiAction` (HUD actions), `FaithfulAction` (the original screens' widgets),
 the commands `Say` sends (orders, item moves, trades, dialogue choices), and a poll in `Draw` for windows opening and closing, the title button under the pointer, the speed keys (F2 to F4, when the clock moves to a new speed without a button), a building of the player's finishing
-(`Building_Complete`) and a new building unlocked (`Thing_Complete`; the sim also queues `DismantleDone` for a finished dismantle and `BountyPaid` for a reward, played as `Thing_Complete` / `Bounty_Fulfilled`).
-**No trigger in Meitou (not played):** `Building_Click` (a building cannot be selected), `UI_Generator` (no machine panel), `Building_Lock_Unlock` (no door panel), `Prospect_Click` and `Prospect_Results` (no prospecting), `Research_Tab` and research-complete
-`Thing_Complete` (no research list), `New_Biome` (no HUD biome banner), `Character_Drop_Ground` (an item cannot be dragged out onto the ground), `Create_Character` on a prisoner's release, `Slider` outside the editor; `Building_Place`'s `Indoors` value
+(`Building_Complete`) and a new building unlocked by research or a blueprint (`Thing_Complete`; the sim also queues `DismantleDone` for a finished dismantle and `BountyPaid` for a reward, played as `Thing_Complete` / `Bounty_Fulfilled`).
+**No trigger in Meitou (not played):** `Building_Click` (a building cannot be selected), `UI_Generator` (no machine panel), `Building_Lock_Unlock` (no door panel), `Prospect_Click` and `Prospect_Results` (no prospecting), `Research_Tab` (the research tab posts
+nothing), `New_Biome` (no HUD biome banner), `Character_Drop_Ground` (an item cannot be dragged out onto the ground), `Create_Character` on a prisoner's release, `Slider` outside the editor; `Building_Place`'s `Indoors` value
 (Meitou's ghost has no parent building to ask) is always `Outdoors`.
 
 ## Meitou's player
@@ -383,7 +383,7 @@ Open for the next wave: which event each game action posts and on which object, 
 
 ### Not done
 
-The emitters of effects, spiders, foliage and map features, machines (the emitters that need power stay silent), door, turret and wall-break sounds (nothing in Meitou triggers them), the callers that post effects, building floors as footstep surfaces, the task and interface sounds whose trigger Meitou lacks (listed under [Characters](#characters-footsteps-combat-voices) and [Interface](#interface)) (the engine is ready:
+The emitters of effects, spiders, foliage and map features, machines (nothing calls `WorldEmitters.SetPower`, so the emitters that need power stay silent), turret and wall-break sounds (nothing in Meitou triggers them), the callers that post effects, building floors as footstep surfaces, the task and interface sounds whose trigger Meitou lacks (listed under [Characters](#characters-footsteps-combat-voices) and [Interface](#interface)) (the engine is ready:
 [API](#api-for-event-sources)), voice limits, obstruction and occlusion (the game uses none), the radio, serial effect slots and the cone as Wwise draws it, and unloading ambience
 banks left behind (they stay loaded: about 5 to 14 MB of Ogg each; the music banks unload as above).
 

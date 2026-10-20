@@ -101,7 +101,7 @@ public sealed class WorldEmitters(WwisePlayer player)
     /// <summary>
     /// A machine's state (the game's <c>FUN_140258c20</c>, called each frame by production buildings): <paramref name="powered"/> starts or stops an emitter that needs power,
     /// and the <c>Intensity</c> becomes <c>efficiency × efficiency multiplier × 100 + intensity × 100</c> when it changed. Only for an emitter within range, as the game does.
-    /// Meitou has no machines yet, so nothing calls this and the emitters that need power stay silent.
+    /// Meitou's production buildings do not call this yet, so the emitters that need power stay silent.
     /// </summary>
     public void SetPower(string key, float efficiency, bool powered)
     {
