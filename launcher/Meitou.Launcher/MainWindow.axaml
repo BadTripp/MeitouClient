@@ -140,6 +140,13 @@
               <TextBlock Text="News" />
             </DockPanel>
           </Border>
+          <!-- Support link, above the posts -->
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,0,0,10">
+            <TextBlock Classes="desc" VerticalAlignment="Center" Text="Enjoying Meitou? A coffee on Ko-fi supports me in its development:" />
+            <Button Classes="link" Click="Kofi_Click" VerticalAlignment="Center" ToolTip.Tip="https://ko-fi.com/martinvlcek">
+              <TextBlock Text="ko-fi.com/martinvlcek" />
+            </Button>
+          </StackPanel>
           <ScrollViewer>
             <StackPanel x:Name="NewsPanel" Spacing="14" Margin="0,0,14,4" />
           </ScrollViewer>

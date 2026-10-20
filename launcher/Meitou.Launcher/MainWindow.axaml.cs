@@ -109,6 +109,8 @@ public sealed partial class MainWindow : Window
             await this.Launcher.LaunchUriAsync(uri);
     }
 
+    void Kofi_Click(object? sender, RoutedEventArgs e) => OpenLink("https://ko-fi.com/martinvlcek");
+
     // ---- Kenshi folder ----
 
     void UseKenshi(GameInstall? found)
