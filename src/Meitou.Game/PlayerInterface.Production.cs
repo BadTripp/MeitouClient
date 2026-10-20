@@ -299,7 +299,7 @@ sealed partial class PlayerInterface
             {
                 var r = rows[i];
                 bool queued = research.Queue.Any(q => q.Id == r.Id);
-                string caption = $"{r.Name}  (lvl {r.Level.ToString(CultureInfo.InvariantCulture)})" + (r.Progress > 0 ? $"  {(int)(r.Progress * 100)}%" : "");
+                string caption = $"{r.Name}  ({Loc.Tr("lvl {1,num}", r.Level)})" + (r.Progress > 0 ? $"  {(int)(r.Progress * 100)}%" : "");
                 var colour = queued ? new Vector4(0.6f, 0.6f, 0.6f, 1) : r.BenchTooLow || !r.Affordable ? new Vector4(0.75f, 0.35f, 0.3f, 1) : ink;
                 controls.Add(new($"research-row-{i}", "Button", new(blueprints.Bounds.X + 6, blueprints.Bounds.Y + i * line, blueprints.Bounds.Width - 12, line), caption,
                     queued ? "" : "research-queue:" + r.Id, "", !queued, face, Vector4.Zero, TextColour: colour, HoverColour: new(0, 1, 0, 1), Pickable: true, Clip: blueprints.Bounds));

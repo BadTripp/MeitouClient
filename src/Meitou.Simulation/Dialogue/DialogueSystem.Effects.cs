@@ -28,7 +28,7 @@ public sealed partial class DialogueSystem
             int f = data.Relations.IndexOf(factionId);
             if (f < 0 || amount == 0 || world.Player.Faction < 0) continue;
             ChangeRelation(world, f, world.Player.Faction, amount);
-            world.Post(amount > 0 ? $"Relations with {data.Factions[f].Name} improved by {amount}" : $"Relations with {data.Factions[f].Name} decreased by {-amount}");
+            world.Post(amount > 0 ? Loc.Tr("Relations with {1} improved by {2}", data.Factions[f].Name, amount) : Loc.Tr("Relations with {1} decreased by {2}", data.Factions[f].Name, -amount));
         }
         // Crowd triggers and items given are not built yet; then the campaign trigger.
         if (line.TriggerCampaigns.Count > 0) population?.TriggerFromDialogue(world, me, c.Player, line.TriggerCampaigns);
@@ -55,7 +55,7 @@ public sealed partial class DialogueSystem
                     break;
                 case DialogueActions.TakeMoney when tc is not null:
                     Pay(world, tc, -effect.Value);
-                    world.Post(effect.Value > 100000 ? $"Paid c.{effect.Value / 1000}k" : $"Paid c.{effect.Value.ToString("N0", CultureInfo.InvariantCulture)}");
+                    world.Post(effect.Value > 100000 ? Loc.Tr("Paid c.{1}k", effect.Value / 1000) : Loc.Tr("Paid c.{1}", effect.Value.ToString("N0", CultureInfo.InvariantCulture)));
                     break;
                 case DialogueActions.GiveMoney when tc is not null:
                     Pay(world, tc, effect.Value);

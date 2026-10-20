@@ -39,7 +39,7 @@ sealed partial class PlayerInterface
     }
     void Confirm(string title, string text, Action action, string yes = "YES", (string Caption, Action Act)? middle = null)
     {
-        confirmation = new(title, text, action, yes, middle); faithfulScreens.Open("message");
+        confirmation = new(UpperTr(title), Loc.Tr(text), action, UpperTr(yes), middle is { } m ? (UpperTr(m.Caption), m.Act) : null); faithfulScreens.Open("message");
     }
     /// <summary>The cancel button of the open message box: ButtonC when it has a middle choice, else ButtonB.</summary>
     string CancelButton => confirmation?.Middle is null ? "ButtonB" : "ButtonC";
@@ -128,7 +128,7 @@ sealed partial class PlayerInterface
                 try { SaveCatalog.ValidateName(name); }
                 catch (ArgumentException ex) { Notice(ex.Message, true); return true; }
                 void Save() { ScreenAction?.Invoke(new("save", "SaveButton", "save", name)); faithfulScreens.Close("save"); }
-                if (slots.Any(s => s.Writable && string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase))) Confirm("OVERWRITE SAVE", $"Replace '{name}'?", Save); else Save();
+                if (slots.Any(s => s.Writable && string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase))) Confirm("OVERWRITE SAVE", Loc.Tr("Overwrite save '{1}'?", name), Save); else Save();
             }
             return true;
         }

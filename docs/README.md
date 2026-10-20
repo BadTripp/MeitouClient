@@ -44,6 +44,7 @@ diaries, asset dumps or decompiled output. Current choices: [DECISIONS](../DECIS
 - [fcs-mod](formats/fcs-mod.md)
 - [fogfeatures](formats/fogfeatures.md)
 - [gettext](formats/gettext.md)
+- [localisation](formats/localisation.md): language selection, locale overlay, translations
 - [havok-tagfile](formats/havok-tagfile.md): `.hkt` encoding, navmesh tiles
 - [foliage](formats/foliage.md)
 - [lighting](formats/lighting.md)

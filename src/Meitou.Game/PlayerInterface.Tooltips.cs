@@ -128,6 +128,12 @@ sealed partial class PlayerInterface
     const float TipPlateMargin = 16, TipPlateRadius = 10;
 
     /// <summary>Lays the tooltip out with the painter's measuring and adds its panel and text to <paramref name="controls"/>.</summary>
+    /// <summary>A tooltip text in the active language; a bracketed heading keeps its brackets around the translated inside.</summary>
+    static string TipTr(string text)
+    {
+        string whole = Loc.Tr(text);
+        return whole != text || text.Length <= 2 || text[0] != '[' || text[^1] != ']' ? whole : "[" + Loc.Tr(text[1..^1]) + "]";
+    }
     void PlaceTooltip(List<UiControl> controls, UiPainter painter, IReadOnlyList<TooltipLine> lines, TooltipKind kind, UiRect? given)
     {
         float minimum = TitleOpen ? 0 : StandardTextPixels * Height / 1080f;
@@ -137,6 +143,9 @@ sealed partial class PlayerInterface
             return new(size.Width, size.Height);
         }
         UiRect? anchor = kind == TooltipKind.Fixed ? HudTooltipAnchor() : given;
+        // The tooltip texts the code sets are messages of the game's catalog: shown in the active language (a row's "-" mark of an indented key stays).
+        if (Loc.Translating)
+            lines = [.. lines.Select(l => l with { Key = l.Key.StartsWith('-') ? "-" + TipTr(l.Key[1..]) : TipTr(l.Key), Value = TipTr(l.Value) })];
         var layout = UiTooltips.Arrange(lines, kind, Width, Height, mouse, anchor, Measure);
         var panel = layout.Panel;
         float scale = Height / 1080f;

@@ -30,7 +30,7 @@ sealed partial class PlayerInterface
         for (int i = 0; i < AiOptionRows.Length; i++)
         {
             bool ticked = (on & AiOptionRows[i].Option) != 0;
-            controls.Add(new($"ai-option-{i}", "Button", new(panel.Bounds.X + 6, panel.Bounds.Y + i * line, panel.Bounds.Width - 12, line - 4), AiOptionRows[i].Caption,
+            controls.Add(new($"ai-option-{i}", "Button", new(panel.Bounds.X + 6, panel.Bounds.Y + i * line, panel.Bounds.Width - 12, line - 4), Loc.Tr(AiOptionRows[i].Caption),
                 "ai-option:" + i.ToString(CultureInfo.InvariantCulture), "Kenshi_TickButton1", true,
                 new Dictionary<string, string>(UiTooltips.TextProperties(AiOptionRows[i].Tip, "static:AIToolTip")) { ["Checked"] = ticked ? "true" : "false", ["StateSelected"] = ticked ? "true" : "false" },
                 Vector4.Zero, Pickable: true, Clip: panel.Bounds));

@@ -135,7 +135,7 @@ sealed partial class PlayerInterface
         foreach (string name in new[] { "LoadingPanel", "TownPanel", "TooltipPanel", "MessagePanel" }) b.Hidden.Add(name);
         BindBiome(b);
         // The viewed floor (the exe's "Floor {1,num}", docs/game/ui-screens.md section 4; docs/formats/zones.md "Interior view"); the arrows step it as PageUp / PageDown do.
-        b.Text["FloorText"] = $"Floor {Floor?.Get() ?? 0}";
+        b.Text["FloorText"] = Loc.Tr("Floor {1,num}", Floor?.Get() ?? 0);
         b.Actions["FloorArrowUp"] = "meitou:floor-up";
         b.Actions["FloorArrowDown"] = "meitou:floor-down";
         b.Actions["BuildButton"] = "meitou:build";

@@ -180,7 +180,7 @@ public sealed partial class ArrestSystem
         int amount = bc.Medical is { Dead: true } ? entry.Amount / 2 : entry.Amount;
         world.Player.Money += amount;
         entry.Claimed = true;
-        world.Post($"Received c.{amount} reward.");
+        world.Post(Loc.Tr("Received c.{1} reward.", amount));
         world.EmitSound(SoundKind.BountyPaid, carrier, table.Next[carrier].Position);
         Note(world, ArrestEventKind.Claimed, table.IdOf(carrier), captive, owner, amount);
         return amount;
@@ -200,7 +200,7 @@ public sealed partial class ArrestSystem
         int amount = bc.Medical is { Dead: true } ? entry.Amount / 2 : entry.Amount;
         world.Player.Money += amount;
         entry.Claimed = true;
-        world.Post($"Received c.{amount} reward.");
+        world.Post(Loc.Tr("Received c.{1} reward.", amount));
         world.EmitSound(SoundKind.BountyPaid, c, table.Next[c].Position);
         Note(world, ArrestEventKind.Claimed, carrier, cc.Carrying, booking, amount);
         return amount;

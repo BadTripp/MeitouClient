@@ -625,7 +625,7 @@ public sealed partial class ProductionSystem : ITickSystem
         {
             research.Complete(db, item.Id);
             publishedResearch = null;
-            world.Post($"Research complete: {data.Name}");
+            world.Post(Loc.Tr("Research complete: {1}", data.Name));
         }
         return true;
     }
