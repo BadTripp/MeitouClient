@@ -2,6 +2,11 @@
 
 Released with tags `launcher-v<version>` by `.github/workflows/launcher-release.yml`; each release needs its `## v<version>` section.
 
+## v1.0.1
+
+- Reads every page of GitHub releases, not only the newest 100: old game versions stay installable and the launcher's own
+  updates are always found.
+
 ## v1.0.0
 
 - First release: installs game releases from GitHub (stable or with pre-releases), with a cancellable download and a SHA-256
