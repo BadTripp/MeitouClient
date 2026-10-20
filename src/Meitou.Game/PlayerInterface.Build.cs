@@ -388,8 +388,9 @@ sealed partial class PlayerInterface
         b.Text["BuildingName"] = building?.Name ?? "";
         b.Text["DescriptionText"] = building is null || buildHost is null ? "" : buildHost.Description(building.Id);
         b.Properties["DescriptionText"] = new Dictionary<string, string> { ["WordWrap"] = "true", ["TextAlign"] = "Left Top", ["TextColour"] = MyGuiColours.InkText };
-        // The pictures of buildings (data/icons/buildings) are not drawn yet.
-        b.Hidden.Add("BuildingImage");
+        // The building's picture (docs/game/ui-screens.md "Building icons"): the game's saved one, else the renderer's drawing; the frame stays empty while it loads.
+        if (BuildingImage(building) is { } image) b.Properties["BuildingImage"] = image;
+        else b.Hidden.Add("BuildingImage");
         b.Text["CommandsTextBox"] = string.Join('\n', BuildCommandLines);
         b.Properties["CommandsTextBox"] = new Dictionary<string, string> { ["WordWrap"] = "true", ["TextAlign"] = "Left Top", ["TextColour"] = MyGuiColours.InkText };
         b.Text["FloorText"] = Loc.Tr("Floor {1,num}", Floor?.Get() ?? 0);
@@ -404,6 +405,16 @@ sealed partial class PlayerInterface
         if (group is not { Members.Count: > 1 }) { b.Disabled.Add("BuldingTypePrevButton"); b.Disabled.Add("BuldingTypeNextButton"); }
         // The failure the ghost has now, where the original puts its messages.
         b.Properties["MessagePanel"] = new Dictionary<string, string> { ["Visible"] = buildMessage is null ? "false" : "true" };
+    }
+
+    /// <summary>The <c>BuildingImage</c> properties showing <paramref name="building"/>'s picture once it is on the GPU, null until then (or without one).</summary>
+    Dictionary<string, string>? BuildingImage(BuildingBuildData? building)
+    {
+        if (building is null || buildHost is not { } host || uiPainter is not { } painter) return null;
+        if (host.IconFile(building.Id) is { } file)
+            return painter.IconReady(file) ? new() { ["ImageTexture"] = Meitou.Rendering.Ui.UiPainter.IconTexture(file), ["Caption"] = "" } : null;
+        string rendered = Meitou.Rendering.Ui.UiPainter.RenderedBuildingIconTexture(building.Id);
+        return painter.RenderedIconReady(rendered) ? new() { ["ImageTexture"] = rendered, ["ImageFlipV"] = "true", ["Caption"] = "" } : null;
     }
 
     /// <summary>The Commands box: the build map's keys (the original's own text is <b>Unknown</b>).</summary>

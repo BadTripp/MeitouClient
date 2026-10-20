@@ -153,6 +153,7 @@ sealed partial class GameHost
         if (scene.Database is not { } db) return null;
         var footprints = new Meitou.Navigation.BuildingFootprints(install, db, IsSandbox || IsDuel ? null : scene.Objects?.Levels);
         var parts = new Dictionary<string, IReadOnlyList<Meitou.Data.World.PlacedMesh>>(StringComparer.Ordinal);
+        var icons = new Meitou.Data.Gameplay.Construction.BuildingIcons(Path.Combine(install.DataDirectory, "icons", "buildings"));
         IReadOnlyList<Meitou.Data.Gameplay.Construction.PlacementTown>? towns = null;
         Dictionary<(Meitou.Data.World.ZoneCoordinate, string), (string Town, string? Owner)>? townOf = null;
         var pickable = new Dictionary<string, bool>(StringComparer.Ordinal);
@@ -171,6 +172,7 @@ sealed partial class GameHost
                     ? Meitou.Data.World.WorldObjectLayout.Building(db, record, "ghost:" + id, System.Numerics.Vector3.Zero, System.Numerics.Quaternion.Identity, new Meitou.Data.World.BuildingState())
                     : [];
             },
+            IconFile = icons.Find,
             Placement = new Building.PlacementServices
             {
                 Ground = heights.HeightAt,

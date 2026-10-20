@@ -1196,6 +1196,7 @@ static class WorldFrame
         gpu.Characters?.DrawPortraits();   // the squad portraits, from this update's poses
         gpu.Characters?.DrawHoverMask(gpu.HoverOutline is null ? null : gpu.HoverKey, width, height, camera.View, camera.FieldOfView, eye);   // before the colour pass, whose statistics stand
         gpu.Characters?.DrawIcons();   // the item icons being made, from the same update
+        gpu.Objects?.DrawBuildingIcons();   // the build window's pictures being made
         StageClock.Lap(StageClock.UpdChars);
         float floor = gpu.Terrain.HeightAt(eye.X, eye.Z);
         if (render.Water) floor = Math.Max(floor, WorldWater.Height);
