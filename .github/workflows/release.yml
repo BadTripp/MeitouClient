@@ -1,6 +1,7 @@
 # Manual release, or a nightly pre-release each day there are game changes since the last v* tag: builds the game and the world viewer (meitou-viewer), self-contained, for Windows, Linux and macOS
 # (tools/scripts/package-release.ps1; the Windows zip with NVIDIA DLSS/Streamline and AMD FidelityFX next to the exes), tags the commit
-# v<version> and publishes a GitHub release with one Meitou-<version>-<rid>.zip per runtime (docs/launcher.md).
+# v<version> and publishes a GitHub release with one Meitou-<version>-<rid>.zip per runtime (docs/launcher.md), never marked Latest
+# (that is the newest full launcher release, launcher-release.yml).
 name: Release
 
 on:
@@ -176,8 +177,8 @@ jobs:
           On Linux and macOS, give the Kenshi folder with ``KENSHI_PATH`` or when asked. DLSS and FSR are Windows-only.
           "@
           $notes = $changes.Trim() + "`n`n" + $download
-          $flags = @()
-          if ($env:PRERELEASE -eq 'true' -or $env:NIGHTLY -eq 'true') { $flags += @('--prerelease', '--latest=false') }
+          $flags = @('--latest=false')
+          if ($env:PRERELEASE -eq 'true' -or $env:NIGHTLY -eq 'true') { $flags += '--prerelease' }
           # A nightly's notes list every commit already (the version step). A full release adds GitHub's generated notes (merged pull requests),
           # from the previous full release, not a launcher-v* tag in between (docs/launcher.md), so they span its nightlies.
           if ($env:NIGHTLY -ne 'true') {

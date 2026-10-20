@@ -1,6 +1,6 @@
 # Manual launcher release: Velopack packages of launcher/Meitou.Launcher (one Native AOT executable each), one channel per runtime (win-x64, linux-x64, osx-x64,
-# osx-arm64), each built on its own OS (macOS packages need a Mac), all attached to one launcher-v<version> release, never marked
-# Latest (that stays the game's). The installed launcher updates itself from these (docs/launcher.md, "Self-update").
+# osx-arm64), each built on its own OS (macOS packages need a Mac), all attached to one launcher-v<version> release; a full one
+# is marked Latest, so /releases/latest (the README's link) is always the newest launcher. The installed launcher updates itself from these (docs/launcher.md, "Self-update").
 name: Launcher release
 
 on:
@@ -126,8 +126,8 @@ jobs:
             echo "- **macOS**: the \`osx-arm64\` (Apple silicon) or \`osx-x64\` (Intel) package; not signed yet, so Gatekeeper warns."
             echo; echo "Once installed, the launcher updates itself. You need Kenshi installed."
           } > "$RUNNER_TEMP/notes.md"
-          flags=(--latest=false)
-          [ "$PRERELEASE" = true ] && flags+=(--prerelease)
+          flags=(--latest)
+          [ "$PRERELEASE" = true ] && flags=(--prerelease --latest=false)
           previous=$(git tag -l "launcher-v*" --sort=-v:refname | head -n1)
           [ -n "$previous" ] && flags+=(--generate-notes --notes-start-tag "$previous")
           gh release create "launcher-v$VERSION" $(find out -type f) --target "$GITHUB_SHA" \

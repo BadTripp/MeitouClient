@@ -14,8 +14,8 @@ Website: [meitou.martinvlcek.sk](https://meitou.martinvlcek.sk/).
 
 ## Download and requirements
 
-The easiest way to get the game is the [Meitou Launcher](https://github.com/VlcekM/MeitouClient/releases?q=launcher-v&expanded=true)
-(newest launcher release at the top; Windows Setup.exe, Linux AppImage or macOS package): it installs and updates the game and
+The easiest way to get the game is the [Meitou Launcher](https://github.com/VlcekM/MeitouClient/releases/latest)
+(Windows Setup.exe, Linux AppImage or macOS package): it installs and updates the game and
 manages mods. By hand: [releases](https://github.com/VlcekM/MeitouClient/releases) for Windows, Linux and macOS, unzip and run
 the game or meitou-viewer (debug world viewer); prebuilt packages need no separate .NET install.
 Needs a Vulkan1.3 GPU with required descriptor-indexing/indirect-draw features, and Kenshi.
