@@ -9,16 +9,15 @@ mods and saves unchanged. **No game assets are shipped; an installed legal copy 
 Early playable slice: streamed Vulkan world, characters/animation, movement/combat/body state,
 NPC population/partial AI, inventory/trade, saves and native UI. 
 
-Remaining work: [ROADMAP.md](ROADMAP.md) 
 Architecture/research: [docs index](docs/README.md)
 Website: [meitou.martinvlcek.sk](https://meitou.martinvlcek.sk/).
 
 ## Download and requirements
 
-[Windows releases](https://github.com/VlcekM/MeitouClient/releases): unzip and run MeitouClient.exe
-(game) or meitou-viewer.exe (debug world viewer); prebuilt packages need no separate .NET install.
-Windows10/11, Vulkan1.3 GPU with required descriptor-indexing/indirect-draw features, and Kenshi.
-Other platforms are untested; optional ray-query GI falls back on unsupported GPUs.
+[Releases](https://github.com/VlcekM/MeitouClient/releases) for Windows, Linux and macOS: unzip and run
+the game or meitou-viewer (debug world viewer); prebuilt packages need no separate .NET install.
+Needs a Vulkan1.3 GPU with required descriptor-indexing/indirect-draw features, and Kenshi.
+DLSS and FSR are Windows-only; optional ray-query GI falls back on unsupported GPUs.
 Building requires the [.NET10 SDK](https://dotnet.microsoft.com/download).
 
 Steam installs are located automatically; otherwise select the Kenshi folder when prompted,
