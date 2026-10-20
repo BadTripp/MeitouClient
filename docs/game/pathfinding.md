@@ -74,7 +74,7 @@ DotRecast: cells2,height1,tile48 cells,agent18/climb5,ground/water/door areas. B
 cache tiles and gate population on readiness. Query A* through portal clearance (radius per wall end; tile-border, seam
 and area-change ends are open) and water/door costs. **Observed** (zone 18.39, `meitou-tools navmesh`): a Swamp Village
 shack's stair straddles the tile line x−62208 and its foot came out as 6..8-unit portals, so a 2*radius rule kept radius-4
-agents under the house; the west half's foot also meets the walkboard in a near-miss T (two edges against one, ~1.3 off line), unjoined. Unload of in-flight builds/cache invalidation remains imperfect; constraints
+agents under the house; the west half's foot meets the walkboard in a near-miss T, joined as an inner seam. Unload of in-flight builds/cache invalidation remains imperfect; constraints
 are in [simulation](../simulation.md#open-questions-and-known-gaps). Original Havok tiles are
 reference evidence, not a runtime dependency or proof of DotRecast polygon parity.
 
@@ -105,6 +105,12 @@ joins open edges of one tile that coincide reversed and are within the climb at 
 Swamp House `48-Newwworld-INGAME`'s stair foot met the ground at Y124 vs 127 and kept only a 4-unit tile-border link, so radius-4
 agents had no way up; with the seam, ground (-47000,125,48100) reaches the room (-47229,178,47969) (the dome `805-rebirth-INGAME`,
 `6-` and `4-` were already reachable). Its deck (Y~178) was never pruned: the red there in `--png` is roofs, beams under the deck and interior fragments.
+Contour simplification also leaves near-miss T seams (one edge against two whose middle vertex is off its line). Open edges of one tile left
+unjoined are linked (`Links`, not `Neighbours`) when they run opposite, share one end in X/Z (so floors either side of a thin wall stay apart),
+lie within 1.5 of each other's line at both ends of the overlap, and are within climb + 0.5 there; A* portals for such links take the overlap
+with a 2.0 gap when no facing edge is within 0.2. **Observed** (zone 18.39, `meitou-tools navmesh`): the Swamp Village stair foot's edge
+(-62220,108,34088 → -62208,105,34086) against two edges meeting at (-62216,106,34086) joins both; the path (-62218,34080) → (-62216,34148)
+`--to-y 140` climbs through that vertex (length 83) instead of detouring to the tile line x−62208 (97).
 **Tile seams** (engine choice): tiles are rasterised with a 3-cell border from their neighbours (Recast `borderSize`), so contour
 vertices on a tile's edge are kept and those edges come out as portals. Without it Recast treats the edge as a wall and simplifies across
 it (error 1.3 cells): a strip one cell deep along the edge loses its edge vertex and the stitcher finds no edge on the line. **Observed**

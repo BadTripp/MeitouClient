@@ -212,7 +212,24 @@ public sealed class NavQuery(NavWorld world, NavDoors? doors = null)
             float score = Vector3.Distance(mid, (b0 + b1) * 0.5f);
             if (score < bestDistance) { bestDistance = score; bestEdge = k; }
         }
-        if (bestEdge < 0) return true; // no facing edge found (a degenerate stitch): the whole edge
+        if (bestEdge < 0)
+        {
+            // A near-miss seam (docs/game/pathfinding.md, "Inner seams"): the facing edge strays off the line, so take the overlap with a looser gap.
+            for (int k = 0; k < pb.Length; k++)
+            {
+                var b0 = mb.Vertices[pb[k]];
+                var b1 = mb.Vertices[pb[(k + 1) % pb.Length]];
+                if (!NavGeometry.FacingOverlap(a0, a1, b0, b1, NavGeometry.NearMissGap + 0.5f, out float lo, out float hi, out _, out _)) continue;
+                float score = Vector3.Distance(mid, (b0 + b1) * 0.5f);
+                if (score >= bestDistance) continue;
+                bestDistance = score;
+                right = Vector3.Lerp(a0, a1, lo);
+                left = Vector3.Lerp(a0, a1, hi);
+                leftWall = hi < 1 - 1e-4f ? mb.IsWallVertex(pb[k]) : ma.IsWallVertex(pa[(edge + 1) % pa.Length]);
+                rightWall = lo > 1e-4f ? mb.IsWallVertex(pb[(k + 1) % pb.Length]) : ma.IsWallVertex(pa[edge]);
+            }
+            return true; // with no facing edge at all (a degenerate stitch): the whole edge
+        }
         {
             var b0 = mb.Vertices[pb[bestEdge]];
             var b1 = mb.Vertices[pb[(bestEdge + 1) % pb.Length]];
