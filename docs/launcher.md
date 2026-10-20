@@ -8,10 +8,11 @@ items); the launcher never downloads or hosts mods.
 ## Releases
 
 - One repository, two tag families: the game `v<version>` (`release.yml`), the launcher `launcher-v<version>`
-  (`launcher-release.yml`, changelog `launcher/CHANGELOG.md`). Launcher releases are never marked Latest. Both workflows pass
+  (`launcher-release.yml`, changelog `launcher/CHANGELOG.md`). Launcher releases are never marked Latest. Full releases of both pass
   `--notes-start-tag` with the previous tag of their own family, so the generated notes never span the other family's tag.
 - Nightlies: `release.yml` also runs daily (02:00 UTC, or by hand with `nightly`) and publishes `v<X.Y.Z+1>-nightly.<yyyymmdd>`
-  (patch after the newest full release) as a pre-release, never Latest, without a changelog section. It is skipped when nothing
+  (patch after the newest full release) as a pre-release, never Latest, without a changelog section; its notes list every
+  commit since the newest game tag (GitHub's generated notes cover only merged pull requests, so nightlies don't use them). It is skipped when nothing
   outside `news/`, `site/`, `launcher/` and their workflows changed since the newest game tag (nightly or full). Only the newest 7
   nightlies are kept, since the launcher lists only the newest 100 releases. The launcher shows them with the Nightly builds checkbox beside Play ticked ("Play latest nightly"; ticking it asks first, with Yes under the pointer, warning of crashes and corrupted saves) (GitHub pre-releases; `IncludePrereleases` in `launcher.json`).
 - Game assets: `Meitou-<version>-<rid>.zip`, `<rid>` as .NET's `RuntimeInformation.RuntimeIdentifier` (`win-x64`, `linux-x64`,
