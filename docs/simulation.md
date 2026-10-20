@@ -903,6 +903,11 @@ patrol/bar/shop/sleep/retreat/contracts, combat stances and off-screen roaming j
 TaskData semantics: [ai.md](game/ai.md), [ai-tasks.md](game/ai-tasks.md). Full planner, wars,
 prisoners and resident town simulation off screen are incomplete. Hash blackboards/minds/jobs when present.
 
+Combat stances (engine reading; the original's sighting-to-attack path is **Unknown**): the most aggressive combat goal of
+the role list and race in its hours (`TaskBehaviours.Stances`); no combat goal at all attacks on sight. A member of a faction
+with `default relation` below -30 and `fundamental type` None or Bandit (the test `FUN_1404374d0` reads) attacks on sight even
+under a Passive or Defensive package: fog prince squads (only PROTECT_OWN_SQUAD) hunt in the original (**Observed**, play).
+
 Scoring follows the original (`TaskProfiles`: desire, commitment, crowding per goal type); a desire
 the original computes in a function of its own counts as 1. Town goals ([ai-tasks.md](game/ai-tasks.md#town-goals)):
 wandering and patrolling in town walk to a general node of a town building, shopping to a node of a
