@@ -1,4 +1,4 @@
-# Manual release: builds the game and the world viewer (meitou-viewer), self-contained, for Windows, Linux and macOS
+# Manual release, or a nightly pre-release each day there are game changes since the last v* tag: builds the game and the world viewer (meitou-viewer), self-contained, for Windows, Linux and macOS
 # (tools/scripts/package-release.ps1; the Windows zip with NVIDIA DLSS/Streamline and AMD FidelityFX next to the exes), tags the commit
 # v<version> and publishes a GitHub release with one Meitou-<version>-<rid>.zip per runtime (docs/launcher.md).
 name: Release
@@ -14,16 +14,24 @@ on:
         description: "Mark as a pre-release"
         type: boolean
         default: true
+      nightly:
+        description: "Nightly build (version and notes made up, no changelog section needed); skipped without changes"
+        type: boolean
+        default: false
+  schedule:
+    - cron: "0 2 * * *" # nightly, 02:00 UTC
 
 permissions:
   contents: write
 
 jobs:
   # Checks the version and its changelog section, runs the quick tests; nothing is built or released if this fails.
+  # A nightly with no game changes since the newest v* tag (nightly or full) stops here without failing.
   version:
     runs-on: windows-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      nightly: ${{ steps.version.outputs.nightly }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -38,8 +46,26 @@ jobs:
         shell: pwsh
         env:
           INPUT_VERSION: ${{ inputs.version }}
+          NIGHTLY: ${{ github.event_name == 'schedule' || inputs.nightly }}
           RUN_NUMBER: ${{ github.run_number }}
         run: |
+          if ($env:NIGHTLY -eq 'true') {
+            # Skipped when nothing the game zips are built from changed since the newest game tag, nightly or full.
+            $last = git tag -l "v[0-9]*" --sort=-creatordate | Select-Object -First 1
+            if ($last) {
+              git diff --quiet $last HEAD -- . ':!news' ':!site' ':!launcher' ':!.github/workflows/site-image.yml' ':!.github/workflows/launcher-release.yml'
+              if ($LASTEXITCODE -eq 0) { "No game changes since $last; no nightly." >> $env:GITHUB_STEP_SUMMARY; "nightly=skip" >> $env:GITHUB_OUTPUT; exit 0 }
+            }
+            # <next patch of the newest full release>-nightly.<UTC date>: after that release, before the next one (semver).
+            $full = git tag -l "v[0-9]*" --sort=-v:refname | Where-Object { $_ -notmatch '-' } | Select-Object -First 1
+            $n = if ($full) { [Version]$full.TrimStart('v') } else { [Version]'0.0.0' }
+            $v = "$($n.Major).$($n.Minor).$($n.Build + 1)-nightly.$((Get-Date).ToUniversalTime().ToString('yyyyMMdd'))"
+            if (git tag -l "v$v") { $v += ".$env:RUN_NUMBER" }
+            Set-Content -Path "$env:RUNNER_TEMP/changes.md" -Value "Nightly build of master at $($env:GITHUB_SHA.Substring(0, 7)): untested, may be broken. Changes since $last below." -Encoding utf8
+            "version=$v" >> $env:GITHUB_OUTPUT
+            "nightly=true" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
           $v = $env:INPUT_VERSION.Trim().TrimStart('v')
           if (-not $v) { $v = "0.0.$env:RUN_NUMBER" }
           if ($v -notmatch '^[0-9A-Za-z.\-]+$') { throw "bad version '$v'" }
@@ -54,11 +80,14 @@ jobs:
           if (-not $section) { throw "CHANGELOG.md's '## v$v' section is empty" }
           Set-Content -Path "$env:RUNNER_TEMP/changes.md" -Value "## v$v`n`n$section" -Encoding utf8
           "version=$v" >> $env:GITHUB_OUTPUT
+          "nightly=false" >> $env:GITHUB_OUTPUT
 
       - name: Quick tests
+        if: steps.version.outputs.nightly != 'skip'
         run: dotnet test --filter "Category!=Slow&Category!=Bench" -c Release
 
       - uses: actions/upload-artifact@v4
+        if: steps.version.outputs.nightly != 'skip'
         with:
           name: changes
           path: ${{ runner.temp }}/changes.md
@@ -67,6 +96,7 @@ jobs:
   # One zip per runtime. Unix zips are made on Unix so the execute bits survive; macOS ones on a Mac, which signs the binaries.
   package:
     needs: version
+    if: needs.version.outputs.nightly != 'skip'
     strategy:
       matrix:
         include:
@@ -120,6 +150,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.version.outputs.version }}
           PRERELEASE: ${{ inputs.prerelease }}
+          NIGHTLY: ${{ needs.version.outputs.nightly }}
         run: |
           $zips = @('win-x64', 'linux-x64', 'osx-x64', 'osx-arm64') | ForEach-Object { "out/Meitou-$env:VERSION-$_.zip" }
           foreach ($zip in $zips) { if (-not (Test-Path $zip)) { throw "$zip missing" } }
@@ -135,16 +166,29 @@ jobs:
             found by itself, otherwise Meitou asks for your Kenshi folder once. DLSS (NVIDIA RTX) and FSR are included: pick them on the Tab panel's
             anti-aliasing slider; for the viewer, start ``meitou-viewer-dlss.bat``.
           - **Linux**: ``Meitou-$env:VERSION-linux-x64.zip``, run ``./$game`` or ``./meitou-viewer``. Needs a Vulkan 1.3 driver and loader.
-          - **macOS** (experimental, untested): ``Meitou-$env:VERSION-osx-arm64.zip`` (Apple Silicon) or ``Meitou-$env:VERSION-osx-x64.zip`` (Intel). Needs a
+          - **macOS**: ``Meitou-$env:VERSION-osx-arm64.zip`` (Apple Silicon) or ``Meitou-$env:VERSION-osx-x64.zip`` (Intel). Needs a
             Vulkan loader and MoltenVK installed, e.g. from the LunarG Vulkan SDK.
 
           On Linux and macOS, give the Kenshi folder with ``KENSHI_PATH`` or when asked. DLSS and FSR are Windows-only.
           "@
           $notes = $changes.Trim() + "`n`n" + $download
           $flags = @()
-          if ($env:PRERELEASE -eq 'true') { $flags += '--prerelease' }
-          # The generated notes start at the previous game tag, not at a launcher-v* tag in between (docs/launcher.md).
-          $previous = git tag -l "v[0-9]*" --sort=-v:refname | Select-Object -First 1
+          if ($env:PRERELEASE -eq 'true' -or $env:NIGHTLY -eq 'true') { $flags += @('--prerelease', '--latest=false') }
+          # The generated notes start at the previous game tag, not at a launcher-v* tag in between (docs/launcher.md): for a nightly
+          # the newest game tag, nightly or full; for a full release the previous full release, so its notes span its nightlies.
+          $previous = if ($env:NIGHTLY -eq 'true') { git tag -l "v[0-9]*" --sort=-creatordate | Select-Object -First 1 }
+                      else { git tag -l "v[0-9]*" --sort=-v:refname | Where-Object { $_ -notmatch '-nightly\.' } | Select-Object -First 1 }
           if ($previous) { $flags += @('--notes-start-tag', $previous) }
           gh release create "v$env:VERSION" @zips --target $env:GITHUB_SHA `
             --title "Meitou $env:VERSION" --notes $notes --generate-notes @flags
+
+      # Only the newest 7 nightlies are kept: the launcher lists the newest 100 releases, which old nightlies would crowd out.
+      - name: Prune old nightlies
+        if: needs.version.outputs.nightly == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $old = gh release list --limit 200 --json tagName,createdAt | ConvertFrom-Json |
+            Where-Object { $_.tagName -match '^v.*-nightly\.' } | Sort-Object createdAt -Descending | Select-Object -Skip 7
+          foreach ($r in $old) { gh release delete $r.tagName --cleanup-tag --yes }
