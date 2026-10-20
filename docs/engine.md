@@ -40,6 +40,19 @@ streaming uploads retire and a compacting GC completes before that final smooth 
 **GC:** the stock runtime (server GC, four heaps) in builds and release zips alike; the startup `gc` line names the collector (`GcName`). The
 experimental Satori GC (github.com/VSadov/Satori, `PublishWithSatoriGC` SDK) is not used in official builds. **Observed** earlier A/B (RTX 4070, 10.0.13
 Satori vs stock 10.0.12 fast flight): longest GC pause 15-21 ms stock vs 1-18 ms Satori, frames unchanged (long frames are foliage updates, docs/viewer.md).
+**Pooled buffers** (allocation is the GC lever): streaming garbage is mostly LOH arrays from worker jobs. **Observed** in flights: gen0/gen1 pauses under
+~40 ms; single blocking gen2s (`NonConcurrentGC`, reason `AllocSmall`) of 0.3-1.7 s in some runs despite SustainedLowLatency, with or without pooling;
+what triggers them is **Unknown**. Pooled now:
+DDS file bytes of `WorldTextureCache.Load` (`DdsReader.ReadKept(..., pool)`, `ArrayPool<byte>.Shared`; returned in `Load` after an RGBA8 decode or
+by the last upload step of a stored BC upload), the GI terrain grid's samples (one array per `TerrainGrid`), the card trimmer's clip/hull scratch
+(`FoliageCardTrimmer.Hull`) and the grass generator (`[ThreadStatic]` `FoliageRandom`, reseeded). Contract: a rented array may be longer than asked,
+so its length is never the logical size (pass counts; `DdsFile.TrailingBytes` is meaningless on a pooled file); return it in a `finally` or at the
+one point after its last reader, never while anything keeps it; a buffer that is dropped instead (a texture never pumped) just goes to the GC.
+`ArrayPool<byte>.Shared` rounds up to a power of two (a 4.2 MB file rents 8 MB) and trims idle arrays on gen2; textures in flight bound what it holds.
+**Observed** (swamp, 1920x1080, 3000-frame flight, 4 alternating pairs, 2026-10-21): allocated 6.2 GB to 4.8 GB (2.1 to 1.6 MB a frame), gen0+gen1
+45 to 35 in total, gen2 count unchanged; frame percentiles unchanged within noise.
+Not pooled, kept by their owners: `HeightWindow` arrays (read through `HeightSnapshot` on workers), impostor atlas levels (`ImpostorTextures`
+holds the atlas), grass blade arrays (kept as `PendingBlades`). How to rank allocation sites: docs/bench.md.
 Cancel on window close. Helpers/services dispose/join with their owning scene/session.
 After warm-up, loading panels ease off the left/right edges over 0.7s while the loading image fades to the live scene and UI.
 Input remains blocked through this reveal. A new game ends warm-up as soon as the squad's characters are drawable, skips the sky arrival and opens the
