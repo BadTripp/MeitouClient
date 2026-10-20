@@ -53,18 +53,72 @@ Sources: the configured Kenshi install's `data/gui/`, the existing
   at the rounded ppem): Sentencia 25 pt draws at 22 pt (15.3 px), Exo2 20 pt stays
   20 pt (13.9 px). Rounding to the integer ppem instead (head flag bit 3) gives
   20 pt for Sentencia and does not fit. Meitou: `KenshiFontSize` (default 3).
-- The painter bakes each resource at its resized `Size * Resolution / 72` em
-  pixels, scaled with viewport height; `Antialias` false fonts are baked at 1x and
-  drawn on whole pixels. Native hinting, true monochrome rasterisation (unhinted
-  thresholding was tried: broken strokes) and the full Unicode ranges remain
-  unimplemented.
+- **Observed** in the install's font files: `SubstituteCode` 0, `Distance` 2, `TabWidth` 4,
+  `Codes` `32 126` and `8127 8217` for the English fonts; `locale/ja_JP` uses
+  `ume-pgs5.ttf` with `32 255`, `12288 12543`, `19968 40959`, `65280 65519`. A locale's
+  `kenshi_fonts.xml` redefines the same resource names.
+- **Verified** against MyGUI `MyGUI3.2.2` (`ResourceTrueTypeFont.cpp`, `TextView.cpp`,
+  `EditText.cpp`; the game's MyGUI.log says 3.2.3, which has no tag, and the file's later
+  commits up to 2017 are texture spacing, device loss and speed, **Observed** in its git log)
+  how the original builds and draws a font:
+  - The face is opened at `FT_Set_Char_Size(Size*64, 0, Resolution, Resolution)`: points,
+    fractional ppem. Load flags by `Hinting`: `use_native` `FT_LOAD_DEFAULT` (the
+    bytecode interpreter), `force_auto` `FORCE_AUTOHINT`, `disable_auto` `NO_AUTOHINT`,
+    `disable_all` `NO_HINTING`. Glyphs are rendered with `FT_LOAD_RENDER`: 8-bit
+    coverage. **There is no monochrome rendering in 3.2** (`HintingMonochrome` and
+    `FT_LOAD_TARGET_MONO` exist only in later versions): `Antialias` false writes white
+    luminance with the coverage as alpha, true writes the coverage into both. The
+    crisp look comes from hinting and integer positions.
+  - No kerning. The pen advances by the hinted `advance.x / 64`; a glyph's quad is at
+    pen + `horiBearingX / 64` and `floor(ascent - horiBearingY / 64 - OffsetHeight)`
+    below the line top. MyGUI rounds no glyph position; a line's width is `(int)ceil`, so
+    centred and right-aligned line starts are whole pixels.
+  - The line height is the default height: ascent and descent from the FreeType size
+    metrics (`ascender >> 6`, `-descender >> 6`), each raised to the OS/2 `usWin` and `sTypo`
+    values times `y_ppem / unitsPerEm`.
+  - `Codes`: every `range` adds code points; with none the Basic Multilingual Plane
+    (`0 65535`); `hide` ranges are removed afterwards; space is always built; a code
+    point the face lacks is dropped. A character outside the set draws the
+    `SubstituteCode` glyph if that is in the set, else the face's glyph 0 (`.notdef`):
+    Kenshi's 0 is not in 32-126, so the substitute is the `.notdef` box.
+  - `TabWidth` is the tab's advance in pixels (0: eight spaces). `Distance` is the gap
+    between glyphs in MyGUI's own texture (default 1): no layout effect. Inline `#RRGGBB`
+    colour codes are handled by `TextView` and are **not** implemented in Meitou.
+- Meitou draws text through `UiFont` (`src/Meitou.Rendering/Ui/`): FreeType 2.13.2 (via
+  FreeTypeSharp), one face per file, one size per `UiFont`, glyphs rasterised into an atlas
+  on demand (any code point, UTF-16 pairs as one), the atlas grows to 2048 square and then
+  starts over; text geometry caches are dropped when it moves. Measuring, wrapping and
+  drawing read the same glyph records, so they agree for every script. `UiPainter.Mode`
+  selects the look:
+  - **Faithful** follows the rules above: the resource's `Hinting`, `Codes`,
+    `SubstituteCode`, `TabWidth`, `OffsetHeight`; fractional size at the resource's
+    resolution (1/16 pt steps) scaled by viewport height, so at 1080 lines exactly the
+    original's request; MyGUI's line height; no kerning; glyphs on whole pixels. The
+    TrueType interpreter is set to version 35 (full bytecode hinting; 2.13 defaults to
+    version 40, which ignores most horizontal hints). **Observed**: Exo2 20 pt@50 dpi
+    gives ppem 13.9, ascent 14, descent 3 and integer advances (9, 8, 13), which is
+    `KenshiFontSize`'s default height. **Unknown**: the FreeType version of the original,
+    so pixel-for-pixel equality of the hinted shapes is not claimed.
+    `ume-pgs5.ttf`'s bytecode fails in 2.13.2 (`Invalid_Opcode`, both interpreters;
+    **Observed**, `FT_LOAD_DEFAULT`/`NO_AUTOHINT`): the glyph falls back to the auto-hinter,
+    the font after three failures. `Antialias` true is drawn like false (no luminance
+    modulation); no Kenshi font sets it.
+  - **Meitou** (default) keeps the earlier look: any glyph the face has (`Codes` are not a
+    limit), the substitute, else '?'; whole pixel sizes; `Antialias` false fonts hinted
+    lightly at 1x (`FT_LOAD_TARGET_LIGHT`) on whole pixels with unhinted advances, others
+    (and explicit `FontPixels` sizes) unhinted at 2x oversampling, placed freely; the 1.25 em
+    line; kerning from the font's `kern`/GPOS pairs (read with stb_truetype). `FontPixels`
+    text uses the `Kenshi_StandardFont_Medium` resource's file, so a locale's font.
+  Pre-built glyphs: the `Codes` ranges up to 1024 code points (Faithful), else ASCII and
+  Latin-1; the rest on demand. Lines wrap at spaces and between CJK characters.
 - Main in-game UI applies a user-requested minimum of 16 em pixels at 1080 lines,
   scaled with viewport height, including resource fonts and explicit pixel sizes.
   Larger headings retain their sizes. Short captions centre the line box and clip
   within the widget rather than shrinking the font. Loading-screen tips use the
   same baseline. Title, loading banners and settings retain independent typography.
   This is a Meitou display policy, not a
-  claim about the original font resources.
+  claim about the original font resources; it applies in both UI modes (a size below the
+  minimum is a whole-pixel request at 72 dpi, hinted as the mode says).
 - **Verified** against all installed layouts by `AllInstalledLayoutsAndHudResourcesCanBeRead`:
   ResourceLayout expansion produces finite widget bounds. The source widgets are
   kept immutable; template Client regions receive application children, and
