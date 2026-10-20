@@ -223,6 +223,8 @@ sealed partial class GameHost(GameInstall install, WorldScene scene, AssetLocato
             var standing = town == mine ? MapStanding.Player : d.Relations.IsAlly(mine, town) ? MapStanding.Ally : relation < -30 ? MapStanding.Enemy : MapStanding.Neutral;
             return new MapFaction(faction.Name, relation, standing, faction.NotReal);
         };
+        player.ArmourOf = record => popData?.Combat.Armour(record);
+        player.RecordName = id => popData?.Db.Find(id)?.Name;
         player.MapItemTowns = record =>
         {
             if (popData is not { } d || d.Db.Find(record) is not { Type: Meitou.Data.Fcs.FcsRecordType.MAP_ITEM } map) return null;

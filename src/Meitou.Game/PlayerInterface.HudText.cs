@@ -11,14 +11,16 @@ namespace Meitou.Game;
 /// </summary>
 sealed partial class PlayerInterface
 {
-    // The palette of data/gui/colours/kenshi_colours.xml (Verified): Main, Secondary (the text default), Title, Bad, Good, Alert.
-    internal static readonly string MainColour = Hex("afa68b"), TitleColour = Hex("492620"), BadColour = Hex("59231a"), GoodColour = Hex("a8b774"), AlertColour = Hex("000000");
+    // The palette of data/gui/colours/kenshi_colours.xml (Verified): Main, Secondary (the text default), Title, Bad, Good, Alert; a mod's file replaces it (MyGuiColours.LoadPalette).
+    internal static string MainColour => MyGuiColours.Named("Main", "afa68b");
+    internal static string TitleColour => MyGuiColours.Named("Title", "492620");
+    internal static string BadColour => MyGuiColours.Named("Bad", "59231a");
+    internal static string GoodColour => MyGuiColours.Named("Good", "a8b774");
+    internal static string AlertColour => MyGuiColours.Named("Alert", "000000");
 
     /// <summary>The stats panel's labels (MARTIAL ARTS, STRENGTH, ...): the grey of the orders buttons' text, not Main (docs/game/ui-screens.md).</summary>
     internal static readonly string StatLabelColour = "0.4 0.380392 0.356863";
 
-    static string Hex(string rgb) => string.Join(' ', Enumerable.Range(0, 3).Select(i =>
-        (int.Parse(rgb.AsSpan(i * 2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture) / 255f).ToString("0.###", CultureInfo.InvariantCulture)));
 
     /// <summary>Resolves a faction (a position in the world's faction list) to its name; the host sets it.</summary>
     public Func<int, string?>? FactionName { get; set; }
