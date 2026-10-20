@@ -15,7 +15,7 @@ public readonly record struct TooltipLine(string Key, string Value = "", Tooltip
     public string Whole => Value + Suffix;
 }
 
-/// <summary>Where a tooltip sits (docs/game/ui-screens.md "Tooltips"): <c>ToolTip</c>/<c>ToolTipDynamic</c> at the pointer, <c>ToolTipFixed</c> on an anchor panel, <c>ToolTipInventory</c> from the pointer.</summary>
+/// <summary>Where a tooltip sits (docs/game/ui-screens.md "Tooltips"): <c>ToolTip</c>/<c>ToolTipDynamic</c> at the pointer, <c>ToolTipFixed</c> on an anchor panel, <c>ToolTipInventory</c> beside the window holding the item.</summary>
 public enum TooltipKind { Floating, Fixed, Inventory, Static }
 
 /// <summary>The rectangles of a laid out row, inside <see cref="TooltipLayout.Panel"/>: the key (left aligned) and the value (right aligned) share one area.</summary>
@@ -146,6 +146,8 @@ public static class UiTooltips
         {
             case TooltipKind.Fixed when anchor is { } a: (x, top) = (a.X, a.Y + a.Height - panelHeight); break;
             case TooltipKind.Static when anchor is { } s: (x, top) = (s.X, s.Y); break;
+            // ToolTipInventory::vfunc_6 (Verified): top left at the item window's top right, or its right edge at the window's left when it would pass the screen's right edge.
+            case TooltipKind.Inventory when anchor is { } w: (x, top) = (w.X + w.Width + width > screenWidth ? w.X - width : w.X + w.Width, w.Y); break;
             case TooltipKind.Inventory: (x, top) = (pointer.X, pointer.Y); break;
             default:
                 x = pointer.X - width < 0 ? pointer.X : pointer.X - width;

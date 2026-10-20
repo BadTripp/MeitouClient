@@ -58,10 +58,12 @@ sealed partial class PlayerInterface
             // Moving before it shows starts the delay again; once shown it follows the pointer.
             (tipPoint, tipSince) = (mouse, now);
         }
-        if (!tipShown && Stopwatch.GetElapsedTime(tipSince, now).TotalSeconds >= UiTooltips.ShowDelaySeconds) tipShown = true;
-        if (!tipShown || ResolveTooltip(hit) is not var (lines, kind) || lines.Count == 0) return;
-        // A static tooltip is shown in a widget of its own (the class names it: "static:AIToolTip").
-        UiRect? panel = null;
+        if (ResolveTooltip(hit) is not var (lines, kind) || lines.Count == 0) return;
+        // An item's (ToolTipInventory) shows at once: the inventory's mouse-move hook shows it, not MyGUI's tooltip timer (ToolTipInventory::vfunc_6, Verified).
+        if (!tipShown && (kind == TooltipKind.Inventory || Stopwatch.GetElapsedTime(tipSince, now).TotalSeconds >= UiTooltips.ShowDelaySeconds)) tipShown = true;
+        if (!tipShown) return;
+        // A static tooltip is shown in a widget of its own (the class names it: "static:AIToolTip"); an item's sits beside the window holding the item.
+        UiRect? panel = kind == TooltipKind.Inventory ? ItemWindow(controls, hit) : null;
         if (kind == TooltipKind.Static)
         {
             string name = hit.Properties.GetValueOrDefault(UiTooltips.Class)![7..];
@@ -69,6 +71,15 @@ sealed partial class PlayerInterface
             panel = owner.Bounds;
         }
         PlaceTooltip(controls, painter, lines, kind, panel);
+    }
+
+    /// <summary>The window an item cell lies in (the topmost window over the cell's centre), the anchor of its tooltip; null: none, the tooltip goes at the pointer.</summary>
+    static UiRect? ItemWindow(IReadOnlyList<UiControl> controls, UiControl cell)
+    {
+        float x = cell.Bounds.X + cell.Bounds.Width / 2, y = cell.Bounds.Y + cell.Bounds.Height / 2;
+        for (int i = controls.Count - 1; i >= 0; i--)
+            if (controls[i].Type == "Window" && controls[i].Bounds.Contains(x, y)) return controls[i].Bounds;
+        return null;
     }
 
     static bool CarriesTooltip(UiControl c) => c.Properties.ContainsKey(UiTooltips.Type) || c.Properties.ContainsKey(ItemTipKey);
