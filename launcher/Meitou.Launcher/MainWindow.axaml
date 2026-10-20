@@ -140,14 +140,20 @@
                 <TextBlock x:Name="NewsCount" DockPanel.Dock="Right" Classes="aside" />
                 <TextBlock Text="News" />
               </DockPanel>
-              <!-- Ko-fi's own button (cup with a heart), in white, centred on the bar -->
+              <!-- Ko-fi's own button, in white, centred on the bar -->
               <Button Classes="kofi" Click="Kofi_Click" HorizontalAlignment="Center" VerticalAlignment="Center"
                       ToolTip.Tip="It supports me in the development of Meitou. ko-fi.com/martinvlcek">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <Panel VerticalAlignment="Center">
-                    <Path Fill="#202020" Data="M0,0 H14 V7 A5,5 0 0 1 9,12 H5 A5,5 0 0 1 0,7 Z M14,2 H16 A3,3 0 0 1 16,8 H14 V6 H16 A1,1 0 0 0 16,4 H14 Z" />
-                    <Path Fill="#FF5E5B" Data="M7,9.5 C3,6.5 3,3 5.2,3 C6.2,3 7,4 7,4 C7,4 7.8,3 8.8,3 C11,3 11,6.5 7,9.5 Z" />
-                  </Panel>
+                  <!-- The Ko-fi logo: a black-rimmed white cup with a D handle and an orange heart -->
+                  <Viewbox Height="18" VerticalAlignment="Center">
+                    <Canvas Width="32" Height="26">
+                      <Path Stroke="Black" StrokeThickness="3.6" Fill="White" Data="M22,5 H26 A5,5 0 0 1 26,15 H22" />
+                      <Path Stroke="Black" StrokeThickness="3.6" Fill="White"
+                            Data="M4.8,1.8 H20.2 A3,3 0 0 1 23.2,4.8 V16.2 A8,8 0 0 1 15.2,24.2 H9.8 A8,8 0 0 1 1.8,16.2 V4.8 A3,3 0 0 1 4.8,1.8 Z" />
+                      <Path Fill="#FF5A16"
+                            Data="M12.5,18.5 C6.5,14.5 6,11 6,9.5 C6,7.5 7.6,6 9.4,6 C10.8,6 11.9,6.8 12.5,8 C13.1,6.8 14.2,6 15.6,6 C17.4,6 19,7.5 19,9.5 C19,11 18.5,14.5 12.5,18.5 Z" />
+                    </Canvas>
+                  </Viewbox>
                   <TextBlock Text="Support me on Ko-fi" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
