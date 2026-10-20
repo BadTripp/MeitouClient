@@ -10,7 +10,7 @@ namespace Meitou.Rendering;
 /// The game's point and spot lights on the world (docs/render-lights.md): the lamps of every placed building (<see cref="WorldLights"/>,
 /// loaded on a worker), binned each frame into a grid of <see cref="Cells"/>² cells of <see cref="CellSize"/> around the eye and uploaded as three
 /// textures, which <c>kenshiLight</c> (<see cref="LampShaders"/>) and the probe trace read. Interior lamps are clipped to their building's
-/// mask; the probe trace also shadows their bounce contribution. Render thread only.
+/// mask; the probe trace also shadows their bounce contribution. Buildings placed during play add theirs with <see cref="SetRuntime"/>. Render thread only.
 /// </summary>
 internal sealed class WorldLamps : IDisposable
 {
@@ -22,7 +22,10 @@ internal sealed class WorldLamps : IDisposable
 
     readonly GpuContext ctx;
     readonly Task<WorldLight[]> loading;
-    WorldLight[]? lamps;
+    // The lamps binned each frame: the world's (once loaded) and those of buildings placed during play, by building id.
+    WorldLight[]? world, lamps;
+    readonly Dictionary<string, WorldLight[]> runtime = new(StringComparer.Ordinal);
+    bool runtimeChanged;
     readonly Texture[] cells, index, data;
     readonly Sampler nearest;
     readonly float[] cellValues = new float[Cells * Cells * 2];
@@ -74,6 +77,21 @@ internal sealed class WorldLamps : IDisposable
     internal Vector4 Grid => grid;
     internal uint Emitter(string placementId) => emitters.GetValueOrDefault(placementId);
 
+    /// <summary>Shows the lamps of a building placed during play, replacing any it had (the host calls it when the building is complete).</summary>
+    public void SetRuntime(string building, IEnumerable<WorldLight> lights)
+    {
+        runtime[building] = [.. lights.Where(l => l.Intensity > 0 && l.Radius > 0)];
+        runtimeChanged = true;
+    }
+
+    public void RemoveRuntime(string building) => runtimeChanged |= runtime.Remove(building);
+
+    public void ClearRuntime()
+    {
+        runtimeChanged |= runtime.Count > 0;
+        runtime.Clear();
+    }
+
     /// <summary>Bins the lamps around <paramref name="eye"/> for this frame (the pulsing and shimmering ones at their power now).</summary>
     public void Update(Vector3 eye, WorldObjectRenderer? objects = null)
     {
@@ -82,12 +100,18 @@ internal sealed class WorldLamps : IDisposable
         InGrid = 0;
         emitters.Clear();
         if (!Enabled) return;
-        if (lamps is null)
+        if (world is null)
         {
             if (!loading.IsCompleted) return;
-            if (loading.IsFaulted) { Console.Error.WriteLine($"lamps     not loaded: {loading.Exception?.InnerException?.Message}"); lamps = []; return; }
-            lamps = loading.Result;
-            Console.WriteLine($"lamps     {lamps.Length} lights ({lamps.Count(l => l.Interior)} interior)");
+            if (loading.IsFaulted) Console.Error.WriteLine($"lamps     not loaded: {loading.Exception?.InnerException?.Message}");
+            world = loading.IsFaulted ? [] : loading.Result;
+            Console.WriteLine($"lamps     {world.Length} lights ({world.Count(l => l.Interior)} interior)");
+            runtimeChanged = true;
+        }
+        if (runtimeChanged || lamps is null)
+        {
+            lamps = runtime.Count == 0 ? world : [.. world, .. runtime.Values.SelectMany(r => r)];
+            runtimeChanged = false;
         }
         if (lamps.Length == 0) return;
 

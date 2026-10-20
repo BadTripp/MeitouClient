@@ -10,7 +10,7 @@ The game draws these lights in both looks, so this is not a Faithful / Meitou sw
 
 *From the code* (`WorldLamps`, `LampShaders`):
 
-- **Which lights.** The lights of every placed building and its exterior/interior layouts (`WorldLights.ForWorld`), read on a worker at start.
+- **Which lights.** The lights of every placed building and its exterior/interior layouts (`WorldLights.ForWorld`), read on a worker at start, plus the lights of buildings placed during play while they are complete (`WorldLamps.SetRuntime`, from the host's building diff, [simulation](simulation.md#buildings); placed as the world's, no interior layouts). The game switches a building's lights on when it completes ([construction tick](game/buildings-production.md#construction-tick)).
   Interior lamps enter the grid only with a loaded owner mask (matched by the building prefix of their placement id). Their direct light is
   clipped to its convex footprint and height range with a0.5-unit surface tolerance (see [zones](formats/zones.md#interior-masks)).
   Masks above32 edges are unsupported; direct lamps have no occluder shadows within that hull.

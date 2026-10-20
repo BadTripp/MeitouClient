@@ -640,7 +640,7 @@ asynchronous input).
 
 **Host seam: snapshot diff.** The host keeps the last `BuildingsRevision` it acted on (-1 after `ReplaceWorld`) and,
 when it differs, diffs `Buildings` by id: added → render overlay (and navmesh if it qualifies), removed → out of both,
-newly complete → navmesh. Progress does not bump the revision; the scaffold reads `Progress/Target` each frame (rule in
+newly complete → navmesh and lamps (lamps leave when it is no longer complete). Progress does not bump the revision; the scaffold reads `Progress/Target` each frame (rule in
 [construction look](game/buildings-production.md#construction-look)). An event queue would lose changes across dropped
 ticks and loads; the diff does not. Navmesh membership (engine reading of the Observed rebuild on placing):
 `PathMode != 0` and (`Complete` or `BuildThreshold == 0`). After each rebuilt zone publishes, the host enqueues

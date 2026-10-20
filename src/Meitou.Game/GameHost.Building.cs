@@ -8,7 +8,7 @@ namespace Meitou.Game;
 /// <summary>
 /// The host's side of player construction (docs/simulation.md "Buildings", "Host seam: snapshot diff"): the snapshot's <see cref="WorldSnapshot.Buildings"/> are diffed by id
 /// whenever <see cref="WorldSnapshot.BuildingsRevision"/> changes. A new site goes into the renderer's runtime placements and, when it qualifies, the navmesh overlay; a removed
-/// one leaves both; a completed one enters the navmesh. The scaffold of a site that is not finished is read from <c>Progress / Target</c> every frame.
+/// one leaves both; a completed one enters the navmesh and lights its lamps. The scaffold of a site that is not finished is read from <c>Progress / Target</c> every frame.
 /// </summary>
 sealed partial class GameHost
 {
@@ -16,7 +16,7 @@ sealed partial class GameHost
     long buildingsRevision = -1;
     // What the overlays were last told, by instance id.
     readonly Dictionary<string, BuildingSnapshot> shownBuildings = new(StringComparer.Ordinal);
-    readonly HashSet<string> navBuildings = new(StringComparer.Ordinal);
+    readonly HashSet<string> navBuildings = new(StringComparer.Ordinal), litBuildings = new(StringComparer.Ordinal);
     readonly Dictionary<string, float> constructionLook = new(StringComparer.Ordinal);
     Dictionary<string, BuildingBuildData>? buildData;
 
@@ -68,6 +68,7 @@ sealed partial class GameHost
         {
             gpu.Objects?.RemoveRuntime(id);
             if (navBuildings.Remove(id)) nav?.RemoveRuntimeBuilding(id);
+            if (litBuildings.Remove(id)) gpu.Lamps?.RemoveRuntime(id);
             shownBuildings.Remove(id);
         }
         foreach (var site in current.Values)
@@ -76,14 +77,35 @@ sealed partial class GameHost
             if (shownBuildings.TryGetValue(site.Id, out var shown) && shown.Record == site.Record && shown.Position == site.Position && shown.Rotation == site.Rotation)
             {
                 if (site.Complete && !shown.Complete) AddToNavmesh(site, placement);   // newly complete
+                UpdateLamps(site);
                 shownBuildings[site.Id] = site;
                 continue;
             }
             if (shown is not null && navBuildings.Remove(site.Id)) nav?.RemoveRuntimeBuilding(site.Id);   // moved or changed: out, then in again
+            if (shown is not null && litBuildings.Remove(site.Id)) gpu.Lamps?.RemoveRuntime(site.Id);
             gpu.Objects?.AddRuntime(placement);
             AddToNavmesh(site, placement);
+            UpdateLamps(site);
             shownBuildings[site.Id] = site;
         }
+    }
+
+    /// <summary>
+    /// A building's lamps are lit while it is complete (docs/game/buildings-production.md "Construction tick": completing switches its lights on). Placed the way the world's
+    /// are (<see cref="WorldLights.FromPlaced"/>), without interior layouts: a player building has none.
+    /// </summary>
+    void UpdateLamps(BuildingSnapshot site)
+    {
+        if (gpu.Lamps is not { } lamps) return;
+        if (!site.Complete)
+        {
+            if (litBuildings.Remove(site.Id)) lamps.RemoveRuntime(site.Id);
+            return;
+        }
+        if (!litBuildings.Add(site.Id) || scene.Database is not { } db || db.Find(site.Record) is not { } record) return;
+        var placed = new List<PlacedLight>();
+        WorldObjectLayout.Building(db, record, site.Id, site.Position, site.Rotation, new BuildingState { Identity = site.Id }, placed);
+        lamps.SetRuntime(site.Id, placed.Select(p => WorldLights.FromPlaced(p, interior: false)));
     }
 
     /// <summary>
@@ -105,6 +127,8 @@ sealed partial class GameHost
     void ForgetBuildings()
     {
         gpu?.Objects?.ClearRuntime();
+        gpu?.Lamps?.ClearRuntime();
+        litBuildings.Clear();
         ForgetGroundItems();
         ForgetFarms();
         foreach (string id in navBuildings) nav?.RemoveRuntimeBuilding(id);
