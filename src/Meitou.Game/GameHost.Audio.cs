@@ -72,6 +72,7 @@ sealed partial class GameHost
             eye.Y - gpu.Terrain.HeightAt(eye.X, eye.Z), realSeconds);
         UpdateWorldAudio(audio, target, eye);
         UpdateCharacterAudio(audio, eye);
+        UpdateTurretAudio(audio, eye, realSeconds);
     }
 
     /// <summary>The audio sliders changed in the settings menu: they apply at once.</summary>
@@ -93,6 +94,7 @@ sealed partial class GameHost
         audio.Ambience.Silence();
         ResetWorldAudio();
         ResetCharacterAudio();
+        ResetTurretAudio();
         audio.Music.StartMainTheme();
     }
 

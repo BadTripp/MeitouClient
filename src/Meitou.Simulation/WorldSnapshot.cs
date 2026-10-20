@@ -131,6 +131,8 @@ public sealed record CharacterSnapshot(CharacterId Id, CharacterAppearance? Appe
     public float? StealthKoChance { get; init; }
     /// <summary>In a cage: whether it is locked and the sentence (null: not imprisoned).</summary>
     public PrisonView? Prison { get; init; }
+    /// <summary>The town turret this character stands at the gun of (the AI's turret goals, arrived and idle); null when it mans none. Read-only, for the host's turret sounds.</summary>
+    public MannedTurret? Turret { get; init; }
     /// <summary>The hostile NPCs that noticed or detected this sneaking player character in the last 4 s.</summary>
     public IReadOnlyList<WatcherView> Watchers { get; init; } = [];
     /// <summary>
@@ -145,6 +147,9 @@ public sealed record CharacterSnapshot(CharacterId Id, CharacterAppearance? Appe
 /// to be released), <see cref="HoursLeft"/> what remains of it; <see cref="Bail"/> the bail offered for it (<see cref="Crime.ArrestSystem.BailFor"/>; null: none).
 /// </summary>
 public readonly record struct PrisonView(bool Locked, float Sentence, double HoursLeft, int? Bail = null);
+
+/// <summary>A turret building being manned (<see cref="CharacterSnapshot.Turret"/>): its <see cref="Meitou.Data.World.TownBuilding"/> key and BUILDING record, where it stands and faces (0 along +Z, turning towards +X) and its GUN_DATA record.</summary>
+public sealed record MannedTurret(string Key, string BuildingId, Vector3 Position, float Yaw, string GunId);
 
 /// <summary>The trained stats the HUD shows for the selection.</summary>
 public readonly record struct SkillSummary(float Attack, float Defence, float Dodge, float Toughness, float Strength, float Athletics);

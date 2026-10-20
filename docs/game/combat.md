@@ -85,6 +85,10 @@ branches differ from carried crossbows. Player/NPC targeting and friendly-fire t
 separate eligibility. The retained field/constant tables and expression list specify decoded
 values; trajectory, aim timing and obstruction uncertainties remain labelled.
 
+Turret aim (**Verified**, `TurretBuilding::vfunc_28` `140434b70`, `RotatingEnt::vfunc_2`): the turning parts are the BUILDING_PART records with `rotation function` 5; each turns toward the aim point by its angular error
+(yaw about Y, or pitch) limited to ±GUN_DATA `aim speed` × efficiency × frame time, one after the other down the part chain. Movement and its sound counter: [audio.md](../audio.md#other-world-side-events).
+**Unknown:** which target a manned turret picks (`FUN_140437f40`), its idle behaviour, and the wall bonus to the turning speed. Meitou turns turrets only for sound (display only, nearest hostile in `range`; no firing or damage model).
+
 ## Stealth knock-out
 
 Order 228 "Stealth KO" (verb list `FUN_14079b2d0`), `Task_StealthKO` (vtable slots `FUN_140345eb0` start,
@@ -196,7 +200,7 @@ below is what the engine uses.
 
 The ranged-or-melee switch; what sets the trigger flag (the time between the decision and the shot); the reload animation against the timer; a character's hit shape
 (capsule or ragdoll) and whether downed bodies stop bolts; whether the crossbow's bleed and target multipliers and the armour's `ranged skill mult` do anything; turret
-aiming and states; how NPC crossbowmen get their bolts.
+target choice and states; how NPC crossbowmen get their bolts.
 
 ## Unknowns
 
@@ -204,7 +208,7 @@ aiming and states; how NPC crossbowmen get their bolts.
 - Attacker-side technique choice (which technique an attacker starts, using min/max skill, encumbrance, distance); whether `140887970` tests min/max skill. Attack-slot AI (`14060a9e0` and neighbours), aggression,
   stance and target selection. The bluntBase of non-blunt-dominant weapons; the stat that scales max blood; the part `+0x28` link.
 - The role of the class-table columns 4-6 (athletics, combat speed, stealth is an inference) and of the slot-adjusted factor (armour item field index 0x5d) in `140898e90`.
-- Turrets (aiming and states; see [Ranged and turrets](#ranged-and-turrets) for what is known and its own unknowns); the meaning of the weight/price-like armour table fields; the remaining difficulty floats beyond the dialog bindings listed above (their consumers).
+- Turrets (target choice and states; see [Ranged and turrets](#ranged-and-turrets) for what is known and its own unknowns); the meaning of the weight/price-like armour table fields; the remaining difficulty floats beyond the dialog bindings listed above (their consumers).
 - Whether the +20 guarding state of the block chance is the state the HUD's Block stance sets ([ui-screens.md](ui-screens.md#4-hud-mainbargui)).
 - What `anim hesitate point` (stored as a frame fraction, no reader found) and `max encumbrance` do; what reads the stumble's `+0x128` = 0.85; where `min cut damage mult` x the manufacturer's `min cut damage` is applied (the engine floors the cut at it); the term shapes of the fist damage (the engine takes half the stat each). The engine's answers are in [simulation.md](../simulation.md#combat).
 - Whether the decompiled maths matches in-game numbers: nothing has been compared in play.
