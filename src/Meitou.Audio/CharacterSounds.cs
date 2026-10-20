@@ -77,7 +77,7 @@ public enum CharacterLoop : byte { None, Build, Medic, Unlock }
 /// <list type="bullet">
 /// <item>An event is posted on the character's object and dropped when the character is farther from the camera than its limit (squared 1,000,000 = 1000 units; footsteps 40,000 = 200).</item>
 /// <item>A footstep (an event named exactly <c>Footsteps</c>, no switch override) sets <c>Armor_Worn</c> to the body armour's material first.</item>
-/// <item>While a character moves, <c>Surface_Material</c> follows the ground (every 120,000 squared units of camera distance or less; under height 100 it is <c>Water</c>), barefoot races use the <c>BFoot_</c> names.</item>
+/// <item>While a character moves, <c>Surface_Material</c> follows the ground (every 120,000 squared units of camera distance or less; under height 100 it is <c>Water</c>; a building's floor under the foot names its own material), barefoot races use the <c>BFoot_</c> names.</item>
 /// <item><c>Movement_Speed</c> is the speed in units per second, set within 1000 units.</item>
 /// </list>
 /// Characters beyond <see cref="TrackRadius"/> have no object (the exe keeps one for every loaded character; nothing farther than 1000 units is ever heard).
@@ -119,6 +119,8 @@ public sealed class CharacterSounds
         public CharacterSoundProfile Profile = null!;
         public int Frame;
         public int Surface = -1;
+        public Vector3? FloorPoint;
+        public int FloorResult;
         public float Speed = -1;
         public double NextPassive;
         public bool Down;
@@ -151,6 +153,12 @@ public sealed class CharacterSounds
     public int Voices { get; private set; }
     public int Jobs { get; private set; }
     public int Objects => entries.Count;
+
+    /// <summary>
+    /// The GroundType of the building floor under a character's feet, or -1 when the ground is not a building's (then the terrain's overlay decides): the host's lookup of what the
+    /// game's ground ray hits (docs/audio.md "Surface"). Asked for a moving character within <see cref="SurfaceLimit"/>, again only after it moved a unit.
+    /// </summary>
+    public Func<Vector3, int>? Floor { get; init; }
 
     public CharacterSounds(WwisePlayer player, GroundSurfaces? ground)
     {
@@ -247,14 +255,27 @@ public sealed class CharacterSounds
     {
         int surface;
         if (position.Y < WaterHeight) surface = GroundSurfaces.Water;
-        else if (d2 < SurfaceLimit && ground is not null) surface = ground.At(position.X, position.Z);
+        else if (d2 < SurfaceLimit)
+        {
+            // A building's floor under the foot names its own material; anywhere else the terrain's overlay does.
+            surface = BuildingFloor(e, position);
+            if (surface < 0 && ground is not null) surface = ground.At(position.X, position.Z);
+        }
         else return;
-        if (surface < 0) return;
+        if (surface < 0 || surface >= Shoes.Length) return;   // still loading; or a type past the table (a building's material 9: the exe reads past its name table, Unknown)
         bool bare = e.Profile.Barefoot;
         int packed = surface | (bare ? 0x100 : 0);
         if (e.Surface == packed) return;
         e.Surface = packed;
         player.SetSwitch("Surface_Material", SurfaceName(surface, bare), e.Object);
+    }
+
+    int BuildingFloor(Entry e, Vector3 position)
+    {
+        if (Floor is null) return -1;
+        if (e.FloorPoint is { } at && Vector3.DistanceSquared(at, position) < 1) return e.FloorResult;
+        e.FloorPoint = position;
+        return e.FloorResult = Floor(position);
     }
 
     void ProcessLayers(Entry e, ReadOnlySpan<SoundLayer> layers, float d2)

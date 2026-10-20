@@ -739,6 +739,12 @@ public sealed unsafe partial class WorldObjectRenderer : IDisposable
         return best;
     }
 
+    /// <summary>
+    /// The GroundType a character at <paramref name="feet"/> stands on when the floor under it is a building's: its <c>interior material</c> when <paramref name="inside"/> (the
+    /// character is in a building), else its <c>exterior material</c>; -1 when the ground is not a building's or its floors are still being made (docs/audio.md "Surface").
+    /// </summary>
+    public int FloorMaterialUnder(Vector3 feet, bool inside) => objects.Floors.MaterialUnder(feet, inside);
+
     /// <summary>The loaded mask of a building or one of its layout objects (building id / item id).</summary>
     internal InteriorVolume? InteriorFor(string placementId)
     {

@@ -220,10 +220,19 @@ through one helper (`FUN_1405c9a70(char, event, maxSqDist)`): **dropped when the
   object first) and `stop` (posted when the animation ends). Only the highest-weight animation that has events fires them (`FUN_1405b5c30`); the cursor (`FUN_140064690`) fires
   the events between the last and the current fraction, the rest of the pass when the clip wraps, and everything up to the fraction at once when an animation becomes the dominant one.
   An event named exactly `Footsteps` with no override first sets `Armor_Worn` to the body armour's `material type` (Cloth, Leather, Chain, Plate; the heaviest body-slot item, `FUN_1405d28b0`).
-- **Surface.** While a character moves, `Surface_Material` follows the ground: under height 100 `Water`; else the BIOMES record under the point (biome map pixel, five bytes: ground, slope, grass, dirt, road
-  type) picks by the overlay map's channels at that point (A above `0xA0` road, B dirt, G or R grass, else ground). GroundType 0..8 names Sand, Grass, Concrete, Wood, Metal, Water, Mud, Snow, Dirt; a
-  RACE with `barefoot` and no boots uses `BFoot_Sand`, `BFoot_Grass`, `BFoot_Wood`, `BFoot_Metal`, `BFoot_Dirt` for those (the rest are shared). **Unknown:** Wood and Metal floors of buildings (the exe asks the floor
-  under the foot; Meitou has only the overlay), so indoors Sand/Concrete/etc. come from the terrain.
+- **Surface** (`CharMovement::vfunc_11` calls `FUN_14065df80` while a character moves; `FUN_1405cafc0` sets the switch, `FUN_140a08c70` names it). **Verified** unless marked. GroundType 0..8 names Sand, Grass,
+  Concrete, Wood, Metal, Water, Mud, Snow, Dirt; a RACE with `barefoot` and no boots uses `BFoot_Sand`, `BFoot_Grass`, `BFoot_Wood`, `BFoot_Metal`, `BFoot_Dirt` for those (the rest are shared). The name table has no bound:
+  a type past 8 reads beyond it (**Unknown**; one record, `Bridgehead`, has `interior material` 9). In order:
+  1. Height under 100: `Water`.
+  2. The ground ray (`FUN_14065f160`, run for the movement: from 20 units above the character straight down) leaves the hit's collision group and the hit object's handle on the movement. Its masks are `0x7de04` (groups 2,
+     9..12, 14, 15..18) when the character is in no building and `0x7f9e00` (groups 9..12, 15..22; no terrain or foliage) when it is in one. The terrain can override a lower hit (**Observed**; gated by a character flag at `+0x1a9` and, in a building, a building property via vfunc `0x330`; not decoded). Group 2 (the terrain,
+     **Observed**): the BIOMES record under the point (biome map pixel, five bytes: ground, slope, grass, dirt, road type) picks by the overlay map's channels at that point (A above `0xA0` road, B dirt, G or R grass, else
+     ground), only within ~346 units of the camera (squared 120,000).
+  3. Any other group: when the hit object is a BUILDING (handle type 0; any other object, such as a foliage one, leaves the switch as it was), the building's `exterior material` (`FUN_14029e0c0` reads both fields into
+     the building, `+0x220`) when the character is in no building (its place handle, `CharacterAnimal::vfunc_59`, is the null handle, type `0xb`), else its `interior material` (`+0x21c`). Both are GroundType BUILDING
+     fields (fcs.def defaults: interior Wood, exterior Concrete) and belong to the whole building, not to the part hit. No distance limit on this branch.
+  Base game, all 603 BUILDINGs set both (interior/exterior): Wood/Concrete 412, Metal/Metal 131, Wood/Wood 21, Mud/Metal 13, Wood/Metal 6, Concrete/Concrete 6, Dirt/Mud 5 (hive), Water/Metal 2, Dirt/Dirt 3, Metal/Concrete 1,
+  and three odd ones (Sand inside: `Carpet`, `Weird Crate`; 9 inside: `Bridgehead`). The 58 with an indoor hull: Wood/Concrete 36, Metal/Metal 12, Concrete/Concrete 6, Dirt/Mud 2, Metal/Concrete 1, Wood/Wood 1.
 - **Weapons switch** (set on the object when it equips; table indexed by WEAPON `skill category`): Katanas, Sabres, Blunt, Heavy, Hackers, (unarmed: none), Bow, Turret, Blunt. The bank's values are `Katanas`,
   `Sabres`, `Hackers`, `Heavy_Weapons` and so on, so **Observed (names compared, not heard):** the exe's `Blunt`, `Heavy`, `Bow` select nothing and those weapons' swings are silent in the original; Meitou keeps that.
   Animals set `Weapons` to their creature name and `Creature_VO` to it too.
@@ -246,6 +255,15 @@ Meitou (`CharacterSounds`, `AnimationSoundEvents`, `GroundSurfaces` in `Meitou.A
 the host hands each character's place, facing, speed (horizontal distance between the last two snapshots over the tick) and animation layers (`AnimationLayer.Length` and `.Definition`, added to the snapshot) every frame.
 Combat facts come from `World.Sounds`, a display-only queue the host sets while audio runs (blocks, hits, shots, bolt hits and sticks, characters going down, fighters taking up a fight); nothing in the simulation reads it, so
 it is outside the state hash. Overlay tiles for the ground load on a worker (6 kept).
+
+Building floors in Meitou (`BuildingFloors` in `Meitou.Rendering`, `FloorSurfaces.HighestBelow`, `CharacterSounds.Floor`, `GameHost.AudioFloors.cs`; display only, nothing reaches the simulation). For a moving character within the
+surface limit (120,000 squared; the exe has none for buildings, but footsteps sound only within 200 units), asked again after it moved a unit: the placed, undestroyed BUILDINGs of the zones within 400 units (X/Z of the building's
+position) are listed on a worker; a building's floor collision (`FloorSurfaces.For`: ordinary and stairs parts, groups 9..12 and 15..18) is made on a worker when a character first comes within 400 units. The highest floor
+triangle under the feet and at most 20 above them is the hit, taken when within 4 units below the feet (engine choice: the sim stands on the navigation mesh); the highest across buildings wins. The character is "in a
+building" when the renderer's indoor hull test (`InteriorAt`, margin 2) holds, else outdoors. A hit gives the building's `interior material` or `exterior material`; no hit, or the floors not made yet, leaves the terrain overlay
+(and a material past 8 changes nothing). Differences from the exe (**Observed**, engine choices): the terrain override above is not implemented (a floor slab at or just below the terrain, within the 4 units, gives the building's material where the exe may say terrain); destroyed buildings are left out (the exe hits their `destroyed collision`); buildings under construction count as finished (the exe shifts their parts to the passable groups until built); furniture (groups 19..22, in the indoor mask) is not
+a floor, and terrain showing through holes in an indoor floor falls to the overlay (the exe's indoor ray has no terrain bit); walkable foliage outdoors uses the overlay (the exe leaves the switch unchanged); a building
+whose floor lies farther than 400 units from its position is missed at that distance; the first steps near a building not yet loaded use the overlay.
 
 Task sounds in Meitou (`CharacterLoop`, `CharacterSounds.Job` / `.Carried`; `GameHost.AudioCharacters.cs`). The snapshot carries the movement task, whether a lock is being picked and whether the character is in a bed (read-only, outside the hash):
 `Task.Build` is the `Character_Build_Loop_Start` / `_Stop` loop, `Task.Treat` the `Character_Medic_*` loop, a lock being picked or shackles being picked or cut (`WorkingShackles`; not while walking to it) the `Character_Unlock` loop (a change of job stops the old loop first, with `Character_Unlock_Fail`, the exe's bare Stop; a character that gets its object mid-job starts it
@@ -421,7 +439,7 @@ Open for the next wave: which event each game action posts and on which object, 
 
 ### Not done
 
-The emitters of effects, spiders, foliage and map features, machines (nothing calls `WorldEmitters.SetPower`, so the emitters that need power stay silent), turret and wall-break sounds (nothing in Meitou triggers them), the callers that post effects, building floors as footstep surfaces, the task and interface sounds whose trigger Meitou lacks (listed under [Characters](#characters-footsteps-combat-voices) and [Interface](#interface)) (the engine is ready:
+The emitters of effects, spiders, foliage and map features, machines (nothing calls `WorldEmitters.SetPower`, so the emitters that need power stay silent), turret and wall-break sounds (nothing in Meitou triggers them), the callers that post effects, the task and interface sounds whose trigger Meitou lacks (listed under [Characters](#characters-footsteps-combat-voices) and [Interface](#interface)) (the engine is ready:
 [API](#api-for-event-sources)), voice limits, obstruction and occlusion (the game uses none), the radio, serial effect slots and the cone as Wwise draws it, and unloading ambience
 banks left behind (they stay loaded: about 5 to 14 MB of Ogg each; the music banks unload as above).
 
