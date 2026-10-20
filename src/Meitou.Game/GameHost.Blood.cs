@@ -32,6 +32,7 @@ sealed partial class GameHost
     /// <summary>Makes the store and the renderer when the install's <c>Blood</c> setting is on (missing: on).</summary>
     void SetUpBlood(GpuContext context)
     {
+        gpu.Debris ??= new DebrisRenderer(context, gpu.Objects?.Resolver, assets.Find);   // made now: its shaders compile here, not at the first burst
         if (gpu.Decals is not null || AudioSystem.Setting(install, "Blood", 1) == 0) return;
         var files = BloodTextureFiles(assets.Configured);
         decalStore = new TerrainDecalStore([.. files.Select(list => (IReadOnlyList<(int, int)>)[.. list.Select(DdsSize)])]);
@@ -41,15 +42,30 @@ sealed partial class GameHost
         gpu.DecalStore = decalStore;
     }
 
-    /// <summary>Once a frame: the marks of the ticks since the last frame into the store, and the decals aged by the game time they took.</summary>
+    /// <summary>
+    /// Once a frame: luckyren Mode handed to the world, the marks of the ticks since the last frame into the store (bursts thrown), and the decals aged and the
+    /// pieces moved by the game time they took.
+    /// </summary>
     void UpdateBlood()
     {
-        if (decalStore is not { } store || gpu.Decals is not { } decals) return;
         var world = session.World;
+        world.Luckyren = config.LuckyrenMode;
+        if (decalStore is null && !config.LuckyrenMode && pieces.Count == 0)
+        {
+            world.BloodMarks = null;
+            return;
+        }
         if (!ReferenceEquals(bloodFor, world)) BloodForNewWorld(null);
+        world.BloodMarks = bloodQueue;
         float tick = world.TickSeconds;
         while (bloodQueue.TryDequeue(out var m))
         {
+            if (m.Kind == BloodMarkKind.Explosion)
+            {
+                Burst(m, world);
+                continue;
+            }
+            if (decalStore is not { } store) continue;
             if (m.Position.Y > gpu.Terrain.HeightAt(m.Position.X, m.Position.Z) + BloodAboveGround) continue;
             uint opaque = 0xFF000000 | Abgr(m.Colour);
             long who = (long)(uint)m.Who.Slot << 32 | (uint)m.Who.Generation;
@@ -65,7 +81,8 @@ sealed partial class GameHost
         }
         long ticks = world.Tick - bloodTick;
         bloodTick = world.Tick;
-        if (ticks > 0) store.Age(ticks * tick, decals.Drawn);
+        if (ticks > 0 && decalStore is { } aging && gpu.Decals is { } decals) aging.Age(ticks * tick, decals.Drawn);
+        UpdateDebris(world, Math.Max(ticks, 0) * tick);
     }
 
     /// <summary>
@@ -74,13 +91,15 @@ sealed partial class GameHost
     /// </summary>
     void BloodForNewWorld(FcsRecord? saved)
     {
-        if (decalStore is not { } store) return;
         var world = session.World;
-        store.Clear();
+        pieces.Clear();
+        gpu.DebrisPieces.Clear();
         bloodQueue.Clear();
-        world.BloodMarks = bloodQueue;
         bloodFor = world;
         bloodTick = world.Tick;
+        if (decalStore is not { } store) return;
+        store.Clear();
+        world.BloodMarks = bloodQueue;
         if (saved is not null) store.Load(SaveDecals.Read(saved));
     }
 

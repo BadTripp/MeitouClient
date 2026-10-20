@@ -29,6 +29,8 @@ public sealed unsafe partial class WorldObjectRenderer : IDisposable
     readonly ObjProg colourProg, solidProg, depthProg;   // the colour, the colour without a discard (EarlyDepth) and the depth (shadow caster) programs, native
     readonly WorldTextureCache textureCache;
     readonly MaterialResolver resolver;
+    /// <summary>Finds the textures of a mesh's parts (the <see cref="DebrisRenderer"/> shares it).</summary>
+    public MaterialResolver Resolver => resolver;
     readonly UploadQueue uploads = new();
     readonly ObjectMeshCache meshes;
     readonly ObjectStreamer streamer;
