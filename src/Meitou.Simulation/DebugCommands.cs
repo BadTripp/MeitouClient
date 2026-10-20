@@ -29,7 +29,7 @@ public sealed record DebugDamage(IReadOnlyList<CharacterId> Characters, float Cu
 /// </summary>
 public sealed record DebugGiveItem(CharacterId Character, string Record, int Quantity, int Quality = 0) : DebugCommand
 {
-    /// <summary>The record types whose items have a quality (grade).</summary>
+    /// <summary>The record types whose items have a quality (grade): armour's is <see cref="Items.ItemInstance.Quality"/>, the others' the <see cref="Items.ItemInstance.Level"/> their stats read (no maker or model).</summary>
     public static readonly FcsRecordType[] QualityTypes = [FcsRecordType.WEAPON, FcsRecordType.ARMOUR, FcsRecordType.CROSSBOW, FcsRecordType.LIMB_REPLACEMENT];
 
     /// <summary>The record types an item can be made from.</summary>
@@ -88,7 +88,8 @@ static class DebugCheats
             case DebugGiveItem give when data is not null:
                 if (!table.TryResolveNext(give.Character, out int owner) || table.Cold(owner)?.Inventory is not { } inventory) break;
                 if (data.Items.Create(give.Record, give.Quantity) is not { } item) { world.Post($"No item record {give.Record}."); break; }
-                if (DebugGiveItem.QualityTypes.Contains(item.Type)) item.Quality = Math.Clamp(give.Quality, 0, 100);
+                if (item.Type == FcsRecordType.ARMOUR) item.Quality = Math.Clamp(give.Quality, 0, 100);
+                else if (DebugGiveItem.QualityTypes.Contains(item.Type)) item.Level = Math.Clamp(give.Quality, 0, 100);
                 if (inventory.Add(item)) break;
                 world.GroundItems.Drop(item, table.Next[owner].Position, 0);
                 world.Post($"{item.Quantity} x {item.Name} did not fit; dropped on the ground.");
