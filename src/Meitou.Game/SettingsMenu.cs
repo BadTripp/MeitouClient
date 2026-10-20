@@ -94,7 +94,7 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
         }
     }
 
-    static string Label(string label) => Regex.Replace(label.Split('(')[0].Trim(), @"\s+0-\d+.*$", "")
+    internal static string Label(string label) => Regex.Replace(label.Split('(')[0].Trim(), @"\s+0-\d+.*$", "")
         .Replace(" x", " multiplier", StringComparison.Ordinal).Replace(": error px", "", StringComparison.Ordinal);
 
     static string Section(Slider s)

@@ -40,6 +40,11 @@ foreach ($project in @("src/Meitou.Game/Meitou.Game.csproj", "tools/Meitou.Model
 # The Unix runtime packs carry native debug symbols (*.dbg, *.dwarf, *.dSYM; ~250 MB) for binaries Satori partly replaces: not shipped.
 Get-ChildItem $stage -Recurse -Include *.dbg, *.dwarf, *.dSYM | Remove-Item -Recurse -Force
 
+# The settings the launcher's Graphics page shows, under the names this build saves them (docs/launcher.md "Graphics"). The file is the same
+# for every runtime, so the host's own build writes it: the staged exe may be for another one.
+dotnet run --project (Join-Path $root "src/Meitou.Game/Meitou.Game.csproj") -c Release -- --settings-schema (Join-Path (Resolve-Path $stage) "settings-schema.json")
+if ($LASTEXITCODE -ne 0) { throw "writing settings-schema.json failed" }
+
 function Get-Archive([string] $url) {
     $file = Join-Path $Cache ([IO.Path]::GetFileName($url))
     if (-not (Test-Path $file)) {
@@ -68,9 +73,9 @@ if ($windows) {
     # The viewer loads Streamline only when started with DLSS chosen (the game loads it on every startup).
     Set-Content -Path (Join-Path $stage "meitou-viewer-dlss.bat") -Encoding ASCII -Value "@`"%~dp0meitou-viewer.exe`" --world --town `"The Hub`" --upscaler dlss %*`r`n@if errorlevel 1 pause"
 
-    # NVIDIA Streamline 2.14.1 (the headers src/Meitou.Rendering/Upscalers/Streamline.cs follows): the production (signed) plugins of bin/x64,
+    # NVIDIA Streamline 2.14.16 (the headers src/Meitou.Rendering/Upscalers/Streamline.cs follows): the production (signed) plugins of bin/x64,
     # not bin/x64/development, and the DLSS runtime. Loaded next to the exe (Streamline.cs).
-    $sl = Get-Archive "https://github.com/NVIDIA-RTX/Streamline/releases/download/v2.14.1/streamline-sdk-v2.14.1.zip"
+    $sl = Get-Archive "https://github.com/NVIDIA-RTX/Streamline/releases/download/v2.14.16/streamline-sdk-v2.14.16.zip"
     Copy-Entries $sl @("bin/x64/sl.interposer.dll", "bin/x64/sl.common.dll", "bin/x64/sl.dlss.dll", "bin/x64/nvngx_dlss.dll", "bin/x64/NvLowLatencyVk.dll") $stage
     Copy-Entries $sl @("license.txt", "3rd-party-licenses.md", "bin/x64/nvngx_dlss.license.txt", "bin/x64/reflex.license.txt") (Join-Path $stage "licenses/NVIDIA") "streamline-"
 
@@ -158,6 +163,7 @@ Set-Content -Path (Join-Path $stage "README.txt") -Value $readme -Encoding UTF8
 
 $zipPath = Join-Path $Output "$name.zip"
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+if (-not (Test-Path (Join-Path $stage "settings-schema.json"))) { throw "settings-schema.json missing from $stage" }
 foreach ($program in $game, "meitou-viewer") {
     if (-not (Test-Path (Join-Path $stage "$program$exe"))) { throw "$program$exe missing from $stage" }
 }

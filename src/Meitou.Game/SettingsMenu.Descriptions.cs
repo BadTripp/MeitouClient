@@ -5,7 +5,9 @@ namespace Meitou.Game;
 
 sealed partial class SettingsMenu
 {
-    static string SliderHint(Slider slider) => Label(slider.Label) switch
+    static string SliderHint(Slider slider) => SliderHint(slider.Label);
+
+    internal static string SliderHint(string label) => Label(label) switch
     {
         "VSync" => "Match the display refresh rate to prevent tearing.",
         "Full screen" => "Fill the monitor with a borderless game window.",
@@ -47,7 +49,7 @@ sealed partial class SettingsMenu
         "Hybrid tone map: ACES share" => "Blend more ACES into the hybrid tone mapping curve.",
         "Heat haze strength" => "Scale the distortion caused by hot air.",
         "Night grading strength" => "Adjust the blue shift of colours in low light.",
-        _ => $"Adjust {Label(slider.Label).ToLowerInvariant()}.",
+        _ => $"Adjust {Label(label).ToLowerInvariant()}.",
     };
 
     static string ToggleHint(string label) => label switch

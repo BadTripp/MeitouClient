@@ -897,6 +897,9 @@ static class WorldFrame
     public const string FilteringSlider = "Anisotropic filtering (texture filtering)";
     public const string TextureQualitySlider = "Texture quality 0-4 (game)";
     public static readonly string[] ParticleSliders = ["Weather particles: 0 off 1 quarter 2 half 3 auto 4 full", "Particle density x"];
+    // More labels the launcher's settings schema names (they are the meitou.user.json keys too).
+    public const string ObjectDistanceSlider = "Object draw distance", GrassDensitySlider = "Grass density x", WaterReflectionSlider = "Water reflection 0-4 (game)",
+        ShadowDistanceSlider = "Shadow distance (game 1k-9k, 0 off)", ShadowMapSlider = "Shadow map size (game quality 0-2)";
     /// <summary>The weather particles slider's position for the renderer's state: 0 off, 1 quarter, 2 half, 3 by sprite size (auto), 4 full size.</summary>
     public static int WeatherParticlesSlider(bool weatherOn, PostOptions o) =>
         !weatherOn ? 0 : !o.LowResParticles || o.ParticleDivisor == 1 ? 4 : o.ParticleDivisor switch { 4 => 1, 2 => 2, _ => 3 };
@@ -967,7 +970,7 @@ static class WorldFrame
             sliders.Add(new Slider("Full screen", 0, 1, () => getFullScreen() ? 1 : 0, v => { if (v >= 0.5f != getFullScreen()) setFullScreen(v >= 0.5f); }, Text: v => v >= 0.5f ? "borderless" : "window"));
         if (g.Objects is { } objects)
         {
-            sliders.Add(new Slider("Object draw distance", 1000, 400000, () => objects.ObjectDistance, v => objects.ObjectDistance = v, "0", Logarithmic: true,
+            sliders.Add(new Slider(ObjectDistanceSlider, 1000, 400000, () => objects.ObjectDistance, v => objects.ObjectDistance = v, "0", Logarithmic: true,
                 Faithful: Enhancements.FaithfulObjectDistance, Meitou: Enhancements.MeitouObjectDistance));
             if (objects.HasLandmarks)
                 sliders.Add(new Slider("Landmark distance (Meitou)", 1000, 400000, () => objects.LandmarkDistance, v => objects.LandmarkDistance = MathF.Round(v / 100) * 100, "0", Logarithmic: true));
@@ -989,12 +992,12 @@ static class WorldFrame
             sliders.Add(new Slider("Medium foliage range", 400, 80000, () => foliage.MediumRange, v => foliage.MediumRange = MathF.Round(v / 50) * 50, "0", Logarithmic: true));
             sliders.Add(new Slider("Small foliage range", 200, 40000, () => foliage.SmallRange, v => foliage.SmallRange = MathF.Round(v / 50) * 50, "0", Logarithmic: true));
             sliders.Add(new Slider("Grass draw distance x", 0.25f, 80, () => foliage.GrassRangeSetting, v => foliage.GrassRangeSetting = v, "0.00", Logarithmic: true));
-            sliders.Add(new Slider("Grass density x", 0.1f, 2, () => foliage.GrassDensitySetting, v => foliage.GrassDensitySetting = v, "0.00"));
+            sliders.Add(new Slider(GrassDensitySlider, 0.1f, 2, () => foliage.GrassDensitySetting, v => foliage.GrassDensitySetting = v, "0.00"));
         }
         // The game's `water reflection` (0 off .. 4 everything) and `reflection range` (x the haze distance), docs/formats/settings.md.
         if (g.Reflection is { } reflection)
         {
-            sliders.Add(new Slider("Water reflection 0-4 (game)", 0, 4, () => reflection.Level, v => reflection.Level = (int)MathF.Round(v), "0",
+            sliders.Add(new Slider(WaterReflectionSlider, 0, 4, () => reflection.Level, v => reflection.Level = (int)MathF.Round(v), "0",
                 Text: v => (int)MathF.Round(v) switch { 0 => "0 off", 1 => "1 landscape", 2 => "2 characters", 3 => "3 buildings", _ => "4 everything" }));   // the label is the user config key: keep it
             sliders.Add(new Slider("Reflection range x (game 0.6)", 0.1f, 50, () => reflection.Range, v => reflection.Range = v, "0.00", Logarithmic: true));
         }
@@ -1015,13 +1018,13 @@ static class WorldFrame
         if (g.Shadow is { } shadow)
         {
             const float off = KenshiShadows.MinRange * 0.9f;
-            sliders.Add(new Slider("Shadow distance (game 1k-9k, 0 off)", off, 200000, () => shadow.Enabled ? shadow.Settings.Range : off, v =>
+            sliders.Add(new Slider(ShadowDistanceSlider, off, 200000, () => shadow.Enabled ? shadow.Settings.Range : off, v =>
             {
                 shadow.Enabled = v >= KenshiShadows.MinRange;
                 if (shadow.Enabled) shadow.Settings = shadow.Settings with { Range = MathF.Round(v / 100) * 100 };
             }, "0", Logarithmic: true, Text: v => shadow.Enabled ? v.ToString("0", CultureInfo.InvariantCulture) : "0 (off)", Faithful: 5000, Meitou: Enhancements.MeitouShadowRange));
             // The game's `shadow quality` (--shadow-quality): the atlas is made again at the new side on the next frame.
-            sliders.Add(new Slider("Shadow map size (game quality 0-2)", 0, 2, () => Array.IndexOf(KenshiShadows.QualitySizes, shadow.Settings.MapSize),
+            sliders.Add(new Slider(ShadowMapSlider, 0, 2, () => Array.IndexOf(KenshiShadows.QualitySizes, shadow.Settings.MapSize),
                 v => shadow.Settings = shadow.Settings with { MapSize = KenshiShadows.MapSize((int)MathF.Round(v)) }, "0",
                 Text: v => KenshiShadows.MapSize((int)MathF.Round(v)).ToString(CultureInfo.InvariantCulture) + "²"));
             if (shadow.Meitou) sliders.Add(new Slider("Shadow filter 0-2 (Meitou; 0 low-end)", 0, 2, () => shadow.FilterQuality, v => shadow.FilterQuality = (int)MathF.Round(v), "0"));

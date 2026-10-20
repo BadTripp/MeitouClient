@@ -108,9 +108,15 @@ public sealed class GameInstall
     /// Writes <c>meitou.local.json</c> with <paramref name="root"/> into <paramref name="directory"/>, so <see cref="Locate"/> finds the
     /// install next time (a release's first start asks for the folder and keeps it this way).
     /// </summary>
-    public static void SaveLocalConfig(string directory, string root) =>
-        File.WriteAllText(Path.Combine(directory, LocalConfigFile),
-            JsonSerializer.Serialize(new Dictionary<string, string> { ["kenshiPath"] = Path.GetFullPath(root) }, new JsonSerializerOptions { WriteIndented = true }));
+    public static void SaveLocalConfig(string directory, string root)
+    {
+        // Written by hand, not JsonSerializer: the launcher is Native AOT, where reflection-based serialization is unavailable.
+        using var file = File.Create(Path.Combine(directory, LocalConfigFile));
+        using var json = new Utf8JsonWriter(file, new JsonWriterOptions { Indented = true });
+        json.WriteStartObject();
+        json.WriteString("kenshiPath", Path.GetFullPath(root));
+        json.WriteEndObject();
+    }
 
     /// <summary>
     /// The Steam libraries on this machine: Steam's own folder (<c>SteamPath</c> in the user's registry) and every <c>"path"</c> in its

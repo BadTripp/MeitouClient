@@ -9,6 +9,8 @@ static class Program
     static int Main(string[] args)
     {
         GameConsole.AttachToParent();
+        // The launcher's settings description (package-release.ps1): no log, window or game files.
+        if (args is ["--settings-schema", var schema]) return LauncherSchema.Write(schema);
         GameConsole.StartLog();
         RenderJobs.RaiseRenderThread();
         GameOptions game;

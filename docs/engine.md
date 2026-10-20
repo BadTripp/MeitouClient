@@ -18,7 +18,7 @@ KenshiCamera follows pivot/boom/zoom/pitch/ground constraints from [camera](form
 Engine choices: pivot500*clamp(boom/600,0.1,1), keys1.5rad/s, mouse0.005rad/pixel; terrain-ground
 pivot rather than building support. Free-camera ; follows smoothed flight, exits at ground hit.
 InputState consumes events once per tick; commands apply at world boundaries, not UI callbacks.
-meitou.user.json persists fps/vsync/fullscreen/tickRate/simThreads/graphics/bindings; renderer
+meitou.user.json persists fps/vsync/fullscreen/tickRate/simThreads/graphics/bindings (layout and versioning: [launcher](launcher.md#graphics)); renderer
 settings and current key list belong in viewer. Quicksave F5/loadF9; cinematic F6/hideUI F7.
 
 ## Host and loading
@@ -126,7 +126,7 @@ Own GLSL compiles through bundled shaderc, explicit native resource/state record
 secondary jobs. [Native API](renderer-native.md).
 
 Single-sample jittered HDR reconstruction, separate near/far depth, unjittered reflection/shadows.
-FSR Vulkan SDK1.1.4 runtime DLL; Streamline2.14.1 manual hook, initialize before Vulkan, request
+FSR Vulkan SDK1.1.4 runtime DLL; Streamline2.14.16 manual hook, initialize before Vulkan, request
 features and proxy present. Bottom-up images require matching clip matrices/presentation.
 Vendor DLLs are not committed; paths/packaging/licensing: [notices](../THIRD_PARTY_NOTICES.md).
 Mip biases and temporal/GI contracts: [post](render-post.md). GI requested by default unless
