@@ -4,7 +4,7 @@
     <OutputType>WinExe</OutputType>
     <AssemblyName>meitou-launcher</AssemblyName>
     <RootNamespace>Meitou.Launcher</RootNamespace>
-    <Version>0.1.0</Version>
+    <Version>1.0.0</Version>
     <ApplicationIcon>../../assets/branding/meitou.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!-- Published as one Native AOT executable: the native libraries are embedded (below, NativeLibraries.cs), symbols stay out. -->
