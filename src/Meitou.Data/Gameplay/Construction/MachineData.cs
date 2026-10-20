@@ -17,7 +17,7 @@ public sealed record MachineData
     /// <summary>The game day at speed 1 in seconds, G (<b>Verified</b>, <c>FUN_14066cd50</c>): 24 x 1200/11.</summary>
     public const float DaySeconds = 24 * 1200f / 11f;
 
-    public const int MineFunction = 1, ResourceStorageFunction = 2, GeneralStorageFunction = 13, ResearchFunction = 3, RefineryFunction = 4, GeneratorFunction = 5, BatteryFunction = 23, NaturalMineFunction = 27;
+    public const int MineFunction = 1, ResourceStorageFunction = 2, GeneralStorageFunction = 13, ResearchFunction = 3, RefineryFunction = 4, GeneratorFunction = 5, ItemFurnaceFunction = 14, BatteryFunction = 23, RainCollectorFunction = 26, NaturalMineFunction = 27;
     /// <summary><c>MiningResource</c> WATER and GROUND (<b>Verified</b>, editor enum).</summary>
     public const int WaterResource = 5, GroundResource = 6;
 
@@ -67,6 +67,8 @@ public sealed record MachineData
     public int PowerOperators { get; init; }
     /// <summary>A wind generator: function 5 without <c>consumes</c> (<b>Observed</b>, the factory <c>FUN_14057cc70</c>).</summary>
     public bool IsWind { get; init; }
+    /// <summary>The BUILDING's raw <c>output rate</c> (the exe's <c>+0x1a8</c>), a factor of the efficiency its sound emitter is told (docs/audio.md "Point emitters"); 1 without one.</summary>
+    public float OutputRate { get; init; } = 1;
     public bool IsBattery => PowerCapacity > 0;
     public bool IsGenerator => PowerOutput > 0 && !IsBattery;
     public bool IsConsumer => PowerOutput < 0;
@@ -79,6 +81,12 @@ public sealed record MachineData
     public bool IsCrafting => Craft is not null;
     /// <summary>A building characters can operate.</summary>
     public bool Operable => IsResearch || Farm is not null || IsProducer || IsCrafting;
+    /// <summary>
+    /// Whether the exe's class updates its sound emitter every frame (<c>ProductionBuilding::vfunc_28</c>: mines, wells, refineries, generators, batteries, furnaces, rain collectors); the
+    /// others (benches, research, farms, anything else) power it once when built (<c>FarmBuilding::vfunc_72</c>). <b>Observed</b>: the class follows the function (the factory <c>FUN_14057cc70</c>).
+    /// </summary>
+    public bool PowersEmitterEachFrame => !IsCrafting && !IsResearch
+        && (Function == MineFunction ? Farm is null : Function is RefineryFunction or GeneratorFunction or ItemFurnaceFunction or BatteryFunction or RainCollectorFunction or NaturalMineFunction);
 
     public static MachineData? From(GameDatabase db, GameRecord building)
     {
@@ -142,6 +150,7 @@ public sealed record MachineData
             PowerCapacity = building.GetInt("power capacity"),
             PowerOperators = powerOperators,
             IsWind = wind,
+            OutputRate = building.GetFloat("output rate", 1),
         };
     }
 }

@@ -134,9 +134,24 @@ power, `FUN_140258260` destroys), the building set-up `FUN_14055c240`, its loade
   (zero orientation), `SetRTPCValue("Intensity")` only when `intensity × 100` is not 0, and `Start_Emitter` (Play/3, 500 ms fade); a stop is `Stop_Emitter` (Stop/3, 1 s). Destroying an emitter posts the stop and then
   stops everything on its object and unregisters it. With a base intensity of 0 the parameter is never sent for the object, so Wwise reads the **global** `Intensity` (the wind's, set by the weather) until a machine sets
   its own (**Observed**, from the code paths).
-- **Power.** An emitter starts unpowered. One that has `needs power` waits for `FUN_140258c20(efficiency, powered)`, which every production building calls each frame (powered = it has power and its efficiency is above 0);
-  that call also sets `Intensity` = efficiency × `efficiency multiplier` × 100 + `intensity` × 100 when the value changed, for an emitter in range. An emitter without `needs power` starts by distance alone. A building
-  finishing construction (`FarmBuilding::vfunc_72`) powers its emitter.
+- **Power.** An emitter starts unpowered. One that has `needs power` waits for `FUN_140258c20(efficiency, powered)`; it also sets `Intensity` = efficiency × `efficiency multiplier` × 100 + `intensity` × 100 when the value changed,
+  for an emitter in range. An emitter without `needs power` starts by distance alone. Only two places call it (**Verified**, the callers of `FUN_140258c20`; nothing else starts or stops an emitter but the distance update and the teardown):
+  - **Each frame**, `ProductionBuilding::vfunc_28` (the class of mines, wells, refineries, generators, batteries, wind generators, rain collectors and furnaces; skipped while the global flag `DAT_1421349c9` is set, **Unknown** what sets it):
+    efficiency = the building's slot 110, powered = `FUN_140299370` (has power) and efficiency above 0.
+  - **Once**, `FarmBuilding::vfunc_72` (finishing construction, and `Zones_BuildBuilding` for a building with nothing left to build): powered, efficiency = slot 108, only if the emitter exists and the building is not yet marked complete.
+    `FarmBuilding`, `CraftingBuilding` (the Medical Workbenches, Robotics and Skeleton Limb benches) and `ResearchBuilding` override `vfunc_28` without the call, as do other classes (the Peeler Machine), so their emitters are never told again.
+    At that moment nobody works them (efficiency 0), so the `Intensity` stays the base (0 is never sent, so the object hears the global wind `Intensity`) and the emitter plays whether or not the bench is used.
+    **Observed**: the order of `read_building_n3` (makes the emitter, only for a complete state) and this call is not traced for a building the player finishes; if the emitter comes second it is never powered.
+- **Efficiency** (the chain **Verified**, its meaning **Observed**): `FarmBuilding::vfunc_110` calls slot 108 for every class except `WindGeneratorBuilding`, which returns its turbine's animation value (`FUN_1404cbd90`, units **Unknown**).
+  Slot 108 = operators ÷ raw `max operators` (1 when that is 0) × slot 109 (health × granted ÷ demand of slot 163, 1 with no demand) × slot 119 (the yield `FarmBuilding::vfunc_92` × the BUILDING's raw `output rate` (`+0x1a8`, not the
+  `+0x1a4` one that includes `production mult`) × the research production multiplier). Nothing caps it (a drill with `output rate` 1.4 gives 140), so Wwise's curve limits it.
+  A generator's demand is 0, so its efficiency is health × `output rate` whatever its fuel or switch. A battery's demand is its rate while its charge is below capacity (efficiency = granted ÷ rate, negative while it drains), else 0.
+- **Has power** (`FUN_140299370`, **Verified** from the decompile): true for a pure generator (output above 0, no capacity) whatever its fuel or `power on` (**a generator with no fuel or switched off still hums**); true for a machine
+  drawing nothing (output plus research increase 0: wells, looms, silos, furnaces); else false when `power on` is off; else true if the town's generator output (`Town::vfunc_87`'s `+0x474`) is above 0, or the machine
+  `gets battery`, the town is in battery mode (`+0x470`) and its batteries' output (`+0x480`) is above 0; no town: true. It is town-wide, not the machine's own grant (a starved machine is powered, with a low efficiency).
+- **Data** (probe of the base game, Newwworld and rebirth). Needs-power records with `intensity` / `efficiency multiplier`: `Auto_Mine`, `Electronics_Bench`, `Leather_Tanning`, `Loom`, `Medical_Bench`, `Research_bench`, `Robotics_Bench`,
+  `Rum_Still`, `Water_Well`, `Windmill_Large`, `Windmill_Small` 0 / 1; `Stone_Processor` 0 / 0.75; `Generator`, `BioFuel`, `Furnace`, `Silo_Grind` 0 / 0 (they never send `Intensity`: the global one applies); `Battery_Bank` and `Light_Hum` 1 / 0
+  (constant 100). `Leather_Tanning` and `Light_Hum` are not the first `sounds` entry of any BUILDING.
 - **Buildings.** The loader (`FUN_14029e0c0`) flags a building whose `sounds` list is not empty; when the building is built into the world (`Zones_BuildBuilding`, and again at completion) the flag registers its
   Wwise object (also used by door sounds) and makes **one** emitter from the **first** `sounds` entry only (a Peeler Machine lists Generator and Grind; only Generator sounds), if the building is complete (the first
   byte of its state struct is `is complete`) and `chance` > `rand()` (rolled once). Position = the building's position + its orientation × (the entry's values × the building's `scale`) (the Wind Generator's (0, 240, 0)
@@ -147,8 +162,28 @@ power, `FUN_140258260` destroys), the building set-up `FUN_14055c240`, its loade
   mirrors the placement of `Lay`; **Observed**: the exe's furniture path was not traced, layout objects are ordinary BUILDING records with `sounds`). The base level then has 1,252 emitters: 534 from buildings and
   718 from layout furniture. 585 play by distance: 333 `Fire` (campfires, torch posts, streetlights), 157 `Oven` (bread ovens, cooking stoves) and 95 `Water_Tank`. 667 need power (265 `Generator`, 96 `Windmill_Large`,
   94 `Battery_Bank`, 44 `Water_Well`, 36 `Electronics_Bench`, 32 `Research_bench`, 28 `Windmill_Small`, 17 `Auto_Mine`, 14 `Medical_Bench`, 14 `Stone_Processor`, 12 `BioFuel`, 8 `Rum_Still`, 4 `Silo_Grind`, 3 `Furnace`)
-  and stay silent because Meitou has no machines (`WorldEmitters.SetPower` is the call for them). Rendered: `Fire` at `Intensity` 10 is −58, −66, −81 dBFS and silent at 50, 200, 400 and 600 units from the listener
+  and are driven as [below](#machine-sounds-meitou). Rendered: `Fire` at `Intensity` 10 is −58, −66, −81 dBFS and silent at 50, 200, 400 and 600 units from the listener
   (**Observed**); in the game, with the sound eye moved 84 units from two campfires both started and at 904 units both stopped (a temporary log line). Not done: EFFECT, RACE (spider), FOLIAGE_MESH and MAP_FEATURES emitters.
+
+#### Machine sounds (Meitou)
+
+`ProductionSystem` derives, for each machine of the player's buildings, `Efficiency` and `HasPower` every tick (display only, not saved, not hashed); `MachineSnapshot.Sound` is what the host passes to `WorldEmitters.SetPower`
+each frame (`GameHost.UpdateEmitters`, key = the building's instance id). **Engine choices** are marked.
+
+- **Per-frame classes** (`MachineData.PowersEmitterEachFrame`: function 1 without a farm, 4, 5, 14, 23, 26, 27): `Sound` = (efficiency, has power and efficiency above 0), computed as the exe's chain above from the sim's values: operators
+  ÷ `PowerOperators` (the sim's operator count, like its power demand; an automated drill with `max operators` 0 on the building and 3 on its functionality is counted as 3, **engine choice**: the sim needs its operators too, so the
+  machine is silent while nobody works it), × the consumer's granted share (a battery's as above), × `Machine.Yield` × the raw `output rate` (`MachineData.OutputRate`) × the research production multiplier. Health is 1.
+  Has power follows `FUN_140299370` with the sim's town grid (generators' output above 0, or batteries while the town is in battery mode) and `power on`. A wind generator's efficiency is `ProductionSystem.WindFraction` (**engine choice**,
+  the turbine value is Unknown). Result: a Generator hums whenever built; a well, mine or still sounds while worked and powered, at `Intensity` 100 × the factors where its record has an `efficiency multiplier` (`Stone_Processor` 0.75 ×).
+  A battery bank (constant `Intensity` 100) plays while it is full or charging, not while it drains or is empty.
+- **Once-powered classes** (benches, research, farms, others): `Sound` = (0, powered), the exe's completion call: they play from the moment the machine exists, at the base `Intensity` (global when 0). **Engine choice**: the order for
+  a building the player finishes is Observed only (above), the sound is given to it as for the level's.
+- **The level's buildings** and layout furniture have no machine (the simulation runs only the player's buildings), so the host decides once when it adds the emitter (`GameHost.LevelPowered`, **engine choice**; the exe runs their
+  classes): needs-power emitters of once-powered classes play as above; generators, wind generators (efficiency `WindFraction`), battery banks (the town is assumed to produce power) and furnace-like machines needing no operators
+  play; machines that need operators or town power (wells, mines, processors, stills, looms, silos, distillers, the Electrical Workbench) stay silent, since the NPC workers and town grids are not simulated. Level furniture
+  that is a bench or generator follows the same rule through its own BUILDING record.
+- **Power switch.** The exe's `FarmBuilding::vfunc_161` (the machine panel's power button) flips `power on`, then sets the `Generator` switch to `On` / `Off` on the GUI object 110 and posts `UI_Generator`
+  (**Verified**). Meitou has `Machine.PowerOn` (saved, default on) but its machine panel (`PlayerInterface.Production.cs`) has no power button and no command sets it, so `UI_Generator` has no trigger.
 
 ### Other world-side events
 
@@ -256,7 +291,7 @@ Hover and Slider; whether the editor's speed reset posts `Game_Speed_Normal`; wh
 Meitou (`UiSounds` in `Meitou.Audio`, `PlayerInterface.Sounds.cs`, `GameHost.AudioUi.cs`): the host plays what `PlayerInterface.UiSound` receives. Hooks: `ExecuteUiAction` (HUD actions), `FaithfulAction` (the original screens' widgets),
 the commands `Say` sends (orders, item moves, trades, dialogue choices), and a poll in `Draw` for windows opening and closing, the title button under the pointer, the speed keys (F2 to F4, when the clock moves to a new speed without a button), a building of the player's finishing
 (`Building_Complete`) and a new building unlocked by research or a blueprint (`Thing_Complete`; the sim also queues `DismantleDone` for a finished dismantle and `BountyPaid` for a reward, played as `Thing_Complete` / `Bounty_Fulfilled`).
-**No trigger in Meitou (not played):** `Building_Click` (a building cannot be selected), `UI_Generator` (no machine panel), `Building_Lock_Unlock` (no door panel), `Prospect_Click` and `Prospect_Results` (no prospecting), `Research_Tab` (the research tab posts
+**No trigger in Meitou (not played):** `Building_Click` (a building cannot be selected), `UI_Generator` (the machine panel has no power switch, [above](#machine-sounds-meitou)), `Building_Lock_Unlock` (no door panel), `Prospect_Click` and `Prospect_Results` (no prospecting), `Research_Tab` (the research tab posts
 nothing), `New_Biome` (no HUD biome banner), `Character_Drop_Ground` (an item cannot be dragged out onto the ground), `Create_Character` on a prisoner's release, `Slider` outside the editor; `Building_Place`'s `Indoors` value
 (Meitou's ghost has no parent building to ask) is always `Outdoors`.
 

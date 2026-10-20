@@ -1,6 +1,9 @@
 using System.Numerics;
 using Meitou.Audio;
+using Meitou.Data;
+using Meitou.Data.Gameplay.Construction;
 using Meitou.Data.World;
+using Meitou.Simulation.Production;
 
 namespace Meitou.Game;
 
@@ -24,6 +27,8 @@ sealed partial class GameHost
     // The player-built buildings the emitters follow: what each was when its emitter was decided.
     readonly Dictionary<string, (string Record, bool Complete, Vector3 Position)> runtimeEmitters = new(StringComparer.Ordinal);
     readonly HashSet<string> runtimeSeen = new(StringComparer.Ordinal);
+    // The level's building records as machines (null for one that is not), for whether their emitters play.
+    readonly Dictionary<string, MachineData?> levelMachines = new(StringComparer.Ordinal);
 
     /// <summary>Once a frame, after the ambience: <paramref name="pivot"/> is the camera's target (the game tests the building under it), <paramref name="eye"/> the camera's position (the emitters' distance).</summary>
     void UpdateWorldAudio(AudioSystem sound, Vector3 pivot, Vector3 eye)
@@ -85,7 +90,11 @@ sealed partial class GameHost
             levelEmittersAdded = true;
             if (read.IsCompletedSuccessfully)
             {
-                foreach (var emitter in read.Result) emitters.Add(emitter);
+                foreach (var emitter in read.Result)
+                {
+                    bool powered = LevelPowered(emitter, out float efficiency);
+                    emitters.Add(emitter, powered, efficiency);
+                }
                 Console.WriteLine($"audio     {read.Result.Count} sound emitters in the level's buildings");
             }
             else
@@ -111,10 +120,32 @@ sealed partial class GameHost
                 runtimeEmitters.Remove(id);
                 emitters.Remove(id);
             }
+
+        // The machines of the player's buildings tell their emitters what they do (the exe's per-frame call, docs/audio.md "Point emitters"); one without an emitter is ignored.
+        foreach (var machine in session.CurrentSnapshot.Machines)
+            if (!machine.IsContainer) emitters.SetPower(machine.Site, machine.Sound.Efficiency, machine.Sound.Powered);
+    }
+
+    /// <summary>
+    /// Whether a level building's emitter plays although the simulation does not run the building (docs/audio.md "Point emitters", Meitou's choice): one that needs power and whose class powers it once
+    /// when built, a generator, a battery and a furnace-like machine that needs no operator (their efficiency is the data's); not the machines that need operators or town power.
+    /// </summary>
+    bool LevelPowered(PlacedEmitter emitter, out float efficiency)
+    {
+        efficiency = 0;
+        if (!emitter.Sound.NeedsPower || scene.Database is not { } db) return false;
+        if (!levelMachines.TryGetValue(emitter.Building, out var data))
+            levelMachines[emitter.Building] = data = db.Find(emitter.Building) is { } record ? MachineData.From(db, record) : null;
+        if (data is null || !data.PowersEmitterEachFrame) return true;
+        if (data.IsWind) efficiency = ProductionSystem.WindFraction;
+        else if (data.IsGenerator || data.IsBattery || (data.PowerOperators == 0 && data.PowerOutput == 0)) efficiency = data.OutputRate;
+        else return false;
+        return true;
     }
 
     void ForgetEmitters()
     {
+        levelMachines.Clear();
         emittersFor = null;
         levelEmitters = null;
         levelEmittersAdded = false;

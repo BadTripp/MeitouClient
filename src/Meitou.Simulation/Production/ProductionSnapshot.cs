@@ -24,6 +24,9 @@ public enum PowerKind : byte { Consumer, Generator, Battery }
 
 public readonly record struct PowerView(PowerKind Kind, float Demand, float Granted, float Usage, float Charge, float Store, bool Fueled);
 
+/// <summary>What the host tells a machine's sound emitter (docs/audio.md "Point emitters"): the efficiency and whether it is powered, as the exe's <c>FUN_140258c20</c> takes them.</summary>
+public readonly record struct MachineSound(float Efficiency, bool Powered);
+
 /// <summary>A machine of a complete player building after a tick (docs/simulation.md "Production"); <see cref="Site"/> is the building's instance id.</summary>
 public sealed record MachineSnapshot(string Site, string Record, IReadOnlyList<MachineSlotView> Inputs, MachineSlotView? Output, InventoryView? Storage, FarmView? Farm, byte Status, int Operators, int MaxOperators)
 {
@@ -39,6 +42,8 @@ public sealed record MachineSnapshot(string Site, string Record, IReadOnlyList<M
     public CraftView? Craft { get; init; }
     /// <summary>Its power (null for a building outside the grid).</summary>
     public PowerView? Power { get; init; }
+    /// <summary>What its sound emitter is told each frame (docs/audio.md "Point emitters").</summary>
+    public MachineSound Sound { get; init; }
 
     internal static MachineSnapshot Of(Machine m, ItemFactory items)
     {
@@ -50,7 +55,9 @@ public sealed record MachineSnapshot(string Site, string Record, IReadOnlyList<M
                 { Material = item.MaterialId, Charge = item.ChargeFraction }).ToArray())) : null;
         FarmView? farm = m.Farm is { } f && m.Data.Farm is { } fd
             ? new FarmView(f.Growth, f.Death, f.Harvested, f.Plants.Length, f.Status, m.Yield, m.CropMatch, ProductionSystem.Ripeness(f)) { PlantGrowth = [.. f.Plants] } : null;
-        return new MachineSnapshot(m.Site, m.Data.Id, inputs, output, storage, farm, m.Status, m.Operators, m.Data.MaxOperators) { TechLevel = m.Data.IsResearch ? m.Data.TechLevel : 0, Operable = m.Data.Operable, IsStorage = m.Data.IsStorage, Craft = Crafting(m, items),
+        // The classes that update their emitter every frame tell it the efficiency and the power; the others powered it once, when built, with no operators (efficiency 0).
+        var sound = m.Data.PowersEmitterEachFrame ? new MachineSound(m.Efficiency, m.HasPower && m.Efficiency > 0) : new MachineSound(0, true);
+        return new MachineSnapshot(m.Site, m.Data.Id, inputs, output, storage, farm, m.Status, m.Operators, m.Data.MaxOperators) { Sound = sound, TechLevel = m.Data.IsResearch ? m.Data.TechLevel : 0, Operable = m.Data.Operable, IsStorage = m.Data.IsStorage, Craft = Crafting(m, items),
             Power = m.Data.IsConsumer || m.Data.IsGenerator || m.Data.IsBattery ? new PowerView(m.Data.IsBattery ? PowerKind.Battery : m.Data.IsGenerator ? PowerKind.Generator : PowerKind.Consumer, m.Demand, m.Granted, m.Usage, m.Charge, m.Store, m.Inputs.Length == 0 || Array.Exists(m.Inputs, i => i.Level > 0 || i.Count > 0)) : null };
     }
 
