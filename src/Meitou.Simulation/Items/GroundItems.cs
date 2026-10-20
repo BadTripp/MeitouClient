@@ -26,7 +26,7 @@ public sealed record GroundItem(int Id, ItemInstance Item, Vector3 Position, Qua
 public sealed class GroundItems
 {
     /// <summary>The default and largest <see cref="Limit"/>.</summary>
-    public const int DefaultLimit = 64, MaxLimit = 1024;
+    public const int DefaultLimit = 1024, MaxLimit = 4096;
 
     int limit = DefaultLimit;
 
