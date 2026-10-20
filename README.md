@@ -32,7 +32,8 @@ Needs a Vulkan1.3 GPU with required descriptor-indexing/indirect-draw features, 
 DLSS and FSR are Windows-only; optional ray-query GI falls back on unsupported GPUs.
 Building requires the [.NET10 SDK](https://dotnet.microsoft.com/download).
 
-Steam installs are located automatically; otherwise select the Kenshi folder when prompted,
+Steam installs are located automatically (on Linux under ~/.local/share/Steam, ~/.steam/steam and the
+Flatpak folder); otherwise select the Kenshi folder when prompted,
 set KENSHI_PATH, or create git-ignored meitou.local.json in the repo/working/executable directory:
 
 ```json

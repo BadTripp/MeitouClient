@@ -600,6 +600,9 @@ static class WorldFrame
         /// <summary>The blood decals on the ground (null in the viewer, or with the game's <c>Blood</c> setting off) and the host's decals they draw (docs/game/blood-decals.md).</summary>
         public TerrainDecalRenderer? Decals;
         public TerrainDecalStore? DecalStore;
+        /// <summary>luckyren Mode's flying bones and limbs (null until the host makes it) and the pieces it draws this frame (docs/game/luckyren.md).</summary>
+        public DebrisRenderer? Debris;
+        public readonly List<DebrisPiece> DebrisPieces = [];
         /// <summary>The buildings' interior masks the terrain, foliage and map features are cut by (made with the first frame that has objects; docs/render-interior-cut.md).</summary>
         public InteriorMaskRenderer? InteriorMask;
         /// <summary>The navmesh debug view (null in the viewer; drawn while visible).</summary>
@@ -665,6 +668,7 @@ static class WorldFrame
             Particles?.Dispose();
             MoveMarker?.Dispose();
             Decals?.Dispose();
+            Debris?.Dispose();
             InteriorMask?.Dispose();
             NavmeshOverlay?.Dispose();
             Water?.Dispose();
@@ -1383,6 +1387,7 @@ static class WorldFrame
             StageClock.Lap(8);
             host.Stage(6);
             gpu.Terrain.DrawDeferred();   // the terrain colour where nothing nearer covers it (the depth is in from the draw above)
+            if (nearSlice && gpu.Debris is { } debris) debris.Draw(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(gpu.DebrisPieces), viewProjection, eye, frustum, light);
             StageClock.Lap(6);
             // Characters after the opaque geometry: they alone write the scene's alpha (SSAO's character mask), so nothing drawn later may cover them but water.
             if (gpu.Characters is { } fogCharacters) { fogCharacters.FogCull = fogCull; fogCharacters.InteriorObjects = gpu.Objects; }

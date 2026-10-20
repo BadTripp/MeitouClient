@@ -40,6 +40,13 @@ public sealed record InventoryItemView(int Index, string Record, string Name, st
     public string Material { get; init; } = "";
     /// <summary>How full the item is (0 to 1, <see cref="Items.ItemInstance.ChargeFraction"/>); null: no charge bar.</summary>
     public float? Charge { get; init; }
+    /// <summary>The item's manufacturer record (<c>company sid</c>; "" none), its model level and its charges (what the tooltip shows).</summary>
+    public string Company { get; init; } = "";
+    public int Level { get; init; }
+    public float Charges { get; init; }
+    public float MaxCharges { get; init; }
+    /// <summary>The faction the item counts as stolen from for its holder (<see cref="Items.ItemInstance.IsStolenFor"/>), -1 when it is not stolen.</summary>
+    public int StolenFrom { get; init; } = -1;
 }
 public sealed record InventoryView(int Width, int Height, int BagWidth, int BagHeight, IReadOnlyList<InventoryItemView> Items)
 {

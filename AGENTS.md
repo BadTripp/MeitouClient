@@ -22,6 +22,8 @@ drop-in replacement that runs original content and mods unchanged.
 ## Game assets
 
 - Never commit original game files or content dumps. `.gitignore` blocks asset extensions.
+- Paths that come from game data (records, scripts, meshes) go through `GameFiles.Resolve` (`Meitou.Content`) before they are tested or opened:
+  Windows ignores letter case and Kenshi's data does not always agree with itself, so on Linux the exact path may not exist.
 - The install is found via `KENSHI_PATH` or a git-ignored `meitou.local.json`; never hardcode a path.
   Tests needing the game use `Assert.SkipWhen(GameInstall.Locate() is null, ...)`.
 - Clean-room readers for Havok, PhysX and Wwise formats; don't link their SDKs or ship their DLLs.

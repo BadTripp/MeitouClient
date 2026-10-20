@@ -106,6 +106,8 @@ public sealed class CharacterCold
     /// <summary>Where the last blood decal of its trail was left, and the drip build-up while it bleeds being carried (<see cref="BodySystem"/>, docs/game/blood-decals.md). Display only: not hashed, not saved.</summary>
     public System.Numerics.Vector3 BloodMark { get; set; }
     public float BloodDrip { get; set; }
+    /// <summary>Burst by a fatal hit in luckyren Mode (<see cref="World.Luckyren"/>): the blow's direction (X/Z); <see cref="BodySystem"/> removes it at the end of the tick. Not saved.</summary>
+    public System.Numerics.Vector2? Burst { get; set; }
     /// <summary>What it carries (null for animals and anything without a race): <see cref="Meitou.Simulation.Items.FeedSystem"/> eats from it, <see cref="BodySystem"/> weighs it.</summary>
     public Meitou.Simulation.Items.Inventory? Inventory { get; set; }
     /// <summary>The tick from which a hungry NPC without food may be given a ration again.</summary>

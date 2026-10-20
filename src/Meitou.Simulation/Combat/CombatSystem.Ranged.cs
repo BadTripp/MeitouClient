@@ -662,6 +662,7 @@ public sealed partial class CombatSystem : IProjectileSource
         }
         if (death && Relations is not null && p.ShooterIsPlayer && !dc.IsPlayer) PlayerRelations.Event(world, Relations, dc.Faction, RelationEventKind.Murder);
         if (death && world.Uniques.RecordOf(world.Characters.IdOf(v)) is { } unique) world.Uniques.Died(unique, p.ShooterIsPlayer);
+        if (death && world.Luckyren) dc.Burst = new Vector2(p.Direction.X, p.Direction.Z);
         if (Settings.RecordLog)
             log.Add(new CombatLogEntry(now, p.Shooter, v, 0, BlowOutcome.Hit, part, damage.Cut, damage.Blunt, damage.Pierce, damage.ExtraStun, knockout, death) { Ranged = true, Intended = intended });
     }

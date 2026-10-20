@@ -212,7 +212,7 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
                 Toggle: new("Hover outline", () => config.HoverOutline, v => config.HoverOutline = v, Remaster: true, OnOff: true)));
             result.Add(new("Selection rings", "Draw the green ring on the ground under each selected character.",
                 Toggle: new("Selection rings", () => config.SelectionRings, v => config.SelectionRings = v, Remaster: true, OnOff: true)));
-            result.Add(new("luckyren Mode", "A character that takes a fatal hit explodes, covers everything around in blood and sends bones flying everywhere. Not implemented yet: this switch does nothing.",
+            result.Add(new("luckyren Mode", "A character that takes a fatal hit explodes, covers everything around in blood and sends bones flying everywhere. Its gear falls to the ground around the spot.",
                 Toggle: new("luckyren Mode", () => config.LuckyrenMode, v => config.LuckyrenMode = v, Remaster: true, OnOff: true),
                 Picture: SettingsMenuArt.LuckyrenImage));
             result.Add(new("Main menu scene transitions", "Sky flight to/from the main menu (Meitou UI).",

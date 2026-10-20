@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Numerics;
 using Meitou.Data.Ui;
 using Meitou.Simulation;
+using Meitou.Ui;
 
 namespace Meitou.Game;
 
@@ -11,20 +12,22 @@ namespace Meitou.Game;
 /// </summary>
 sealed partial class PlayerInterface
 {
-    // The palette of data/gui/colours/kenshi_colours.xml (Verified): Main, Secondary (the text default), Title, Bad, Good, Alert.
-    internal static readonly string MainColour = Hex("afa68b"), TitleColour = Hex("492620"), BadColour = Hex("59231a"), GoodColour = Hex("a8b774"), AlertColour = Hex("000000");
+    // The palette of data/gui/colours/kenshi_colours.xml (Verified): Main, Secondary (the text default), Title, Bad, Good, Alert; a mod's file replaces it (MyGuiColours.LoadPalette).
+    internal static string MainColour => MyGuiColours.Named("Main", "afa68b");
+    internal static string TitleColour => MyGuiColours.Named("Title", "492620");
+    internal static string BadColour => MyGuiColours.Named("Bad", "59231a");
+    internal static string GoodColour => MyGuiColours.Named("Good", "a8b774");
+    internal static string AlertColour => MyGuiColours.Named("Alert", "000000");
 
     /// <summary>The stats panel's labels (MARTIAL ARTS, STRENGTH, ...): the grey of the orders buttons' text, not Main (docs/game/ui-screens.md).</summary>
     internal static readonly string StatLabelColour = "0.4 0.380392 0.356863";
 
-    static string Hex(string rgb) => string.Join(' ', Enumerable.Range(0, 3).Select(i =>
-        (int.Parse(rgb.AsSpan(i * 2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture) / 255f).ToString("0.###", CultureInfo.InvariantCulture)));
 
     /// <summary>Resolves a faction (a position in the world's faction list) to its name; the host sets it.</summary>
     public Func<int, string?>? FactionName { get; set; }
 
     /// <summary>A line of a text panel: label and value, each with its colour (null: the text default).</summary>
-    internal readonly record struct HudLine(string Label, string Value, string? LabelColour = null, string? ValueColour = null);
+    internal readonly record struct HudLine(string Label, string Value, string? LabelColour = null, string? ValueColour = null, string? Tooltip = null);
 
     /// <summary>
     /// The status panel's prison line (<c>FUN_1405d2da0</c>, docs/game/economy.md 11.5, <b>Observed</b>): the hours left rounded up, "FOREVER" for a sentence of 2000 hours or more,
@@ -138,8 +141,13 @@ sealed partial class PlayerInterface
             foreach (var (part, text, colour, align, properties) in new[] { ("label", lines[i].Label, lines[i].LabelColour, "Left Top", labelProperties),
                 ("value", lines[i].Value, lines[i].ValueColour, "Right Top", valueProperties) })
                 if (text.Length > 0)
+                {
+                    var textProperties = new Dictionary<string, string>(properties) { ["TextAlign"] = align, ["TextColour"] = colour ?? MyGuiColours.InkText };
+                    // A line with a tooltip is a mouse target (the HUD's own tooltip, anchored on its panel).
+                    if (lines[i].Tooltip is { Length: > 0 } tip) foreach (var pair in UiTooltips.TextProperties(tip, "fixed")) textProperties[pair.Key] = pair.Value;
                     controls.Add(new($"{panel}-{part}-{i}", "TextBox", row, text, "", "Kenshi_TextboxStandardText", true,
-                        new Dictionary<string, string>(properties) { ["TextAlign"] = align, ["TextColour"] = colour ?? MyGuiColours.InkText }, Vector4.Zero, Pickable: false, Clip: host.Clip));
+                        textProperties, Vector4.Zero, Pickable: lines[i].Tooltip is { Length: > 0 }, Clip: host.Clip));
+                }
         }
 
         static Dictionary<string, string> Face(string name, float? pixels)

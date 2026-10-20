@@ -8,7 +8,7 @@ using Silk.NET.Vulkan;
 namespace Meitou.Rendering.Ui;
 
 /// <summary>Native alpha-composited MyGUI atlas slices and styled native control frames.</summary>
-public sealed class UiPainter : IDisposable
+public sealed partial class UiPainter : IDisposable
 {
     readonly DebugOverlay overlay;
     readonly MyGuiResources resources;
@@ -297,28 +297,9 @@ public sealed class UiPainter : IDisposable
                 font.Target = overlay.Target;
                 scale = 1;
             }
-            else if (FontSpec(fontName) is { } spec && FontPath(spec.Source) is { } sourcePath)
+            else if (ResourceFont(fontName, c.TextScale ?? height / 1080f, minimumTextPixels) is { } resourceFont)
             {
-                // TrueType resource sizes are points at the resource's DPI, resized as the original does on load (KenshiFontSize).
-                float resolution = spec.Resolution > 0 ? spec.Resolution : 50;
-                float points = EffectiveFontSize(sourcePath, spec.Size > 0 ? spec.Size : 20, resolution) * (c.TextScale ?? height / 1080f);
-                float em = points * resolution / 72;
-                bool faithful = Mode == UiMode.Faithful;
-                long size64;
-                uint dpi;
-                if (faithful && em >= Math.Max(6, minimumTextPixels) && em <= 192)
-                {
-                    // MyGUI's own request: fractional points at the resource's dpi (1/16 point steps, so a resized window makes a bounded number of fonts).
-                    size64 = Math.Max(1, (long)MathF.Round(points * 16)) * 4;
-                    dpi = (uint)MathF.Round(resolution);
-                }
-                else
-                {
-                    // Whole pixels: Meitou's look, and the display policy's minimum size in either mode.
-                    size64 = Math.Clamp((int)MathF.Round(Math.Max(minimumTextPixels, em)), 6, 192) * 64L;
-                    dpi = 72;
-                }
-                font = UiFontFor(fontName, spec, sourcePath, size64, dpi, faithful, faithful || !spec.Antialias);
+                font = resourceFont;
                 font.Target = overlay.Target;
                 scale = 1;
             }

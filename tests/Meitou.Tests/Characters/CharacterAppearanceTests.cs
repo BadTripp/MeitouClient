@@ -64,7 +64,7 @@ public class CharacterAppearanceTests
         int missing = 0, old = 0, read = 0;
         foreach (var body in bodies)
         {
-            var path = Path.Combine(install.Root, body.TrimStart('.', '\\', '/'));
+            var path = Path.Combine(install.Root, body.Replace('\\', '/').TrimStart('.', '/'));
             if (!File.Exists(path)) { missing++; continue; }
             int type = BitConverter.ToInt32(File.ReadAllBytes(path), 0);
             if (type < 15) { old++; continue; } // legacy FCS layouts (types 5-13), not read

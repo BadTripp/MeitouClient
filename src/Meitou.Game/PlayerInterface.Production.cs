@@ -126,7 +126,7 @@ sealed partial class PlayerInterface
                 if (machineDrag is { Slot: -1 } d && d.Index == item.Index) continue;
                 AddItemCell(controls, $"machine-item-{item.Index}",
                     new(area.X + item.X * area.Width / grid.Width, area.Y + item.Y * area.Height / grid.Height, item.Width * area.Width / grid.Width, item.Height * area.Height / grid.Height),
-                    item.Record, item.Material, item.Name, item.Quantity, $"Weight\t{item.Weight.ToString("0.#", CultureInfo.InvariantCulture)} kg", "MachineItem", 1000 + item.Index,
+                    item.Record, item.Material, item.Name, item.Quantity, ItemTip.Of(item), "MachineItem", 1000 + item.Index,
                     slot.Bounds.Intersect(slot.Clip ?? slot.Bounds), charge: item.Charge);
             }
             return;

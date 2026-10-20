@@ -41,6 +41,8 @@ public enum RngPurpose : uint
     Name = 20,
     /// <summary>The blood trail's drips (<see cref="BodySystem"/>; display only).</summary>
     BloodTrail = 21,
+    /// <summary>luckyren Mode: where a burst character's gear falls (<see cref="BodySystem"/>).</summary>
+    Luckyren = 22,
 }
 
 /// <summary>
