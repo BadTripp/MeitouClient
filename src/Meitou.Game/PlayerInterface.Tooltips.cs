@@ -345,12 +345,25 @@ sealed partial class PlayerInterface
     IReadOnlyList<TooltipLine> ItemLines(ItemTip t)
     {
         var record = ItemRecordOf?.Invoke(t.Record);
-        // A weapon's grade is its model, which leads its name ("Mk I Fragment Axe"); the weapon rows have no grade of their own.
-        string name = record?.Type == Meitou.Data.Fcs.FcsRecordType.WEAPON && t.Material.Length > 0 && RecordName?.Invoke(t.Material) is { Length: > 0 } model ? model + " " + t.Name : t.Name;
+        var type = record?.Type;
+        // A weapon's grade is its model ("Mk I"), shown under the name in the colour of its level's grade; a brief tooltip puts it before the name ("Mk I Fragment Axe").
+        string? model = type == Meitou.Data.Fcs.FcsRecordType.WEAPON && t.Material.Length > 0 && RecordName?.Invoke(t.Material) is { Length: > 0 } m ? m : null;
+        string name = t.Brief && model is not null ? model + " " + t.Name : t.Name;
         var lines = new List<TooltipLine> { new(t.Quantity > 1 ? $"{name} ({t.Quantity})" : name, "", TooltipTone.Title) };
         if (t.Brief) return lines;
+        // Every grade line (weapon model, armour, crossbow, prosthetic) goes right under the name, as in the original.
+        if (model is not null) lines.Add(new(model, "", GradeTone(ArmourTooltip.GradeOf(t.Level))));
+        else if (type == Meitou.Data.Fcs.FcsRecordType.CROSSBOW)
+        {
+            int grade = ArmourTooltip.GradeOf(t.Level);
+            lines.Add(new(Loc.Tr("{1} Grade", Loc.Tr(ArmourTooltip.GradeNames[grade])), "", GradeTone(grade)));
+        }
         var combat = CombatOf?.Invoke();
-        var type = record?.Type;
+        var armour = type == Meitou.Data.Fcs.FcsRecordType.ARMOUR ? combat?.Armour(t.Record) : null;
+        var armourHead = armour is not null ? ArmourTooltip.Head(armour, t.Quality).Select(ArmourRow).ToList() : null;
+        var limbRows = type == Meitou.Data.Fcs.FcsRecordType.LIMB_REPLACEMENT ? LimbRows(Meitou.Data.Gameplay.Bodies.LimbReplacement.From(record!), t.Level).ToList() : null;
+        if (armourHead is not null) { lines.Add(armourHead[0]); armourHead.RemoveAt(0); }
+        if (limbRows is not null) { lines.Add(limbRows[0]); limbRows.RemoveAt(0); }
         int function = type == Meitou.Data.Fcs.FcsRecordType.ITEM ? record!.GetInt("item function") : 0;
         float unitWeight = t.Quantity > 0 ? t.Weight / t.Quantity : t.Weight;
         TooltipLine Row(string label, string value, TooltipTone valueTone = TooltipTone.Ink) => new("-" + label, value, TooltipTone.Ink, valueTone);
@@ -387,13 +400,8 @@ sealed partial class PlayerInterface
         else
         {
             // Armour: grade, class and material, resistances (ArmourTooltip; docs/game/ui-screens.md "Item tooltip").
-            if (type == Meitou.Data.Fcs.FcsRecordType.ARMOUR && combat?.Armour(t.Record) is { } armour) lines.AddRange(ArmourTooltip.Head(armour, t.Quality).Select(ArmourRow));
-            if (type == Meitou.Data.Fcs.FcsRecordType.LIMB_REPLACEMENT) lines.AddRange(LimbRows(Meitou.Data.Gameplay.Bodies.LimbReplacement.From(record!), t.Level));
-            if (type == Meitou.Data.Fcs.FcsRecordType.CROSSBOW)
-            {
-                int grade = ArmourTooltip.GradeOf(t.Level);
-                lines.Add(new(Loc.Tr("{1} Grade", Loc.Tr(ArmourTooltip.GradeNames[grade])), "", GradeTone(grade)));
-            }
+            if (armourHead is not null) lines.AddRange(armourHead);
+            if (limbRows is not null) lines.AddRange(limbRows);
             // "{n} x {unit} kg ({total} kg)" for a stack.
             weightText = (t.Quantity > 1 ? $"{t.Quantity} x " : "") + Number(unitWeight) + " kg" + (t.Quantity > 1 ? $" ({Number(t.Weight)} kg)" : "");
             lines.Add(Row("Weight", weightText));
@@ -406,8 +414,8 @@ sealed partial class PlayerInterface
             lines.Add(new("-Value", "c." + Money(trade.Value), TooltipTone.Ink, TooltipTone.Ink, suffix, TooltipTone.Bad));
             lines.Add(new("-Sell value", "c." + Money(trade.SellValue), TooltipTone.Ink, TooltipTone.Ink, suffix, TooltipTone.Bad));
         }
-        if (type == Meitou.Data.Fcs.FcsRecordType.ARMOUR && combat?.Armour(t.Record) is { } covering)
-            lines.AddRange(ArmourTooltip.Tail(covering, id => RecordName?.Invoke(id)).Select(ArmourRow));
+        if (armour is not null)
+            lines.AddRange(ArmourTooltip.Tail(armour, id => RecordName?.Invoke(id)).Select(ArmourRow));
         if (type == Meitou.Data.Fcs.FcsRecordType.ITEM && function is not (3 or 16))
         {
             if (t.MaxCharges > 1) lines.Add(Row("Charges", $"{Number(t.Charges)}/{Number(t.MaxCharges)}"));
