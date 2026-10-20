@@ -210,7 +210,7 @@ no path re-running the initial resident placement was found (**Unknown** whether
   outside 0..5 an error box). `default resident`: the town's, else (no override) the faction's. `bar squads`: the
   faction's (TownType 2 only, no override) then the town's; with override the town's only.
 - **When**: at zone populate (`FUN_140a0e760`) per non-player town, the zone's buildings sorted by handle serial (random-looking).
-- **Candidates**: buildings of the town with an `interior` reference, not player-owned, holding no residents template
+- **Candidates**: buildings of the town ([membership](../formats/zones.md#town-membership)) with an `interior` reference, not player-owned, holding no residents template
   or the default one; walls (`links together`, a vfunc override) never, gates (`is wall gate`) only for entries naming
   `building`s. Level data agrees: 1946 walls, none with a resident.
 - **Driver** (`FUN_1409370d0`): re-owns the buildings to the town's faction; priority 5 down to 0, each entry with count

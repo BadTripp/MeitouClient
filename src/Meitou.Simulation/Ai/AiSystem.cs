@@ -207,17 +207,19 @@ public sealed class AiSystem(PopulationData data, AiSettings? settings = null) :
         };
     }
 
-    /// <summary>The town a point is in (within its <c>town radius</c>), -1 when none.</summary>
+    /// <summary>The nearest town whose <see cref="TownData.Radius"/> holds a point (as the game's position lookup, <c>FUN_140928890</c>), -1 when none.</summary>
     int TownAt(Vector3 p)
     {
         var at = Flat(p);
+        int best = -1;
+        float bestD = float.MaxValue;
         for (int s = 0; s < data.Sites.Count; s++)
         {
             var site = data.Sites[s];
-            float r = site.Town.SizeRadius * site.Town.TownRadiusMult;
-            if (Vector2.DistanceSquared(at, Flat(site.Position)) <= r * r) return s;
+            float r = site.Town.Radius, d = Vector2.DistanceSquared(at, Flat(site.Position));
+            if (d <= r * r && d < bestD) (best, bestD) = (s, d);
         }
-        return -1;
+        return best;
     }
 
     /// <summary>A town's buildings with a general node, its shops and its bars, as <see cref="RefreshPlaces"/> last found them.</summary>
@@ -319,7 +321,7 @@ public sealed class AiSystem(PopulationData data, AiSettings? settings = null) :
         if (board.Town < 0 || !world.Characters.IsAlive(self)) return true;
         var site = data.Sites[board.Town];
         var p = world.Characters.Previous[self.Slot].Position;
-        float r = site.Town.SizeRadius * site.Town.TownRadiusMult;
+        float r = site.Town.Radius;
         return Vector2.DistanceSquared(new Vector2(p.X, p.Z), new Vector2(site.Position.X, site.Position.Z)) <= r * r;
     }
 
