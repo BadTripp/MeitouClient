@@ -272,10 +272,17 @@ no path re-running the initial resident placement was found (**Unknown** whether
 - **Town wipe** (**Observed**, `TownPopulationManager::vfunc_4`): roaming `pop` ≤ 3, ≤ 25 roaming living and no intact resident platoon
   sets `ded`.
 - **Nests** (`NestPopulationManager::vfunc_4`): pool 2 starts at 0.7 × `nest resident population` and grows as above. While the nest's
-  zone is loaded it spawns one squad per tick (weight `max(0, v0 − existing) × faction wealth`, size within the free budget) unless a
+  zone is loaded it spawns one squad per tick (weight `max(0, v0 − existing) × faction wealth`; an entry passes when its size fits the free budget `floor(pop2)` − living, or
+  the pool is empty and more than 4 are free, so a squad bigger than the budget can open a nest: `FUN_1408f7e80`, **Verified** by code) unless a
   player-faction unit is within 1250. With no candidate and no intact squad the nest is `ded` ("wiped out", game hour stored as `tod`,
   **Observed**) and never spawns again. New nests come only from the area tick, up to `num nests` per biome group; whether a dead nest
   frees its count is **Unknown**.
+- **Homeless squads** (area tick `FUN_1408f9240`, every 2 s, per island): the island's load (sum over its loaded sectors of counted +
+  0.5 × imprisoned/dead, clamped to [0, 2] for a sector by a town) is compared with `FUN_1408f5ca0`, the sum of P × `homeless spawn
+  amount` over the loaded zones of the island; while below, one sector is picked by weight max(0, P × amount + 1 − load), halved by a town,
+  (w + 1) × 2 when empty, and one squad is made there (`FUN_1408f8060`) if its count is below P × amount, retrying other sectors when that
+  fails. So a loaded sector is refilled as its squads die or walk out (**Verified** by code). The squad gets a town handle: the template
+  faction's nearest town unless any town is 9216 nearer, none beyond 50000. Meitou makes a sector's squads once per load (engine choice).
 - **Traders**: restocked only while active, when the clock passes the platoon's `inventory refresh time`; an unloaded one catches up at
   its first active tick.
 - **Prisoners** (**Observed**): frozen with their platoon; sentences are absolute timestamps and release is a loaded AI task.

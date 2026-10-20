@@ -33,7 +33,7 @@ public sealed record WildSite(int Index, WildKind Kind, ZoneCoordinate Zone, int
 /// 100, the TOWN's <c>world state</c> gate), its place a seeded cell of the group's area with candidate spots away from placed towns, or for groups with
 /// <c>nests at fixed markers only</c> one of the placed NEST_MARKER towns of the area. When its zone activates the nest fills its roaming pool to
 /// its pool's floor(<c>pop2</c>) members (0.7 x <c>nest resident population</c> at first; <c>PopulationPools.cs</c>) from the TOWN's <c>roaming squads</c> (weight max(0, v0 - count), k = 1; an entry whose expected
-/// size passes the free capacity is skipped), the squads wandering round the nest. While loaded it tops up one squad
+/// size passes the free capacity is skipped, unless the pool is empty and more than 4 are free), the squads wandering round the nest. While loaded it tops up one squad
 /// per look and can be wiped out for good (<c>PopulationPools.cs</c>).</item>
 /// <item><b>Saves</b> (docs/formats/save.md "Nests", "Wild and nest platoons"): a loaded save's nests are the layout's first (at their saved places), the
 /// seeded roll (with the seed the save restores) only tops each group up to its count, leaving out the rolls whose nests the save holds, so a Meitou save
@@ -569,8 +569,10 @@ public sealed partial class PopulationSystem
         int rolls = 0;
         for (int s = 0; s < budget.Rolls && squads.Count < budget.Squads && (members < cap || topUp); s++)
         {
+            // An entry fits the free room, or any size does while the pool is empty and more than 4 are free (FUN_1408f7e80).
+            int free = cap - members;
             for (int i = 0; i < entries.Count; i++)
-                weights[i] = templates[i] is { } t && SquadFactory.ExpectedSize(t, settings.SquadSizeMultiplier) <= cap - members
+                weights[i] = templates[i] is { } t && (SquadFactory.ExpectedSize(t, settings.SquadSizeMultiplier) <= free || members == 0 && free > 4)
                     ? MathF.Max(0, entries[i].V0 - counts[i]) : 0;
             ulong key = Rng.Mix(Rng.Mix(SeedSalts.NestSquad ^ site.Key) ^ (uint)(budget.First + s));
             rolls++;
