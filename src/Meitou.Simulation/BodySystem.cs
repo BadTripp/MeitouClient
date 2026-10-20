@@ -66,6 +66,7 @@ public sealed class BodySystem(GameConstants constants, BodyOptions? options = n
             };
             // The combat system's own context (hits) reads the encumbrance from the fighter, so it matches the one used here.
             if (cold.Fighter is { } fighter) fighter.EncumbranceFactor = encumbrance;
+            if (world.BloodMarks is { } marks && medical.Bleeding > 0 && cold.WaterState == 0) BloodTrail(world, marks, i, cold, medical.Bleeding, race, in n);
             events ??= [];
             events.Clear();
             medical.Tick(HoursPerTick, ctx, events);
@@ -88,6 +89,42 @@ public sealed class BodySystem(GameConstants constants, BodyOptions? options = n
                     n.Velocity = Vector3.Zero;
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// The blood a bleeding character out of the water leaves (<c>FUN_140652000</c>, docs/game/blood-decals.md): standing still (by its carrier's speed when carried) its pool
+    /// grows; walking, a smear every 4 units, as opaque as the bleeding (at most 1); carried, drops of min(0.5, bleeding / 10) once a build-up of random × bleeding × dt × 10
+    /// passes 1, where it has moved more than a unit. Display only (<see cref="World.BloodMarks"/>): the trail's state on the cold row is not hashed.
+    /// </summary>
+    static void BloodTrail(World world, System.Collections.Concurrent.ConcurrentQueue<BloodMark> marks, int slot, CharacterCold cold, float bleeding, RaceData race, in CharacterHot n)
+    {
+        var table = world.Characters;
+        var id = table.IdOf(slot);
+        var velocity = table.IsAlive(cold.CarriedBy) ? table.Previous[cold.CarriedBy.Slot].Velocity : n.Velocity;
+        var at = n.Position;
+        float moved = Vector2.DistanceSquared(new Vector2(cold.BloodMark.X, cold.BloodMark.Z), new Vector2(at.X, at.Z));
+        if (velocity.X == 0 && velocity.Z == 0)
+        {
+            marks.Enqueue(new BloodMark(BloodMarkKind.Pool, id, at, default, bleeding, race.BloodColour));
+            cold.BloodMark = at;
+        }
+        else if (cold.CarriedBy.IsNone)
+        {
+            if (moved <= 16) return;
+            cold.BloodMark = at;
+            marks.Enqueue(new BloodMark(BloodMarkKind.Smear, id, at, new Vector2(velocity.X, velocity.Z), Math.Clamp(bleeding, 0, 1), race.BloodColour));
+        }
+        else if (bleeding > 0.01f)
+        {
+            float roll = Rng.Float(Rng.Hash(world.Seed, Rng.Key(id), RngPurpose.BloodTrail, (ulong)world.Tick * 3));
+            cold.BloodDrip += roll * bleeding * world.TickSeconds * 10;
+            if (cold.BloodDrip <= 1) return;
+            cold.BloodDrip = 0;
+            if (moved <= 1) return;
+            float x = Rng.Float(Rng.Hash(world.Seed, Rng.Key(id), RngPurpose.BloodTrail, (ulong)world.Tick * 3 + 1)), z = Rng.Float(Rng.Hash(world.Seed, Rng.Key(id), RngPurpose.BloodTrail, (ulong)world.Tick * 3 + 2));
+            marks.Enqueue(new BloodMark(BloodMarkKind.Drip, id, at, new Vector2(x - 0.5f, z - 0.5f), MathF.Min(bleeding * 0.1f, 0.5f), race.BloodColour));
+            cold.BloodMark = at;
         }
     }
 

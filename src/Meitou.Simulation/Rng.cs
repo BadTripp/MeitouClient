@@ -39,6 +39,8 @@ public enum RngPurpose : uint
     Craft = 19,
     /// <summary>The random name of a <c>named</c> character at its spawn, keyed like its spawn rolls.</summary>
     Name = 20,
+    /// <summary>The blood trail's drips (<see cref="BodySystem"/>; display only).</summary>
+    BloodTrail = 21,
 }
 
 /// <summary>

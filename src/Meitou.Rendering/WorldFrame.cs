@@ -597,6 +597,9 @@ static class WorldFrame
         public ParticleRenderer? Particles;
         /// <summary>The movement marker the game interface shows after a ground move order (null in the viewer, or without <c>position.mesh</c>).</summary>
         public MoveMarkerRenderer? MoveMarker;
+        /// <summary>The blood decals on the ground (null in the viewer, or with the game's <c>Blood</c> setting off) and the host's decals they draw (docs/game/blood-decals.md).</summary>
+        public TerrainDecalRenderer? Decals;
+        public TerrainDecalStore? DecalStore;
         /// <summary>The buildings' interior masks the terrain, foliage and map features are cut by (made with the first frame that has objects; docs/render-interior-cut.md).</summary>
         public InteriorMaskRenderer? InteriorMask;
         /// <summary>The navmesh debug view (null in the viewer; drawn while visible).</summary>
@@ -661,6 +664,7 @@ static class WorldFrame
             Objects?.Dispose();
             Particles?.Dispose();
             MoveMarker?.Dispose();
+            Decals?.Dispose();
             InteriorMask?.Dispose();
             NavmeshOverlay?.Dispose();
             Water?.Dispose();
@@ -1258,6 +1262,9 @@ static class WorldFrame
             gpu.Probes?.Update(gi, eye, heights, gpu.Lamps, gpu.FogVolumes, gpu.Objects?.GiInteriorFocus(camera.Target));
             StageClock.Sub("gi blend");
         }
+        // The blood on the ground near the eye (docs/game/blood-decals.md), before any terrain draw reads it.
+        if (gpu.Decals is { } decals && gpu.DecalStore is { } decalStore) decals.Record(decalStore, eye);
+        gpu.Terrain.Decals = gpu.DecalStore is null ? null : gpu.Decals;
         StageClock.Lap(14);
         // Water reflection: the mirrored scene into its own framebuffer (restores the bound one), before the main pass.
         bool reflecting = render.Water && render.Reflections && gpu.Water is not null && gpu.Reflection is { Level: > 0 };   // level 0: no pass, the water shows the sky colour
