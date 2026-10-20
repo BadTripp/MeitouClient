@@ -122,7 +122,8 @@ sealed partial class GameHost
             };
         if (panel is not null && !lowEnd)
             foreach (var slider in panel.Sliders)
-                if (!SessionSliders.Contains(slider.Label) && config.Graphics.TryGetValue(slider.Label, out float v) && !(o.Post.Upscale.Explicit && WorldFrame.UpscalerSliders.Contains(slider.Label)))
+                if (!SessionSliders.Contains(slider.Label) && config.Graphics.TryGetValue(slider.Label, out float v) && !(o.Post.Upscale.Explicit && WorldFrame.UpscalerSliders.Contains(slider.Label))
+                    && !(slider.Label == WorldFrame.TextureQualitySlider && Environment.GetCommandLineArgs().Contains("--texture-quality")))   // the saved one was applied before the boot (Program)
                     slider.Set(Math.Clamp(v, slider.Min, slider.Max));
         // The switches as saved, unless the command line chose them (--meitou / --faithful).
         if (panel is not null && !lowEnd && !Environment.GetCommandLineArgs().Any(a => a is "--meitou" or "--faithful"))
