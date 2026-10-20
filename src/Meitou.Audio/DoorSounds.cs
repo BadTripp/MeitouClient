@@ -33,6 +33,9 @@ public sealed class DoorSounds(WwisePlayer player)
     readonly Dictionary<string, Door> doors = new(StringComparer.Ordinal);
     ulong next = FirstObject;
 
+    /// <summary>Fix (default): set the <c>Break</c> switch before <c>Break</c>, so doors and gates sound when they break. Off: as the exe, which never sets it, so <c>Break</c> plays nothing.</summary>
+    public bool FixBreak { get; set; } = true;
+
     /// <summary>Events posted since the world was set (statistics and tests).</summary>
     public int Posted { get; private set; }
 
@@ -71,7 +74,7 @@ public sealed class DoorSounds(WwisePlayer player)
         if (breaks)
         {
             // The exe never sets the Break switch group, so its Break plays nothing (docs/audio.md "Other world-side events"); the bank's cases are Door and Gate.
-            player.SetSwitch("Break", at.Type == 2 ? "Gate" : "Door", door.Object);
+            if (FixBreak) player.SetSwitch("Break", at.Type == 2 ? "Gate" : "Door", door.Object);
             Post("Break", door);
         }
         // A state skipped between two frames still gets its sounds: closed to open is a start and an end, and so on.

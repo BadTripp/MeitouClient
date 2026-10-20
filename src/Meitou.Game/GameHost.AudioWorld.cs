@@ -50,6 +50,7 @@ sealed partial class GameHost
         UpdateEmitters();
         UpdateEffectEmitters(worldEmitters!);
         worldEmitters!.Update(eye);
+        doorSounds!.FixBreak = config.FixDoorBreak;
         UpdateDoorSounds(eye);
     }
 

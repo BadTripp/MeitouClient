@@ -213,7 +213,7 @@ snapshot leaves out plainly closed doors. A door seen for the first time is assu
 `clamp(2·p1 + 0.5·p0, 20, 60)` and loses 0.015 × that of its integrity (wall: half the sum, clamped 10 to 60, 0.003 ×); when the integrity is 0 or less it is marked broken (virtual `+0x310`/`+0x340`) and `Break` posts on the building's object. **Neither
 function sets the `Break` switch group** (cases `Door` and `Gate`, bank `SFX_General_Bank`): no other code in the exe sets it (**Verified**, no `SetSwitch` string `Break`), so with the group never set the original plays the container's default, which
 is silent (**Observed**, rendered). **Meitou:** `DoorSounds` posts `Break` when a door becomes broken (the lock bash `LockSystem.Bash` and a lockpick's break set `DoorBroken`), after setting `Break` to `Gate` for door type 2 and `Door` otherwise
-(**engine choice**: it fixes the exe's omission). **Walls: no trigger**: nothing in Meitou damages walls (no damage model is invented).
+(**engine choice**: it fixes the exe's omission; Fixes settings page, `Door break sound`, off plays as the exe). **Walls: no trigger**: nothing in Meitou damages walls (no damage model is invented).
 
 **Turrets** (`TurretBuilding::vfunc_28` `140434b70`, `RotatingEnt::vfunc_2`). **Verified:** each frame of an active turret with a target the largest angle its turning parts still have to turn (`FUN_1404cc0d0`, degrees) is kept; with the counter at 0 and that angle over 0.1 it posts `Turret_Mvt_Start` and sets
 the counter to 8; the counter counts down every frame and posts `Turret_Mvt_Stop` on reaching 0 (so a turret that keeps turning posts a start and a stop every 8 frames; no fade on either). Both post on the building's object (`+0x208`, registered when the gun first asks for it).
@@ -372,8 +372,8 @@ host running without sound.
   - **Positions, attenuation, reverb**: [below](#game-objects-3d-and-attenuation).
 - `AudioOutput` keeps four blocks of 1024 frames (23 ms each at 44100 Hz) queued on one OpenAL Soft streaming source, refilled by a thread.
 - `AmbienceDirector` is the game's rules above: biome under the pivot, day/night, `Camera_Zoom`, `Time_in_Game`, rain and wind. Two
-  differences from the game: the delayed-load suffix bug is not copied (the right event always plays), and the wind is stopped with
-  `Weather_Wind_End`.
+  fixes of the game's bugs, each a switch on the Fixes settings page (off plays as the game): the delayed-load suffix bug is not copied (the right event always plays; `Ambience after loading`), and the wind is stopped with
+  `Weather_Wind_End` (`Wind stops`; off posts the game's `Weather_Wind_Stop`).
 - **Music engine** (`WwisePlayer.Music.cs`; the layouts and meanings are in [wwise-bnk.md](formats/wwise-bnk.md#music)). Music nodes are
   instances in the same tree as the sounds, so fades, stop actions (also on an ancestor, across banks), the gain chain up to the music bus
   (`BA70EAC8`: −4 dB, the `User_Volume_Music` curve) and the voices are the same code.

@@ -11,7 +11,7 @@ namespace Meitou.Game;
 /// <summary>Shared settings layout and interaction; the current UI mode selects only its presentation.</summary>
 sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, InputBindings bindings, Action save, Slider frameLimit, UserConfig config)
 {
-    static readonly string[] Pages = ["Display", "Graphics", "Interface", "Controls", "Advanced", "Audio"];
+    static readonly string[] Pages = ["Display", "Graphics", "Interface", "Controls", "Advanced", "Audio", "Fixes"];
     static readonly string[] GraphicsPages = ["World", "Lighting", "Water", "Effects"];
     readonly float[] defaults = values.Sliders.Select(s => s.Get()).ToArray();
     readonly bool[] toggleDefaults = values.Toggles.Select(t => t.Get()).ToArray();
@@ -175,6 +175,21 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
             for (int i = 0; i < AudioSliders.Length; i++)
                 result.Add(new(AudioSliders[i].Label, hints[i], Slider: AudioSliders[i]));
         }
+        if (page == 6)
+        {
+            // Bugs of the game as it ships; on fixes them, off plays as the game does.
+            result.Add(new("Raids as written", "Raid and campaign data that builds on a base campaign counts the base's squads and follow-up campaigns once. "
+                + "The game counts them twice, so inherited squads come up more often and follow-up raids are about twice as likely.",
+                Toggle: new("Raids as written", () => config.CampaignAncestorsOnce, v => { config.CampaignAncestorsOnce = v; OffscreenChanged?.Invoke(); }, Remaster: true, OnOff: true)));
+            result.Add(new("Door break sound", "Doors and gates make their breaking sound when they are bashed or broken open. "
+                + "The game never picks which breaking sound to play, so it plays none.",
+                Toggle: new("Door break sound", () => config.FixDoorBreak, v => config.FixDoorBreak = v, Remaster: true, OnOff: true)));
+            result.Add(new("Ambience after loading", "A biome whose sounds were not loaded yet starts its day or night ambience by the time of day. "
+                + "The game plays the opposite one (night sounds by day) until the next biome or day change.",
+                Toggle: new("Ambience after loading", () => config.FixAmbienceSuffix, v => config.FixAmbienceSuffix = v, Remaster: true, OnOff: true)));
+            result.Add(new("Wind stops", "The wind's sound ends when the wind dies down. The game asks for a stop sound that does not exist, so once the wind has blown it never goes quiet.",
+                Toggle: new("Wind stops", () => config.FixWindStop, v => config.FixWindStop = v, Remaster: true, OnOff: true)));
+        }
         if (page == 4)
         {
             result.Add(new(AttackSlotsSlider.Label, "How many enemies may fight one character in melee at once (the game: 1).", Slider: AttackSlotsSlider));
@@ -191,9 +206,6 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
             result.Add(new("Wild squads stay", "Animals, bandits and other wild squads keep their characters, wounds and places when the area around them unloads, and are there again when you come back. "
                 + "In the game they are removed and new ones are made.",
                 Toggle: new("Wild squads stay", () => config.KeepWild, v => { config.KeepWild = v; OffscreenChanged?.Invoke(); }, Remaster: true, OnOff: true)));
-            result.Add(new("Raids as written", "Raid and campaign data that builds on a base campaign counts the base's squads and follow-up campaigns once. "
-                + "The game counts them twice, so inherited squads come up more often and follow-up raids are about twice as likely.",
-                Toggle: new("Raids as written", () => config.CampaignAncestorsOnce, v => { config.CampaignAncestorsOnce = v; OffscreenChanged?.Invoke(); }, Remaster: true, OnOff: true)));
             result.Add(new("Doors close behind", "A door someone opened by walking through it closes again a few seconds after the last person went through. In the game doors stay open.",
                 Toggle: new("Doors close behind", () => config.DoorsCloseBehind, v => { config.DoorsCloseBehind = v; DoorsCloseChanged?.Invoke(v); }, Remaster: true, OnOff: true)));
             result.Add(new("Hover outline", "Outline and tint the character under the cursor, in the colour of what a right click would do.",
@@ -431,6 +443,7 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
         config.KeepRoamers = config.OffscreenFights = config.OffscreenHealing = config.CampaignAncestorsOnce = config.KeepWild = true;
         config.DoorsCloseBehind = true;
         DoorsCloseChanged?.Invoke(true);
+        config.FixDoorBreak = config.FixAmbienceSuffix = config.FixWindStop = true;
         OffscreenChanged?.Invoke();
         config.Audio = new();
         AudioChanged?.Invoke();

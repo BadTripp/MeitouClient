@@ -68,6 +68,8 @@ sealed partial class GameHost
         audio.SetPaused(session.Simulation.IsPaused);
         var weather = gpu.Weather;
         var clock = session.Clock;
+        audio.Ambience.FixDelayedSuffix = config.FixAmbienceSuffix;
+        audio.Ambience.FixWindStop = config.FixWindStop;
         audio.Update(weather?.World.RegionAt(target.X, target.Z), weather?.State, clock.HourOfDay, clock.Sunrise, clock.Sunset,
             eye.Y - gpu.Terrain.HeightAt(eye.X, eye.Z), realSeconds);
         UpdateWorldAudio(audio, target, eye);
