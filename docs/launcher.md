@@ -31,10 +31,11 @@ items); the launcher never downloads or hosts mods.
 - `dotnet publish -r <rid>` gives a single Native AOT `meitou-launcher[.exe]` (`PublishAot`, ~45 MB on win-x64, **Verified**
   2026-10-20) and nothing else: no symbols, no native libraries beside it. `Meitou.Core` is `IsAotCompatible`, so code it or the
   launcher adds that AOT can't compile (reflection `JsonSerializer`, for one) fails the build; JSON goes through `LauncherJson`.
-- Avalonia's native libraries (`libSkiaSharp`, `libHarfBuzzSharp`, on Windows ANGLE's `av_libglesv2`) can't be linked in, so the
-  publish embeds them as `native/<file>` resources. `NativeLibraries.Load` (right after Velopack's hooks) writes them once to
-  `native/<16 hex of their SHA-256>/` in the data folder, loads them by full path and points SkiaSharp's and HarfBuzzSharp's
-  P/Invokes at them; ANGLE is then found by name as an already loaded module. Other `native/*` folders are deleted when not in use.
+- Avalonia's native libraries (`libSkiaSharp`, `libHarfBuzzSharp`, on Windows ANGLE's `av_libglesv2`, on macOS
+  `libAvaloniaNative`) can't be linked in, so the publish embeds them as `native/<file>` resources. `NativeLibraries.Load` (right
+  after Velopack's hooks) writes them once to `native/<16 hex of their SHA-256>/` in the data folder, loads them by full path and
+  points SkiaSharp's, HarfBuzzSharp's and Avalonia.Native's P/Invokes at them; ANGLE is then found by name as an already loaded
+  module (Windows only: macOS dyld doesn't match a bare name to a loaded library, issue #16). Other `native/*` folders are deleted when not in use.
   Debug builds embed nothing and load them from beside the executable.
 - Statically linked Skia/ANGLE (third-party prebuilt packages, win-x64 only) would avoid the extraction; not used, so all four
   RIDs share one mechanism on the official binaries.
