@@ -97,7 +97,7 @@ sealed partial class GameHost
                 soundLayers.Add(new SoundLayer(layer.Definition, events, layer.Length > 0 ? layer.Time / layer.Length : 0, layer.Weight, events is null ? null : definitionWeapons![layer.Definition]));
             }
             ulong key = SoundKey(c.Id);
-            var loop = c.Task == CharacterTask.Build ? CharacterLoop.Build : c.Task == CharacterTask.Treat ? CharacterLoop.Medic : c.PickingLock && c.Task != CharacterTask.GoTo ? CharacterLoop.Unlock : CharacterLoop.None;
+            var loop = c.Task == CharacterTask.Build ? CharacterLoop.Build : c.Task == CharacterTask.Treat ? CharacterLoop.Medic : (c.PickingLock || c.WorkingShackles) && c.Task != CharacterTask.GoTo ? CharacterLoop.Unlock : CharacterLoop.None;
             sounds.Update(key, profile, position, yaw, speed, System.Runtime.InteropServices.CollectionsMarshal.AsSpan(soundLayers), loop);
             JobSounds(sounds, key, c);
         }
@@ -136,6 +136,8 @@ sealed partial class GameHost
             case SoundKind.Eat: sounds.Job(subject, "Character_Consume", CharacterSounds.FootstepLimit, "Consume", "Eat"); break;
             case SoundKind.Unlocked: sounds.Job(subject, "Character_Unlock_Success", 0); break;
             case SoundKind.Locked: sounds.Job(subject, "Character_Lock"); break;
+            case SoundKind.PickedUp: sounds.Job(subject, "Character_Pick_Up_Ground"); break;
+            case SoundKind.ShacklesOn: if (e.Item is not null) uiSounds?.Play(new UiSoundEvent("Item_Drop", Item: e.Item)); break;
             case SoundKind.BountyPaid: uiSounds?.Play(new UiSoundEvent("Notifications", "Notifications", "Bounty_Fulfilled")); break;
             case SoundKind.DismantleDone: uiSounds?.Play(new UiSoundEvent("Notifications", "Notifications", "Thing_Complete")); break;
         }

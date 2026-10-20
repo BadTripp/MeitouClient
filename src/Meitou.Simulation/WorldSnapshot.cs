@@ -99,6 +99,8 @@ public sealed record CharacterSnapshot(CharacterId Id, CharacterAppearance? Appe
     public CharacterTask Task { get; init; }
     /// <summary>Working on a cage's lock (the picker's order is given and it is in reach or walking there).</summary>
     public bool PickingLock { get; init; }
+    /// <summary>Picking or cutting shackles (a <see cref="Locks.ShackleJob"/> of that work, in reach or walking there): the <c>Character_Unlock</c> loop. Breaking and putting on have none.</summary>
+    public bool WorkingShackles { get; init; }
     /// <summary>Lying in a bed (<see cref="Locks.HeldState.Bed"/>).</summary>
     public bool InBed { get; init; }
     /// <summary>In a fight (<see cref="CharacterCold.InCombat"/>): the portrait's <c>Combat</c> overlay.</summary>

@@ -140,7 +140,11 @@ public sealed partial class LockSystem
                 case ShackleWork.PutOn:
                     c.Shackles = null;
                     var wearer = table.Cold(w)!;
-                    if (PutOn(world, c, wearer, item)) { if (c.IsPlayer) world.Post($"{c.Name} put {item.Name} on {wearer.Name}"); }
+                    if (PutOn(world, c, wearer, item))
+                    {
+                        // The sound of the original's drop onto the armour slot (the interface's Item_Drop); only the player's order has one.
+                        if (c.IsPlayer) { world.Post($"{c.Name} put {item.Name} on {wearer.Name}"); world.EmitSound(SoundKind.ShacklesOn, s, next[s].Position, item.Record); }
+                    }
                     else if (c.IsPlayer) world.Post($"{wearer.Name} already wears something in that slot");
                     break;
                 case ShackleWork.Pick:

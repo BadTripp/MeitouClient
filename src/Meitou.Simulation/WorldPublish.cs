@@ -71,6 +71,7 @@ public sealed partial class World
                 Carrying = cold?.Carrying ?? CharacterId.None,
                 Task = (CharacterTask)state[i].Task,
                 PickingLock = cold?.PickingLock is not null,
+                WorkingShackles = cold?.Shackles is { Work: Locks.ShackleWork.Pick or Locks.ShackleWork.Cut },
                 InBed = cold is { InSomething: Locks.HeldState.Bed },
                 InCombat = cold?.InCombat ?? false,
                 Shackled = cold?.Inventory is { } worn && worn.Items.Any(item => item.IsLocked && item.Section != "main"),
