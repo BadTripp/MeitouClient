@@ -180,11 +180,12 @@ public sealed class OgreScriptResources
     {
         if (!groups.TryGetValue(location.Group, out var index))
             groups[location.Group] = index = new(StringComparer.OrdinalIgnoreCase);
-        if (location.Type != "FileSystem" || !Directory.Exists(location.Path))
+        if (location.Type != "FileSystem" || GameFiles.ExistingDirectory(location.Path) is not { } existing)
         {
             Skipped.Add(location);
             return;
         }
+        location = location with { Path = existing };
         Locations.Add(location);
         foreach (var file in Files(location.Path, "*", SearchOption.TopDirectoryOnly))
             index[Path.GetFileName(file)] = file;

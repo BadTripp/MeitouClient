@@ -49,9 +49,19 @@ sealed partial class GameHost
         if (fullScreen) BorderlessFullScreen.Toggle(window);
         else window.WindowState = WindowState.Maximized;
         BeginLoadingScreen(display);   // its textures and fonts are made before the window shows
-        // The first loading frame is in the swapchain when the window shows, and on screen before the splash closes.
-        LoadingFrame();
-        window.IsVisible = true;
+        // The first loading frame is in the swapchain when the window shows, and on screen before the splash closes. Not on Wayland: a window gets its
+        // shell role when it shows, and a buffer attached to the surface before that makes the compositor drop the client ("attached a buffer before
+        // configure event"), so there the window shows first and takes the compositor's configure before anything is drawn.
+        if (window.Native?.Wayland is not null)
+        {
+            window.IsVisible = true;
+            window.DoEvents();
+        }
+        else
+        {
+            LoadingFrame();
+            window.IsVisible = true;
+        }
         LoadingFrame();
         Splash?.Dispose();
         try

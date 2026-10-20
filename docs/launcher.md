@@ -47,7 +47,7 @@ Native dependencies off Windows:
 - Windows-only, not shipped: DLSS/Streamline (`sl.*.dll`, `nvngx_dlss.dll`, `NvLowLatencyVk.dll`) and FSR (`amd_fidelityfx_vk.dll`);
   both load via `NativeLibrary.TryLoad` and report a reason when missing. `FsrUpscaler` also loads `vulkan-1.dll` by name.
 - Linux: the Vulkan loader (`libvulkan.so.1`) and driver come from the system, as do X11/Wayland and the OpenAL backend
-  (PipeWire/PulseAudio/ALSA). **Unknown**: whether the game starts and renders on Linux; never run there.
+  (PipeWire/PulseAudio/ALSA). **Verified** (KDE on Wayland and X11, RTX 3070 Laptop with the NVIDIA driver, GLFW 3.4): the game starts, loads a large save, renders and plays with sound; other distributions, AMD and Intel GPUs were not run. Case-sensitive file systems need `GameFiles.Resolve` for paths from game data.
 - macOS: no Vulkan loader or MoltenVK is bundled (no `Silk.NET.MoltenVK.Native` reference); the user must install one (LunarG SDK).
   `VulkanDevice` requests and requires Vulkan 1.3 and does not enable `VK_KHR_portability_enumeration`, which the loader needs to list
   MoltenVK. **Unknown**: whether MoltenVK offers 1.3 and the features the renderer uses; never run on macOS. Browser downloads get

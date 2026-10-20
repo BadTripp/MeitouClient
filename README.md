@@ -18,7 +18,7 @@ Website: [meitou.martinvlcek.sk](https://meitou.martinvlcek.sk/).
 [Windows releases](https://github.com/VlcekM/MeitouClient/releases): unzip and run MeitouClient.exe
 (game) or meitou-viewer.exe (debug world viewer); prebuilt packages need no separate .NET install.
 Windows10/11, Vulkan1.3 GPU with required descriptor-indexing/indirect-draw features, and Kenshi.
-Other platforms are untested; optional ray-query GI falls back on unsupported GPUs.
+Linux (x64, X11 and Wayland, Vulkan, NVIDIA driver) builds and runs from source (`dotnet run -c Release --project src/Meitou.Game`; a published build needs `--self-contained true`); Steam installs are found under ~/.local/share/Steam, ~/.steam/steam and the Flatpak folder. DLSS/FSR need the Windows DLLs. macOS is untested. Optional ray-query GI falls back on unsupported GPUs.
 Building requires the [.NET10 SDK](https://dotnet.microsoft.com/download).
 
 Steam installs are located automatically; otherwise select the Kenshi folder when prompted,
