@@ -1,3 +1,4 @@
+using Meitou.Content;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -18,7 +19,9 @@ public sealed class StatHelpCatalog
     public static StatHelpCatalog Read(string? path)
     {
         var result = new StatHelpCatalog();
-        if (path is null || !File.Exists(path)) return result;
+        if (path is null) return result;
+        path = GameFiles.Resolve(path);
+        if (!File.Exists(path)) return result;
         var references = new List<int>();
         var text = new StringBuilder();
         bool reading = false;
