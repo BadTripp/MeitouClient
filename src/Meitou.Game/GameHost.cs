@@ -225,6 +225,8 @@ sealed partial class GameHost(GameInstall install, WorldScene scene, AssetLocato
         };
         player.ArmourOf = record => popData?.Combat.Armour(record);
         player.RecordName = id => popData?.Db.Find(id)?.Name;
+        player.ItemRecordOf = id => popData?.Db.Find(id);
+        player.CombatOf = () => popData?.Combat;
         player.MapItemTowns = record =>
         {
             if (popData is not { } d || d.Db.Find(record) is not { Type: Meitou.Data.Fcs.FcsRecordType.MAP_ITEM } map) return null;
