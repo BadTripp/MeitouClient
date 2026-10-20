@@ -7,7 +7,7 @@ public sealed class LauncherConfig
 {
     /// <summary>
     /// The launcher's own folder: <c>%LocalAppData%/Meitou</c> on Windows, <c>~/.local/share/Meitou</c> on Linux,
-    /// <c>~/Library/Application Support/Meitou</c> on macOS. Holds the installed versions and is the game's working directory, so its
+    /// <c>~/Library/Application Support/Meitou</c> on macOS. Holds <c>launcher.json</c> and is the game's working directory, so its
     /// <c>meitou.user.json</c> is shared by every version.
     /// </summary>
     public static string DataDirectory { get; } =
@@ -15,9 +15,27 @@ public sealed class LauncherConfig
 
     static string FilePath => Path.Combine(DataDirectory, "launcher.json");
 
+    /// <summary>Where <c>versions/</c> and <c>downloads/</c> go: <see cref="InstallFolder"/>, else <see cref="DataDirectory"/>.</summary>
+    public static string InstallDirectory { get; private set; } = DataDirectory;
+
+    string? installFolder;
+    public string? InstallFolder
+    {
+        get => installFolder;
+        set
+        {
+            installFolder = string.IsNullOrWhiteSpace(value) ? null : value;
+            InstallDirectory = installFolder ?? DataDirectory;
+        }
+    }
+
+    /// <summary>The user confirmed the install and Kenshi folders in the first-start dialog.</summary>
+    public bool FoldersConfirmed { get; set; }
     public string? KenshiPath { get; set; }
     public bool IncludePrereleases { get; set; }
     public string? SelectedVersion { get; set; }
+    /// <summary>A game release the user chose not to be offered as an update; a newer one is offered again.</summary>
+    public string? SkippedVersion { get; set; }
     public string LaunchArguments { get; set; } = "";
     public List<ModPreset> Presets { get; set; } = [];
 

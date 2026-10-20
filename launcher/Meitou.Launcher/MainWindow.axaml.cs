@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -20,9 +21,13 @@ public sealed partial class MainWindow : Window
     readonly LauncherUpdater updater;
     readonly ObservableCollection<ModRow> mods = [];
     List<Release> allReleases = [];
+    List<string> installedVersions = [];
+    readonly MenuFlyout versionMenu = new() { Placement = PlacementMode.TopEdgeAlignedRight };
     GameInstall? install;
     CancellationTokenSource? download;
     ModRow? dragged;
+
+    const uint WS_CAPTION = 0x00C00000, WS_SYSMENU = 0x00080000, WS_MINIMIZEBOX = 0x00020000, WS_MAXIMIZEBOX = 0x00010000;
 
     static string LauncherVersion => typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
 
@@ -33,33 +38,43 @@ public sealed partial class MainWindow : Window
         this.config = config;
         updater = new LauncherUpdater(releases, config.IncludePrereleases);
         InitializeComponent();
+        // Windows animates minimise, maximise and restore only for windows with a caption style. Avalonia sizes the client area of an
+        // undecorated window to the whole window whatever its styles, so the caption bits add the animations and no frame.
+        if (OperatingSystem.IsWindows())
+            Win32Properties.AddWindowStylesCallback(this, (style, exStyle) => (style | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX, exStyle));
+        PlayVersionButton.Flyout = versionMenu;
+        TrackPointer();
         ModListBox.ItemsSource = mods;
         ModListBox.AddHandler(PointerMovedEvent, ModList_PointerMoved, RoutingStrategies.Bubble, handledEventsToo: true);
         ModListBox.AddHandler(PointerReleasedEvent, ModList_PointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
         ModListBox.AddHandler(PointerCaptureLostEvent, (_, _) => EndDrag(), RoutingStrategies.Direct | RoutingStrategies.Bubble, handledEventsToo: true);
         ArgumentsBox.Text = config.LaunchArguments;
-        ShowPrereleaseToggle();
-        DataFolderText.Text = $"Installed versions and the game's settings: {LauncherConfig.DataDirectory}";
+        NightlyBox.IsChecked = config.IncludePrereleases;
+        DataFolderText.Text = $"The launcher's and the game's settings: {LauncherConfig.DataDirectory}";
+        InstallPathBox.Text = LauncherConfig.InstallDirectory;
         LauncherVersionText.Text = $"v{LauncherVersion} · {Releases.Rid}";
         LauncherAbout.Text = $"Version {LauncherVersion} for {Releases.Rid}. "
             + (updater.IsInstalled ? "Updates itself from GitHub." : "Not installed by its Setup, so updates open the release page.");
         RefreshPresets();
         RefreshInstalled();
         UseKenshi(found);
+        if (!config.FoldersConfirmed) ShowSetup();
+        Closing += (_, _) => { if (graphicsSave?.IsEnabled == true) SaveGame(); };
         Opened += async (_, _) => await Task.WhenAll(LoadNewsAsync(), RefreshReleasesAsync());
     }
 
-    void Status(string text) => StatusText.Text = text;
+    void Status(string text) => SetText(StatusText, text);
 
     // ---- Pages ----
 
     void Nav_Click(object? sender, RoutedEventArgs e)
     {
-        foreach (var (nav, page) in new (ToggleButton, Control)[] { (NavHome, HomePage), (NavMods, ModsPage), (NavVersions, VersionsPage), (NavSettings, SettingsPage) })
+        foreach (var (nav, page) in new (ToggleButton, Control)[] { (NavHome, HomePage), (NavMods, ModsPage), (NavVersions, VersionsPage), (NavGraphics, GraphicsPage), (NavSettings, SettingsPage) })
         {
             nav.IsChecked = nav == sender;
             page.IsVisible = nav == sender;
         }
+        if (sender == NavGraphics) ShowGraphics();
     }
 
     // ---- Home: news ----
@@ -138,24 +153,70 @@ public sealed partial class MainWindow : Window
         config.Save();
     }
 
-    void ShowPrereleaseToggle()
+    async void Nightly_Click(object? sender, RoutedEventArgs e)
     {
-        PrereleaseToggle.IsChecked = config.IncludePrereleases;
-        PrereleaseToggle.Content = config.IncludePrereleases ? "On" : "Off";
-    }
-
-    void Prerelease_Click(object? sender, RoutedEventArgs e)
-    {
-        config.IncludePrereleases = PrereleaseToggle.IsChecked == true;
+        if (NightlyBox.IsChecked == true && !config.IncludePrereleases)
+        {
+            bool sure = await AskAsync("Nightly builds",
+                "Nightly builds are made every day from the newest code and are not tested. They may be unstable, crash, and corrupt your save files: "
+                + "back up your saves before playing one.\n\nContinue with nightly builds?", "Yes", "No");
+            if (!sure) { NightlyBox.IsChecked = false; return; }
+        }
+        config.IncludePrereleases = NightlyBox.IsChecked == true;
         config.Save();
-        ShowPrereleaseToggle();
         ShowReleases();
     }
+
+    string Latest => config.IncludePrereleases ? "latest nightly" : "latest";
 
     async void OpenDataFolder_Click(object? sender, RoutedEventArgs e)
     {
         Directory.CreateDirectory(LauncherConfig.DataDirectory);
         await this.Launcher.LaunchUriAsync(new Uri(LauncherConfig.DataDirectory + Path.DirectorySeparatorChar));
+    }
+
+    async void BrowseInstall_Click(object? sender, RoutedEventArgs e)
+    {
+        if (download is not null) { InstallStatus.Text = "Wait for the download to finish first."; return; }
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Install folder" });
+        if (folders is not [var folder] || folder.TryGetLocalPath() is not { } path || path == LauncherConfig.InstallDirectory) return;
+        var previous = LauncherConfig.InstallDirectory;
+        InstallStatus.Text = "Moving installed versions…";
+        try { await Task.Run(() => Releases.MoveInstalled(previous, path)); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            InstallStatus.Text = $"Could not move the versions to {path}: {ex.Message}";
+            RefreshInstalled();
+            return;
+        }
+        config.InstallFolder = Path.GetFullPath(path) == Path.GetFullPath(LauncherConfig.DataDirectory) ? null : path;
+        config.Save();
+        InstallPathBox.Text = LauncherConfig.InstallDirectory;
+        InstallStatus.Text = "Where versions are installed; changing it moves them.";
+        RefreshInstalled();
+        ShowReleases();
+    }
+
+    async void OpenInstallFolder_Click(object? sender, RoutedEventArgs e)
+    {
+        Directory.CreateDirectory(LauncherConfig.InstallDirectory);
+        await this.Launcher.LaunchUriAsync(new Uri(LauncherConfig.InstallDirectory + Path.DirectorySeparatorChar));
+    }
+
+    void ShowSetup()
+    {
+        var setup = new SetupOverlay(config, install);
+        setup.Confirmed += chosen =>
+        {
+            SetupHost.IsVisible = false;
+            SetupHost.Child = null;
+            InstallPathBox.Text = LauncherConfig.InstallDirectory;
+            RefreshInstalled();
+            ShowReleases();
+            UseKenshi(chosen);
+        };
+        SetupHost.Child = setup;
+        SetupHost.IsVisible = true;
     }
 
     // ---- Mods ----
@@ -168,6 +229,9 @@ public sealed partial class MainWindow : Window
                 mods.Add(new ModRow(entry.Mod, entry.Enabled));
         foreach (var row in mods) row.PropertyChanged += (_, _) => ShowModCount();
         ShowModCount();
+        ModsEmpty.IsVisible = mods.Count == 0;
+        ModsEmpty.Text = install is null ? "Set the Kenshi folder in Settings to list its mods."
+            : "No mods found in Kenshi's mods folder or among its Steam workshop items.";
     }
 
     void ShowModCount() => ModCount.Text = mods.Count == 0 ? "No mods found" : $"{mods.Count(m => m.Enabled)} of {mods.Count} enabled";
@@ -339,9 +403,146 @@ public sealed partial class MainWindow : Window
 
     void RefreshInstalled()
     {
-        var installed = Releases.Installed();
-        VersionBox.ItemsSource = installed;
-        VersionBox.SelectedItem = installed.Contains(config.SelectedVersion ?? "") ? config.SelectedVersion : installed.FirstOrDefault();
+        installedVersions = Releases.Installed();
+        ShowPlay();
+        ShowFooter();
+    }
+
+    // The version picked to play (config.SelectedVersion) while it is installed; null plays the latest.
+    string? PickedVersion => installedVersions.Contains(config.SelectedVersion ?? "") ? config.SelectedVersion : null;
+
+    // The version Play starts: the picked one, else the newest installed.
+    string? PlayVersion => PickedVersion ?? installedVersions.FirstOrDefault();
+
+    // The latest release when it is newer than every installed version and not skipped.
+    Release? NewRelease => installedVersions.Count > 0 && LatestRelease is { } latest && !installedVersions.Contains(latest.Version)
+        && latest.Version != config.SkippedVersion ? latest : null;
+
+    // Playing the latest, with a new release: Play is the button that installs it.
+    bool UpdatePending => PickedVersion is null && NewRelease is not null;
+
+    // "Play latest" or "Play v0.13.0" (or "Update to v0.14.1" while UpdatePending), and the arrow's menu: Latest, then each
+    // installed version. During a download Play keeps its look and shows the progress.
+    void ShowPlay()
+    {
+        var picked = PickedVersion;
+        if (download is null)
+        {
+            bool pending = UpdatePending;
+            PlayButton.Classes.Set("pending", pending);
+            PlayVersionButton.Classes.Set("pending", pending);
+            PlayIcon.IsVisible = !pending;
+            UpdateIcon.IsVisible = pending;
+            SetText(PlayText, pending ? $"Update to {Releases.Display(LatestRelease!.Version)}" : picked is null ? $"Play {Latest}" : $"Play {Releases.Display(picked)}");
+            ToolTip.SetTip(PlayButton, pending ? $"Download and install {LatestRelease!.Title}; the arrow plays an installed version"
+                : PlayVersion is { } played ? $"Start Meitou {played}" : null);
+        }
+        versionMenu.Items.Clear();
+        versionMenu.Items.Add(VersionItem(UpdatePending ? $"Latest (update to {Releases.Display(LatestRelease!.Version)})"
+            : installedVersions.FirstOrDefault() is { } newest ? $"Latest ({Releases.Display(newest)})" : "Latest", null, picked));
+        foreach (var version in installedVersions) versionMenu.Items.Add(VersionItem($"v{Releases.ParseVersion(version).Number}", version, picked));
+        // Its settings are the played version's.
+        if (GraphicsPage.IsVisible) ShowGraphics();
+        // A skipped release stays installable from here.
+        if (LatestRelease is { } latest && latest.Version == config.SkippedVersion && !installedVersions.Contains(latest.Version))
+        {
+            var item = new MenuItem { Header = $"Install v{latest.Version} (skipped)" };
+            item.Click += async (_, _) =>
+            {
+                config.SkippedVersion = null;
+                config.Save();
+                if (download is null) await InstallAsync(latest);
+            };
+            versionMenu.Items.Add(new Separator());
+            versionMenu.Items.Add(item);
+        }
+    }
+
+    // Skip: the new release is no longer offered, until a newer one comes out.
+    void SkipVersion_Click(object? sender, RoutedEventArgs e)
+    {
+        if (download is not null || NewRelease is not { } release) return;
+        config.SkippedVersion = release.Version;
+        config.Save();
+        ShowFooter();
+        Status($"Skipped {release.Title}: the arrow's menu can still install it.");
+    }
+
+    MenuItem VersionItem(string header, string? version, string? picked)
+    {
+        object content = header;
+        // A nightly wears a brass tag with its build date: "v0.15.1  NIGHTLY 20 OCT".
+        if (version is not null && version.Contains("-nightly.", StringComparison.Ordinal))
+        {
+            var date = Releases.ParseVersion(version).Nightly?.ToString(" d MMM", System.Globalization.CultureInfo.InvariantCulture) ?? "";
+            content = new StackPanel
+            {
+                Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 10,
+                Children =
+                {
+                    new TextBlock { Text = header },
+                    new TextBlock { Classes = { "warn" }, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center, Text = ("nightly" + date).ToUpperInvariant() },
+                },
+            };
+        }
+        var item = new MenuItem { Header = content, ToggleType = MenuItemToggleType.Radio, GroupName = "play", IsChecked = version == picked };
+        item.Click += (_, _) => PickVersion(version);
+        return item;
+    }
+
+    // Play starts this version from now on; null: the latest installed.
+    void PickVersion(string? version)
+    {
+        config.SelectedVersion = version;
+        config.Save();
+        ShowPlay();
+        ShowReleases();
+        Status(version is null ? "Play starts the latest installed version." : $"Play starts Meitou {version}.");
+    }
+
+    void SelectVersion_Click(object? sender, RoutedEventArgs e)
+    {
+        if (ReleaseListBox.SelectedItem is ReleaseRow { Installed: true, Release: var release })
+            PickVersion(release.Version == installedVersions.FirstOrDefault() ? null : release.Version);
+    }
+
+    // The newest game release with a build for this platform, honouring the pre-release setting.
+    Release? LatestRelease => allReleases.FirstOrDefault(r => r.Kind == ReleaseKind.Game && (config.IncludePrereleases || !r.Prerelease) && r.Asset is not null);
+
+    // With no version installed the footer offers Install latest instead of the version box and Play; with versions installed
+    // but not the latest, an update button beside the version box installs it and selects it.
+    void ShowFooter()
+    {
+        if (download is not null) return;
+        var installed = installedVersions;
+        var latest = LatestRelease;
+        bool none = installed.Count == 0;
+        PlayPanel.IsVisible = !none;
+        InstallLatestButton.IsVisible = none;
+        SetText(InstallLatestText, $"Install {Latest}");
+        InstallLatestButton.IsEnabled = latest is not null;
+        ToolTip.SetTip(InstallLatestButton, latest is not null ? $"Download and install {latest.Title}" : $"No release with a {Releases.Rid} build found yet");
+        // Playing the latest, Play itself is the update (ShowPlay); playing a picked version, this button beside it.
+        UpdateButton.IsVisible = PickedVersion is not null && NewRelease is not null;
+        SkipButton.IsVisible = NewRelease is not null;
+        SkipText.Text = $"Skip v{NewRelease?.Version}";
+        UpdateTitle.Text = $"New version {latest?.Version}";
+        SetText(UpdateHint, "Click to install");
+        ToolTip.SetTip(UpdateButton, $"Download and install {latest?.Title}");
+        ShowPlay();
+    }
+
+    // Install shows Installed for an installed release and Cancel during a download; Uninstall and Open folder need it installed.
+    void ShowVersionButtons()
+    {
+        var row = ReleaseListBox.SelectedItem as ReleaseRow;
+        bool installed = row?.Installed == true;
+        InstallButton.Content = download is not null ? "Cancel" : installed ? "Installed" : "Install";
+        InstallButton.IsEnabled = download is not null || (row?.Release.Asset is not null && !installed);
+        UninstallButton.IsEnabled = installed && download is null;
+        OpenFolderButton.IsEnabled = installed;
+        SelectVersionButton.Content = row?.Played == true ? "Selected" : "Select";
+        SelectVersionButton.IsEnabled = installed && row?.Played != true;
     }
 
     async Task RefreshReleasesAsync()
@@ -357,12 +558,20 @@ public sealed partial class MainWindow : Window
     void ShowReleases()
     {
         var installed = Releases.Installed();
+        var selected = (ReleaseListBox.SelectedItem as ReleaseRow)?.Release.Tag;
         var rows = allReleases
             .Where(r => r.Kind == ReleaseKind.Game && (config.IncludePrereleases || !r.Prerelease))
-            .Select(r => new ReleaseRow(r, installed.Contains(r.Version)))
+            .Select(r => new ReleaseRow(r, installed.Contains(r.Version), r.Version == PlayVersion))
             .ToList();
         ReleaseListBox.ItemsSource = rows;
+        ReleaseListBox.SelectedItem = rows.FirstOrDefault(r => r.Release.Tag == selected);
+        NotesEmpty.IsVisible = ReleaseListBox.SelectedItem is null;
+        ReleasesEmpty.IsVisible = rows.Count == 0;
+        ReleasesEmpty.Text = allReleases.Any(r => r.Kind == ReleaseKind.Game) ? "Only nightly builds so far: tick Nightly builds beside Play to list them."
+            : "No releases listed yet. Check for releases below.";
         VersionCount.Text = $"{rows.Count} releases · {installed.Count} installed";
+        ShowVersionButtons();
+        ShowFooter();
     }
 
     async void RefreshReleases_Click(object? sender, RoutedEventArgs e) => await RefreshReleasesAsync();
@@ -370,28 +579,99 @@ public sealed partial class MainWindow : Window
     void ReleaseListBox_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         var release = (ReleaseListBox.SelectedItem as ReleaseRow)?.Release;
-        ReleaseNotes.Text = PlainNotes(release?.Notes ?? "");
-        if (download is null) InstallButton.IsEnabled = release?.Asset is not null;
+        ReleaseNotes.Content = release is null ? null
+            : MarkdownView.Render(new NewsPost("", release.Title, null, null, null, ReleaseNotesMarkdown(release.Notes), release.PageUrl), news, OpenLink);
+        NotesEmpty.IsVisible = release is null;
+        ShowVersionButtons();
     }
 
-    // Release notes are Markdown; shown as text without heading marks and code ticks.
-    static string PlainNotes(string markdown) =>
-        string.Join("\n", markdown.ReplaceLineEndings("\n").Split('\n').Select(l => l.TrimStart('#').TrimStart().Replace("`", "")));
+    // Release notes are Markdown, shown without what is only for the release page: its "## Download" section (how to install by hand)
+    // and GitHub's "**Full Changelog**" link.
+    static string ReleaseNotesMarkdown(string markdown)
+    {
+        var lines = new List<string>();
+        bool download = false;
+        foreach (var line in markdown.ReplaceLineEndings("\n").Split('\n'))
+        {
+            if (line.StartsWith("## ", StringComparison.Ordinal)) download = line.Trim() == "## Download";
+            if (download || line.StartsWith("**Full Changelog**", StringComparison.Ordinal)) continue;
+            lines.Add(line);
+        }
+        return string.Join("\n", lines).Trim();
+    }
 
     // Install, or Cancel while a download runs.
     async void Install_Click(object? sender, RoutedEventArgs e)
     {
         if (download is not null) { download.Cancel(); return; }
-        if (ReleaseListBox.SelectedItem is not ReleaseRow { Release: var release }) return;
+        if (ReleaseListBox.SelectedItem is ReleaseRow { Release: var release }) await InstallAsync(release);
+    }
+
+    // The footer's Install latest, or Cancel while a download runs.
+    async void InstallLatest_Click(object? sender, RoutedEventArgs e)
+    {
+        if (download is not null) { download.Cancel(); return; }
+        if (LatestRelease is { } release) await InstallAsync(release);
+    }
+
+    static readonly Avalonia.Media.FontFamily Mono = new("Cascadia Mono, Consolas, DejaVu Sans Mono, Menlo, monospace");
+
+    // The download percentage in a mono font, padded to "100%", so the footer buttons keep their width while it counts.
+    void ShowProgress(double p)
+    {
+        var percent = $"{p,4:0%}";
+        InstallLatestText.Inlines = [new Run("Installing "), new Run(percent) { FontFamily = Mono }];
+        UpdateHint.Inlines = [new Run("Installing "), new Run(percent) { FontFamily = Mono }, new Run(" · click to cancel")];
+        if (PlayButton.Classes.Contains("pending"))
+            PlayText.Inlines = [new Run("Installing "), new Run(percent) { FontFamily = Mono }];
+    }
+
+    // "Downloading <title>  12.3 / 456.7 MB · 85.2 Mbps" (MB = 10^6 bytes, Mbps = 10^6 bits a second), the figures in mono and
+    // padded so the line keeps its width; "Unpacking <title>..." once every byte is in.
+    void ShowDownloadStatus(Release release, long done, long total, double bitsPerSecond)
+    {
+        if (total > 0 && done >= total) { Status($"Unpacking {release.Title}..."); return; }
+        var size = total > 0 ? $"{done / 1e6,6:0.0} / {total / 1e6:0.0} MB" : $"{done / 1e6:0.0} MB";
+        var speed = bitsPerSecond > 0 ? $" · {bitsPerSecond / 1e6,5:0.0} Mbps" : "";
+        StatusText.Inlines = [new Run($"Downloading {release.Title}  "), new Run(size + speed) { FontFamily = Mono }];
+    }
+
+    static void SetText(TextBlock block, string text) => block.Inlines = [new Run(text)];
+
+    async Task InstallAsync(Release release)
+    {
         using var cts = download = new CancellationTokenSource();
-        InstallButton.Content = "Cancel";
-        DownloadProgress.Value = 0;
-        DownloadProgress.IsVisible = true;
+        ShowVersionButtons();
+        ShowProgress(0);
+        SkipButton.IsVisible = false;
+        ToolTip.SetTip(InstallLatestButton, $"Cancel the download of {release.Title}");
+        ToolTip.SetTip(UpdateButton, $"Cancel the download of {release.Title}");
+        if (PlayButton.Classes.Contains("pending")) ToolTip.SetTip(PlayButton, $"Cancel the download of {release.Title}");
+        DownloadProgress.Value = StatusProgress.Value = 0;
+        DownloadProgress.IsVisible = StatusProgress.IsVisible = true;
         Status($"Downloading {release.Title}...");
+        // The speed is smoothed over half-second samples, so the shown figure doesn't flicker with every 100 ms report.
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        double sampleTime = 0, bitsPerSecond = 0;
+        long sampleBytes = 0;
         try
         {
-            await releases.InstallAsync(release, new Progress<double>(p => DownloadProgress.Value = p), cts.Token);
-            config.SelectedVersion = release.Version;
+            await releases.InstallAsync(release, new Progress<(long Done, long Total)>(p =>
+            {
+                double now = clock.Elapsed.TotalSeconds;
+                if (now - sampleTime >= 0.5)
+                {
+                    double rate = (p.Done - sampleBytes) * 8 / (now - sampleTime);
+                    bitsPerSecond = bitsPerSecond == 0 ? rate : 0.7 * bitsPerSecond + 0.3 * rate;
+                    (sampleTime, sampleBytes) = (now, p.Done);
+                }
+                double fraction = p.Total > 0 ? (double)p.Done / p.Total : 0;
+                DownloadProgress.Value = StatusProgress.Value = fraction;
+                ShowProgress(fraction);
+                ShowDownloadStatus(release, p.Done, p.Total, bitsPerSecond);
+            }), cts.Token);
+            // Play starts what was just installed: as the latest, or picked when older than an installed one.
+            config.SelectedVersion = release.Version == Releases.Installed().FirstOrDefault() ? null : release.Version;
             config.Save();
             RefreshInstalled();
             ShowReleases();
@@ -408,8 +688,9 @@ public sealed partial class MainWindow : Window
         finally
         {
             download = null;
-            InstallButton.Content = "Install";
-            DownloadProgress.IsVisible = false;
+            DownloadProgress.IsVisible = StatusProgress.IsVisible = false;
+            ShowVersionButtons();
+            ShowFooter();
         }
     }
 
@@ -476,10 +757,17 @@ public sealed partial class MainWindow : Window
         LauncherUpdateButton.IsEnabled = false;
         try
         {
-            await updater.UpdateAndRestartAsync(p => Dispatcher.UIThread.Post(() => Status($"Updating the launcher: {p}%")), CancellationToken.None);
+            StatusProgress.Value = 0;
+            StatusProgress.IsVisible = true;
+            await updater.UpdateAndRestartAsync(p => Dispatcher.UIThread.Post(() =>
+            {
+                Status($"Updating the launcher: {p}%");
+                StatusProgress.Value = p / 100.0;
+            }), CancellationToken.None);
         }
         catch (Exception ex)
         {
+            StatusProgress.IsVisible = false;
             Status($"Launcher update failed: {ex.Message}");
             LauncherUpdateButton.IsEnabled = true;
         }
@@ -516,6 +804,8 @@ public sealed partial class MainWindow : Window
         bool max = WindowState == WindowState.Maximized;
         Plate.Margin = new Thickness(max ? 0 : 8);
         Plate.CornerRadius = new CornerRadius(max ? 0 : 10);
+        SetupHost.Margin = max ? new Thickness(0, 46, 0, 0) : new Thickness(8, 54, 8, 8);
+        SetupHost.CornerRadius = new CornerRadius(0, 0, max ? 0 : 10, max ? 0 : 10);
         Grips.IsVisible = !max;
         MaximizeIcon.Data = Avalonia.Media.Geometry.Parse(max ? "M2,0 H10 V8 M0,2 H8 V10 H0 Z" : "M0,0 H10 V10 H0 Z");
     }
@@ -524,12 +814,13 @@ public sealed partial class MainWindow : Window
 
     void Play_Click(object? sender, RoutedEventArgs e)
     {
+        // As the update button: install the latest, or cancel its download.
+        if (PlayButton.Classes.Contains("pending")) { InstallLatest_Click(sender, e); return; }
         if (install is null) { Status("Set the Kenshi folder first (Settings)."); return; }
-        if (VersionBox.SelectedItem is not string version) { Status("Install a version first (Versions)."); return; }
+        if (PlayVersion is not { } version) { Status("Install a version first (Versions)."); return; }
         if (Releases.FindGame(Releases.VersionDirectory(version)) is not { } exe) { Status($"Meitou {version} is not installed any more."); return; }
         if (!SaveMods()) return;
-        config.SelectedVersion = version;
-        config.Save();
+        if (graphicsSave?.IsEnabled == true) SaveGame();
         var start = new ProcessStartInfo(exe)
         {
             WorkingDirectory = LauncherConfig.DataDirectory,
@@ -539,7 +830,7 @@ public sealed partial class MainWindow : Window
         foreach (var arg in SplitArguments(config.LaunchArguments)) start.ArgumentList.Add(arg);
         try
         {
-            Process.Start(start);
+            running = Process.Start(start);
             Status($"Meitou {version} started.");
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException)

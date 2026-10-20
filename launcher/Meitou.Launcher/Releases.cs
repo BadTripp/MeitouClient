@@ -37,7 +37,7 @@ public sealed class Releases(HttpClient http)
     public static string? FindGame(string directory) =>
         GameExecutables.Select(name => Path.Combine(directory, name)).FirstOrDefault(File.Exists);
 
-    static string VersionsDirectory => Path.Combine(LauncherConfig.DataDirectory, "versions");
+    static string VersionsDirectory => Path.Combine(LauncherConfig.InstallDirectory, "versions");
     static string CacheFile => Path.Combine(LauncherConfig.DataDirectory, "releases-cache.json");
 
     public static HttpClient CreateClient()
@@ -101,26 +101,74 @@ public sealed class Releases(HttpClient http)
         return [.. list.OrderByDescending(r => r.Published)];
     }
 
-    /// <summary>Installed game versions (folders of <c>versions/</c> holding the game), newest version first.</summary>
+    /// <summary>A nightly's version, <c>0.15.1-nightly.20261020</c> (release.yml): its number and build date.</summary>
+    public static (string Number, DateOnly? Nightly) ParseVersion(string version)
+    {
+        int at = version.IndexOf("-nightly.", StringComparison.Ordinal);
+        if (at < 0) return (version, null);
+        return (version[..at], DateOnly.TryParseExact(version[(at + "-nightly.".Length)..], "yyyyMMdd", out var date) ? date : null);
+    }
+
+    /// <summary>"v0.15.0", a nightly "v0.15.1 nightly".</summary>
+    public static string Display(string version) => version.Contains("-nightly.", StringComparison.Ordinal) ? $"v{ParseVersion(version).Number} nightly" : $"v{version}";
+
+    /// <summary>
+    /// Installed game versions (folders of <c>versions/</c> holding the game), newest version first: a release before its own
+    /// pre-releases (<c>0.15.0</c> before <c>0.15.0-nightly.20261020</c>), nightlies of one version newest date first.
+    /// </summary>
     public static List<string> Installed()
     {
         if (!Directory.Exists(VersionsDirectory)) return [];
         return [.. Directory.EnumerateDirectories(VersionsDirectory)
             .Where(d => FindGame(d) is not null)
             .Select(Path.GetFileName).OfType<string>()
-            .OrderByDescending(v => System.Version.TryParse(v.Split('-')[0], out var n) ? n : new System.Version())];
+            .OrderByDescending(v => System.Version.TryParse(v.Split('-')[0], out var n) ? n : new System.Version())
+            .ThenBy(v => v.Contains('-'))
+            .ThenByDescending(v => v, StringComparer.Ordinal)];
     }
 
     public static string VersionDirectory(string version) => Path.Combine(VersionsDirectory, version);
 
     /// <summary>
-    /// Downloads the release's zip, checks its SHA-256 against the digest GitHub lists (when it lists one) and unpacks it into
-    /// <c>versions/&lt;version&gt;</c>, taking the zip's single top folder as the version's folder.
+    /// Moves the installed versions from <paramref name="from"/>'s <c>versions/</c> into <paramref name="to"/>'s, copying across drives.
+    /// A version already in the target is left where it was.
     /// </summary>
-    public async Task InstallAsync(Release release, IProgress<double> progress, CancellationToken ct = default)
+    public static void MoveInstalled(string from, string to)
+    {
+        var source = Path.Combine(from, "versions");
+        if (!Directory.Exists(source) || Path.GetFullPath(from) == Path.GetFullPath(to)) return;
+        var target = Path.Combine(to, "versions");
+        Directory.CreateDirectory(target);
+        foreach (var dir in Directory.EnumerateDirectories(source))
+        {
+            var dest = Path.Combine(target, Path.GetFileName(dir));
+            if (Directory.Exists(dest)) continue;
+            try { Directory.Move(dir, dest); }
+            catch (IOException) when (Path.GetPathRoot(Path.GetFullPath(dir)) != Path.GetPathRoot(Path.GetFullPath(dest)))
+            {
+                CopyDirectory(dir, dest);
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+        if (!Directory.EnumerateFileSystemEntries(source).Any()) Directory.Delete(source);
+    }
+
+    static void CopyDirectory(string from, string to)
+    {
+        Directory.CreateDirectory(to);
+        foreach (var file in Directory.EnumerateFiles(from)) File.Copy(file, Path.Combine(to, Path.GetFileName(file)));
+        foreach (var dir in Directory.EnumerateDirectories(from)) CopyDirectory(dir, Path.Combine(to, Path.GetFileName(dir)));
+    }
+
+    /// <summary>
+    /// Downloads the release's zip, checks its SHA-256 against the digest GitHub lists (when it lists one) and unpacks it into
+    /// <c>versions/&lt;version&gt;</c>, taking the zip's single top folder as the version's folder. <paramref name="progress"/> gets the bytes
+    /// downloaded and the total (0 when unknown), at most every 100 ms and once at the end.
+    /// </summary>
+    public async Task InstallAsync(Release release, IProgress<(long Done, long Total)> progress, CancellationToken ct = default)
     {
         var asset = release.Asset ?? throw new InvalidOperationException($"{release.Title} has no download for {Rid}.");
-        var downloads = Path.Combine(LauncherConfig.DataDirectory, "downloads");
+        var downloads = Path.Combine(LauncherConfig.InstallDirectory, "downloads");
         Directory.CreateDirectory(downloads);
         var zip = Path.Combine(downloads, asset.Name);
         var target = VersionDirectory(release.Version);
@@ -135,15 +183,16 @@ public sealed class Releases(HttpClient http)
                 await using var file = File.Create(zip);
                 using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new byte[1 << 16];
-                long done = 0;
+                long done = 0, reported = 0;
                 int n;
                 while ((n = await source.ReadAsync(buffer, ct)) > 0)
                 {
                     await file.WriteAsync(buffer.AsMemory(0, n), ct);
                     sha.AppendData(buffer, 0, n);
                     done += n;
-                    if (total > 0) progress.Report((double)done / total);
+                    if (Environment.TickCount64 - reported >= 100) { progress.Report((done, total)); reported = Environment.TickCount64; }
                 }
+                progress.Report((done, total));
                 var hash = Convert.ToHexStringLower(sha.GetHashAndReset());
                 if (asset.Digest is { } digest && digest.StartsWith("sha256:", StringComparison.Ordinal) && digest[7..] != hash)
                     throw new InvalidDataException($"{asset.Name} is damaged: SHA-256 {hash}, GitHub lists {digest[7..]}.");

@@ -10,6 +10,10 @@ items); the launcher never downloads or hosts mods.
 - One repository, two tag families: the game `v<version>` (`release.yml`), the launcher `launcher-v<version>`
   (`launcher-release.yml`, changelog `launcher/CHANGELOG.md`). Launcher releases are never marked Latest. Both workflows pass
   `--notes-start-tag` with the previous tag of their own family, so the generated notes never span the other family's tag.
+- Nightlies: `release.yml` also runs daily (02:00 UTC, or by hand with `nightly`) and publishes `v<X.Y.Z+1>-nightly.<yyyymmdd>`
+  (patch after the newest full release) as a pre-release, never Latest, without a changelog section. It is skipped when nothing
+  outside `news/`, `site/`, `launcher/` and their workflows changed since the newest game tag (nightly or full). Only the newest 7
+  nightlies are kept, since the launcher lists only the newest 100 releases. The launcher shows them with the Nightly builds checkbox beside Play ticked ("Play latest nightly"; ticking it asks first, with Yes under the pointer, warning of crashes and corrupted saves) (GitHub pre-releases; `IncludePrereleases` in `launcher.json`).
 - Game assets: `Meitou-<version>-<rid>.zip`, `<rid>` as .NET's `RuntimeInformation.RuntimeIdentifier` (`win-x64`, `linux-x64`,
   `osx-x64`, `osx-arm64`). A release with no zip for the machine's RID is listed but not installable.
 - The list comes from the REST API without a token (60 requests an hour per IP). The answer and its ETag are cached in
@@ -18,6 +22,21 @@ items); the launcher never downloads or hosts mods.
 - A download is checked against the asset's `digest` (`sha256:<hex>`) when GitHub lists one. The zip's single top folder becomes
   `versions/<version>/`. The game is `MeitouClient[.exe]` since 0.15 (`meitou[.exe]` before; the launcher takes either); on Unix
   it gets its execute bits. Cancelling a download removes the partial zip and unpacked folder.
+
+## One executable (Native AOT)
+
+- `dotnet publish -r <rid>` gives a single Native AOT `meitou-launcher[.exe]` (`PublishAot`, ~45 MB on win-x64, **Verified**
+  2026-10-20) and nothing else: no symbols, no native libraries beside it. `Meitou.Core` is `IsAotCompatible`, so code it or the
+  launcher adds that AOT can't compile (reflection `JsonSerializer`, for one) fails the build; JSON goes through `LauncherJson`.
+- Avalonia's native libraries (`libSkiaSharp`, `libHarfBuzzSharp`, on Windows ANGLE's `av_libglesv2`) can't be linked in, so the
+  publish embeds them as `native/<file>` resources. `NativeLibraries.Load` (right after Velopack's hooks) writes them once to
+  `native/<16 hex of their SHA-256>/` in the data folder, loads them by full path and points SkiaSharp's and HarfBuzzSharp's
+  P/Invokes at them; ANGLE is then found by name as an already loaded module. Other `native/*` folders are deleted when not in use.
+  Debug builds embed nothing and load them from beside the executable.
+- Statically linked Skia/ANGLE (third-party prebuilt packages, win-x64 only) would avoid the extraction; not used, so all four
+  RIDs share one mechanism on the official binaries.
+- Building it locally needs the platform's native toolchain: the MSVC C++ build tools on Windows (with `vswhere.exe` on `PATH`),
+  `clang` and `zlib1g-dev` on Linux, Xcode on macOS.
 
 ## Self-update (Velopack)
 
@@ -44,8 +63,8 @@ both osx RIDs on macOS) and attaches all four zips to the one `v<version>` relea
 Native dependencies off Windows:
 - Bundled from NuGet runtimes (**Verified** in the linux-x64 publish output): `libopenal.so`/`.dylib` (OpenAL Soft 1.23.1),
   `libglfw.so.3`/`.3.dylib` (GLFW 3.4), `libshaderc_shared`.
-- Windows-only, not shipped: DLSS/Streamline (`sl.*.dll`, `nvngx_dlss.dll`, `NvLowLatencyVk.dll`) and FSR (`amd_fidelityfx_vk.dll`);
-  both load via `NativeLibrary.TryLoad` and report a reason when missing. `FsrUpscaler` also loads `vulkan-1.dll` by name.
+- Only in the win-x64 zip: DLSS/Streamline 2.14.16 (`sl.*.dll`, `nvngx_dlss.dll`, `NvLowLatencyVk.dll`) and FSR (`amd_fidelityfx_vk.dll`),
+  copied from the vendor SDK zips by `package-release.ps1`; both load via `NativeLibrary.TryLoad` and report a reason when missing. `FsrUpscaler` also loads `vulkan-1.dll` by name.
 - Linux: the Vulkan loader (`libvulkan.so.1`) and driver come from the system, as do X11/Wayland and the OpenAL backend
   (PipeWire/PulseAudio/ALSA). **Unknown**: whether the game starts and renders on Linux; never run there.
 - macOS: no Vulkan loader or MoltenVK is bundled (no `Silk.NET.MoltenVK.Native` reference); the user must install one (LunarG SDK).
@@ -58,9 +77,35 @@ Native dependencies off Windows:
 
 The launcher's data folder (its program, once installed, is Velopack's, e.g. `%LocalAppData%/MeitouLauncher`) is `%LocalAppData%/Meitou`, `~/.local/share/Meitou` or `~/Library/Application Support/Meitou`, the same
 folder as the game's caches (shader cache, LODs, navmesh). Beside them it holds
-`launcher.json` (Kenshi folder, channel, chosen version, launch arguments, presets), `versions/` and the game's working directory.
+`launcher.json` (Kenshi folder, install folder, channel, chosen version, launch arguments, presets) and is the game's working directory.
 The game runs from that folder, so its `meitou.user.json` (and anything else it writes to the working directory) is shared by all
 versions. The game gets the Kenshi folder through `KENSHI_PATH`.
+
+`versions/` and `downloads/` live in the install folder, by default the data folder. On first start (until `FoldersConfirmed`
+is saved) an overlay on the main window asks for the install folder and the Kenshi folder, prefilled with the current and the detected ones. Changing
+the install folder there or in Settings moves the installed versions (copied, then deleted, across drives).
+
+## Graphics
+
+The Graphics page (`GraphicsPage.cs`, `GameSettings.cs`) shows the settings the version Play starts lists in its
+`settings-schema.json` (`SettingsSchema`, Meitou.Core) and edits the data folder's `meitou.user.json` as a JSON tree, keeping every
+key it does not show. The game writes the schema (`--settings-schema <file>`, `LauncherSchema.cs`; `package-release.ps1` runs it
+for every zip) from the names it saves under: top-level `UserConfig` properties in camelCase (`fullScreen`, `vSync`, `fpsLimit`) and
+Tab panel sliders under `graphics` by label (`WorldFrame.*Slider`), with names and hints from the in-game menu. So a renamed or new
+setting reaches the launcher with its release; the launcher knows none of them. A version without a schema (older), or with a newer
+`format`, gets no page.
+
+- A missing `graphics` key is the game's default for the mode ("Game default"); Default removes it, Reset graphics removes `graphics`
+  (sliders and Faithful / Meitou switches). A top-level Default writes the schema's `default`. Whole values are written as integers.
+- Read-only when the file is unreadable, or its `version` differs from the schema's `settingsVersion` (another layout: the keys may
+  mean something else). Warnings: the game is running (it writes the file on exit), `--low-end` (the game ignores `graphics`).
+
+`meitou.user.json` layout (`UserConfig`; **Verified** by loading crafted files through the built game 2026-10-20):
+- `version` (no key: 1) is raised when a key is renamed, retyped or reinterpreted; `UserConfig.Migrate` converts older files step by
+  step, moving a renamed key only where the new one is missing. A slider whose numbering changes takes a new label instead
+  (`UpscalerSliders`). A newer file keeps its `version` and its unknown top-level keys (`[JsonExtensionData]`) when an older release saves.
+- A value of the wrong type is dropped by its JSON path and takes its default; the rest stay. Unparsable JSON gives all defaults.
+  Either way the file is first copied to `meitou.user.<yyyyMMdd-HHmmss>.bak.json`.
 
 ## Mod list
 

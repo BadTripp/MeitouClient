@@ -26,15 +26,18 @@ public sealed class ModRow(ModInfo mod, bool enabled) : INotifyPropertyChanged
 }
 
 /// <summary>A line of the Versions page.</summary>
-public sealed class ReleaseRow(Release release, bool installed)
+public sealed class ReleaseRow(Release release, bool installed, bool played)
 {
     public Release Release { get; } = release;
+    public bool Installed { get; } = installed;
     public string Title => Release.Title;
     public string Detail => string.Join(" · ", new[]
     {
         Release.Published.ToString("yyyy-MM-dd"),
-        Release.Prerelease ? "pre-release" : null,
+        Release.Prerelease ? "nightly" : null,
         Release.Asset is null ? $"no {Releases.Rid} build" : null,
     }.OfType<string>());
-    public string State => installed ? "Installed" : "";
+    /// <summary>The version Play starts.</summary>
+    public bool Played { get; } = played;
+    public string State => Played ? "Installed · Play" : Installed ? "Installed" : "";
 }

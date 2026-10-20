@@ -1,4 +1,4 @@
-# Manual launcher release: Velopack packages of launcher/Meitou.Launcher, one channel per runtime (win-x64, linux-x64, osx-x64,
+# Manual launcher release: Velopack packages of launcher/Meitou.Launcher (one Native AOT executable each), one channel per runtime (win-x64, linux-x64, osx-x64,
 # osx-arm64), each built on its own OS (macOS packages need a Mac), all attached to one launcher-v<version> release, never marked
 # Latest (that stays the game's). The installed launcher updates itself from these (docs/launcher.md, "Self-update").
 name: Launcher release
@@ -64,6 +64,11 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
+
+      # Native AOT links with the platform's toolchain: clang and zlib on Linux (MSVC and Xcode are on the other runners).
+      - name: AOT prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
 
       - name: Package
         shell: bash
