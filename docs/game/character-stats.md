@@ -244,11 +244,20 @@ Stomach, two arms, two legs, two forelegs):
 ### Limb replacements and robots
 
 A LIMB_REPLACEMENT record (`slot` 50 left arm, 51 right arm, 52 left leg, 53 right leg; **Verified**) becomes a
-`RobotLimbItem` with a `StatsEnumerated -> float` multiplier map. Each multiplier is stored as two fields, `X mult`
-at the lowest quality and `X mult 1` at the highest, interpolated by the item's quality grade
-(`FUN_1400cd500`). The grade is Gear +0x220 = item `level` x 0.01 (the constructor `read_athletics_mult_1_n17`
-lerps `HP`/`HP 1` into +0x268 by it), not the save's `quality` float. **Observed**: METARU's Scout Legs
-(`level` 0, `quality` 95) give legs of 50 HP, the low end of 50/150.
+`RobotLimbItem` with a `StatsEnumerated -> float` multiplier map. Each value is stored as two fields, `X` at the
+lowest quality and `X 1` at the highest, scaled by the item's `level` (Gear +0x224 int, +0x220 = level x 0.01), not
+the save's `quality` float. Constructor `read_athletics_mult_1_n17` (`0x1400ce2d0`; **Verified**, disassembly and
+constant bytes):
+- `HP` (+0x268), `unarmed damage bonus` (+0x278, truncated to int) and `swimming mult` (stat 23, every slot):
+  lerp(level x 0.01, X, X 1), unclamped. Where +0x278 is read is **Unknown** (Meitou: not wired).
+- Skill multipliers (arms 50/51: strength, dexterity, thievery for 10 and 37, ranged; legs 52/53: athletics,
+  stealth) via `FUN_1400cd500(level, X, X 1)`: if X < 1 <= X 1, level >= 40 gives lerp(clamp((level-40)/55,0,1), 1, X 1)
+  and level < 40 gives lerp(clamp((level-5)/35,0,1), X, 1), so the grade bands 5/40/95 hit X, 1, X 1; otherwise
+  lerp(level x 0.01, X, X 1).
+- `overall mult` is looked up and discarded; any other use is **Unknown**.
+
+**Observed**: METARU's Scout Legs (`level` 0, `quality` 95) give legs of 50 HP, the low end of 50/150. Crafted and
+shop limbs get level 0 in Meitou; how the original grades them is **Unknown**.
 
 Per limb slot k (0 L arm, 1 R arm, 2 L leg, 3 R leg) the character holds a state (0 original, 1 stump, 2
 replaced, 3 crushed) and the fitted item (holder `FUN_1400cd3f0`; **Verified** by the save code below).
