@@ -198,6 +198,8 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
                 Toggle: new("Doors close behind", () => config.DoorsCloseBehind, v => { config.DoorsCloseBehind = v; DoorsCloseChanged?.Invoke(v); }, Remaster: true, OnOff: true)));
             result.Add(new("Hover outline", "Outline and tint the character under the cursor, in the colour of what a right click would do.",
                 Toggle: new("Hover outline", () => config.HoverOutline, v => config.HoverOutline = v, Remaster: true, OnOff: true)));
+            result.Add(new("Selection rings", "Draw the green ring on the ground under each selected character.",
+                Toggle: new("Selection rings", () => config.SelectionRings, v => config.SelectionRings = v, Remaster: true, OnOff: true)));
             result.Add(new("luckyren Mode", "A character that takes a fatal hit explodes, covers everything around in blood and sends bones flying everywhere. Not implemented yet: this switch does nothing.",
                 Toggle: new("luckyren Mode", () => config.LuckyrenMode, v => config.LuckyrenMode = v, Remaster: true, OnOff: true),
                 Picture: SettingsMenuArt.LuckyrenImage));
@@ -434,6 +436,7 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
         AudioChanged?.Invoke();
         config.HardwareMouse = false;
         config.HoverOutline = true;
+        config.SelectionRings = true;
         config.LuckyrenMode = false;
         player.SetUiMode(UiMode.Meitou);
         player.SpeedUnit = config.SpeedUnit = SpeedUnit.Mph;

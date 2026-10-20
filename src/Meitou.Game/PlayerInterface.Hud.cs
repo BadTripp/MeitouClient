@@ -85,6 +85,9 @@ sealed partial class PlayerInterface
     /// <summary>The character the HUD panels describe: the other faction's character last clicked, else the first selected one (docs/game/ui-screens.md section 4). The selection stays whoever is inspected.</summary>
     CharacterSnapshot? Lead() => Selected().FirstOrDefault() is { } first ? inspected ?? first : inspected;
 
+    /// <summary>Draw the green ring under each selected character (Advanced → Selection rings).</summary>
+    public bool SelectionRings { get; set; } = true;
+
     /// <summary>The HUD, the selection rings and the drag box, over the finished picture.</summary>
     public void Draw(DebugOverlay o, int width, int height)
     {
@@ -98,7 +101,7 @@ sealed partial class PlayerInterface
         // Rings under the selected characters.
         foreach (var c in session.CurrentSnapshot.Characters)
         {
-            if (!c.Selected || EditorOpen) continue;
+            if (!c.Selected || EditorOpen || !SelectionRings) continue;
             var centre = where(c);
             // A swimmer is drawn that far down (Speed.WadingHeight) so its body lies in the water: its ring stays on the surface.
             if (centre.Y <= Meitou.Data.World.WorldWater.Height - Meitou.Simulation.Bodies.Speed.DeepWaterDepth + 0.01f) centre.Y = Meitou.Data.World.WorldWater.Height;

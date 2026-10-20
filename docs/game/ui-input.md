@@ -212,6 +212,11 @@ mask (colour pass, live pose, picture levels, own depth planes round it) right a
 linear depth within 1 % + 1 unit of the near slice's scene depth (jittered, render size). Outline and tint take the pointer's order's colour: attack red (only for a faction hostile to the player's; a neutral one is white although a right click attacks it), treat green, talk gold, carry/loot blue, else white (no selection or no order). No name or goal label is shown over a character (**Observed** by the owner in play, not traced in the exe: the original shows none for ordinary NPCs, only the outline; Meitou had a plain name and goal label until 2026-10-17). Off in the free camera, with the interface hidden and in
 screenshots and cinema takes. Not in the Shift+F1 switch list (a game setting, like Attackers per target).
 
+### Selection rings
+
+Each selected character gets a green ground ring (radius 1.6, kept on the water surface for swimmers), hidden in the character editor.
+Advanced → Selection rings (`SelectionRings`, default on) turns them off.
+
 ### Building picking and selection
 
 The original's mouse code, kenshi_x64.exe 1.0.68. The panels a selected building fills: [ui-screens](ui-screens.md#selected-building).
