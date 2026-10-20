@@ -126,28 +126,30 @@ public static class WorldLights
     }
 
     /// <summary>A placed LIGHT instance as a <see cref="WorldLight"/>; <paramref name="powerOn"/> is the owner's state <c>power on</c>, if any.</summary>
-    public static WorldLight FromPlaced(PlacedLight p, bool interior, bool? powerOn = null)
-    {
-        var light = p.Light;
-        return new WorldLight(
-            p.Position,
+    public static WorldLight FromPlaced(PlacedLight p, bool interior, bool? powerOn = null) =>
+        FromRecord(p.Light, p.Position, p.Direction, p.Power, p.Function == LightFunction ? WorldLightRule.Night : WorldLightRule.WhenBuildingOn, p.PlacementId, p.Owner.StringId,
+            interior, p.Holder.Type == FcsRecordType.BUILDING_PART ? p.Holder.GetInt("building floor") : 0, powerOn);
+
+    /// <summary>A LIGHT record at <paramref name="position"/> with its rolled <paramref name="power"/>; <paramref name="ownerId"/> is the record that carries it.</summary>
+    public static WorldLight FromRecord(GameRecord light, Vector3 position, Vector3 direction, float power, WorldLightRule rule, string placementId, string ownerId,
+        bool interior = false, int floor = 0, bool? powerOn = null) => new(
+            position,
             Colour(light.GetInt("diffuse", 0xFFFFFF)),
-            p.Power,
+            power,
             light.GetFloat("radius", 100),
             light.GetInt("type") == 1 ? WorldLightType.Spot : WorldLightType.Point,
-            p.Direction,
+            direction,
             light.GetFloat("inner", 45) * (MathF.PI / 180),
             light.GetFloat("outer", 40) * (MathF.PI / 180),
             light.GetFloat("falloff", 1),
             (WorldLightEffect)Math.Clamp(light.GetInt("effect"), 0, 3),
-            p.Function == LightFunction ? WorldLightRule.Night : WorldLightRule.WhenBuildingOn,
+            rule,
             interior,
-            p.Holder.Type == FcsRecordType.BUILDING_PART ? p.Holder.GetInt("building floor") : 0,
+            floor,
             light.StringId,
-            p.Owner.StringId,
-            p.PlacementId,
+            ownerId,
+            placementId,
             powerOn);
-    }
     /// <summary>A packed 0xRRGGBB int as (r, g, b) / 255, as Ogre's <c>ColourValue::setAsARGB</c> unpacks it.</summary>
     public static Vector3 Colour(int rgb) => new Vector3((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF) / 255f;
 

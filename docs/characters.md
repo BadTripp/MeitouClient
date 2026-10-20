@@ -10,6 +10,7 @@ Resolve race, sex, body/head/hair/beard, body sliders and clothing/weapon/backpa
 references and .bod2 overrides. Keep generated appearance/loadout seed separate from per-frame
 live stats. Record lists' weighted chances, forced equipment, quality/manufacturer rolls and
 race restrictions have distinct semantics; missing references do not imply a universal item.
+Worn records' lanterns (and an animal's backpack lantern) become `CharacterAppearance.Lights` ([lights](formats/lights.md#carried-lanterns)).
 NPC generation order determines random consumption; original RNG sequence is not reproduced.
 
 ### Random appearance

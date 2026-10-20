@@ -312,7 +312,7 @@ Transfer/split/top-up through inventory APIs. Food/auto-eat uncertainty and cont
 
 Inventory moves validate snapshot identity, bounds, occupancy, stack limits and equipment
 type/armour slot. Weapon sections are 10×2 (back) and 7×1 (hip); other equipment slots hold
-one compatible item. These are engine constraints, not a complete original-game rule set.
+one compatible item (the belt: an ITEM with `slot` 14, the lanterns, [lights](formats/lights.md#carried-lanterns)). These are engine constraints, not a complete original-game rule set.
 Backpacks move intact between pockets and their attachment slot; containers cannot be put
 inside a backpack. Equipment moves refresh worn appearance and combat gear; pocket armour
 does not grant worn bonuses. Race restrictions, swaps and prosthetic changes remain absent.

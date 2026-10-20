@@ -31,7 +31,7 @@ public static class InventoryCommands
     {
         if (item.Quantity != 1 || item.Width <= 0 || item.Height <= 0) return false;
         string[] sections = item.Type is Meitou.Data.Fcs.FcsRecordType.WEAPON or Meitou.Data.Fcs.FcsRecordType.CROSSBOW ? ["back", "hip"]
-            : item.Type == Meitou.Data.Fcs.FcsRecordType.ARMOUR && IsEquipmentSection(item.EquipmentSection) && item.EquipmentSection is not ("back" or "hip" or "backpack_attach") ? [item.EquipmentSection] : [];
+            : item.Type is Meitou.Data.Fcs.FcsRecordType.ARMOUR or Meitou.Data.Fcs.FcsRecordType.ITEM && IsEquipmentSection(item.EquipmentSection) && item.EquipmentSection is not ("back" or "hip" or "backpack_attach") ? [item.EquipmentSection] : [];
         foreach (string section in sections)
         {
             int x = 0, y = 0;
@@ -73,7 +73,7 @@ public static class InventoryCommands
             {
                 "back" or "hip" => item.Type is Meitou.Data.Fcs.FcsRecordType.WEAPON or Meitou.Data.Fcs.FcsRecordType.CROSSBOW,
                 "backpack_attach" => item.Type == Meitou.Data.Fcs.FcsRecordType.CONTAINER && item.Contents is not null,
-                _ => item.Type == Meitou.Data.Fcs.FcsRecordType.ARMOUR && item.EquipmentSection == section,
+                _ => item.Type is Meitou.Data.Fcs.FcsRecordType.ARMOUR or Meitou.Data.Fcs.FcsRecordType.ITEM && item.EquipmentSection == section,
             };
             if (!allowed || item.Quantity != 1) return false;
             if (section is not ("back" or "hip") && (x != 0 || y != 0 || target.Items.Any(i => i != item && i.Section == section))) return false;

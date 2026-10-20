@@ -105,7 +105,13 @@ internal sealed class WorldLamps : IDisposable
     }
 
     /// <summary>The power factor of lamp <paramref name="i"/>: 1 for the world's, the building's factor for a placed building's (its placement id is the building id).</summary>
-    float PowerFactor(int i) => i < world!.Length ? 1 : runtimePower.GetValueOrDefault(lamps![i].PlacementId, 1);
+    float PowerFactor(int i) => i < world!.Length || i >= lamps!.Length ? 1 : runtimePower.GetValueOrDefault(lamps[i].PlacementId, 1);
+
+    /// <summary>Lamp <paramref name="i"/> of this frame: the world's and placed buildings', then <see cref="Moving"/>.</summary>
+    WorldLight Lamp(int i) => i < lamps!.Length ? lamps[i] : Moving[i - lamps.Length];
+
+    /// <summary>This frame's moving lamps (lanterns carried by characters), filled by the frame before <see cref="Update"/>.</summary>
+    public List<WorldLight> Moving { get; } = [];
 
     /// <summary>
     /// Bins the lamps around <paramref name="eye"/> for this frame (the pulsing and shimmering ones at their power now). <paramref name="daylight"/> is the game's daylight
@@ -131,14 +137,15 @@ internal sealed class WorldLamps : IDisposable
             lamps = runtime.Count == 0 ? world : [.. world, .. runtime.Values.SelectMany(r => r)];
             runtimeChanged = false;
         }
-        if (lamps.Length == 0) return;
+        int count = lamps.Length + Moving.Count;
+        if (count == 0) return;
 
         float x0 = MathF.Floor(eye.X / CellSize) * CellSize - Cells / 2 * CellSize, z0 = MathF.Floor(eye.Z / CellSize) * CellSize - Cells / 2 * CellSize;
         float x1 = x0 + Cells * CellSize, z1 = z0 + Cells * CellSize;
         near.Clear();
-        for (int i = 0; i < lamps.Length && near.Count < MaxLamps; i++)
+        for (int i = 0; i < count && near.Count < MaxLamps; i++)
         {
-            var l = lamps[i];
+            var l = Lamp(i);
             if (l.Position.X + l.Radius < x0 || l.Position.X - l.Radius > x1 || l.Position.Z + l.Radius < z0 || l.Position.Z - l.Radius > z1) continue;
             if (!WorldLights.IsLit(l, daylight) || PowerFactor(i) <= 0) continue;
             var room = l.Interior ? objects?.InteriorFor(l.PlacementId) : null;
@@ -154,7 +161,7 @@ internal sealed class WorldLamps : IDisposable
         for (int k = 0; k < near.Count; k++)
         {
             var (lamp, room) = near[k];
-            var l = lamps[lamp];
+            var l = Lamp(lamp);
             float power = l.Intensity * WorldLights.EffectFactor(l.Effect, t) * PowerFactor(lamp);
             float inner = MathF.Min(l.InnerAngle, l.OuterAngle), outer = MathF.Max(l.InnerAngle, l.OuterAngle);
             int row = k * DataWidth;
@@ -190,7 +197,7 @@ internal sealed class WorldLamps : IDisposable
             }
             for (int k = 0; k < near.Count; k++)
             {
-                var l = lamps[near[k].Lamp];
+                var l = Lamp(near[k].Lamp);
                 int cx0 = Math.Max((int)MathF.Floor((l.Position.X - l.Radius - x0) / CellSize), 0), cx1 = Math.Min((int)MathF.Floor((l.Position.X + l.Radius - x0) / CellSize), Cells - 1);
                 int cz0 = Math.Max((int)MathF.Floor((l.Position.Z - l.Radius - z0) / CellSize), 0), cz1 = Math.Min((int)MathF.Floor((l.Position.Z + l.Radius - z0) / CellSize), Cells - 1);
                 for (int cz = cz0; cz <= cz1; cz++)

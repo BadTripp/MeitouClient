@@ -87,6 +87,8 @@ internal sealed class CharacterAsset
     public required SkeletonRig Rig;
     public BodyShapeData? Shape;
     public readonly List<AssetPart> Parts = [];
+    /// <summary>The carried lights (<see cref="CharacterAppearance.Lights"/>): a bone, the offset from it and an attach slot, posed like a bone-attached part.</summary>
+    public readonly List<(int Bone, Matrix4x4 Offset, int AttachIndex, Meitou.Data.World.WorldLight Light)> Lamps = [];
     /// <summary>The posture libraries (<c>postures</c>, <c>neck set</c>, <c>shoulder set</c>) held at the body file's sliders, weight 1.</summary>
     public readonly List<(LayerDef Def, float Time)> Fixed = [];
     public int AttachCount;
@@ -467,6 +469,13 @@ internal sealed class CharacterContent : IDisposable
                 ap.AttachIndex = asset.AttachCount++;
             }
             asset.Parts.Add(ap);
+        }
+        // A carried light hangs at its binding-pose position, held relative to its bone (a bone the skeleton lacks: the root).
+        foreach (var carried in c.Lights)
+        {
+            int bone = rig.Handle(carried.Bone) ?? rig.Skeleton.Bones.FirstOrDefault(b => b.Parent is null)?.Handle ?? 0;
+            var local = Vector3.Transform(carried.Light.Position - rig.BindPosition[bone], rig.BindRotationInverse[bone]) / rig.BindScale[bone];
+            asset.Lamps.Add((bone, Matrix4x4.CreateTranslation(local), asset.AttachCount++, carried.Light));
         }
 
         if (setup is not null)

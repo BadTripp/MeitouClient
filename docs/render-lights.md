@@ -17,6 +17,8 @@ The game draws these lights in both looks, so this is not a Faithful / Meitou sw
   - Night-only lamps (`WorldLightRule.Night`: the owner's functionality is BF_LIGHT) are left out while the daylight factor is above 0.1;
     the rest are always on. A placed building's lamps are scaled by its power share (`SetRuntimePower`) and left out at 0. World lamps
     take no power factor: the town buildings' power and on state are **Unknown** ([lights](formats/lights.md#when-a-light-is-on)).
+  - Lanterns characters carry (`CharacterAppearance.Lights`, [lights](formats/lights.md#carried-lanterns)) are posed with the character each frame
+    (`CharacterRenderer.CollectLamps`) and binned after the others as `WorldLamps.Moving`; they are night-only.
 - **Binning.** Each frame, the lights whose reach overlaps a 64 × 64 grid of 128-unit cells around the eye (8192 units across, at most
   1024 lights) are written to three textures, one set per frame slot:
   - `uLightCells` (RG32F): each cell's first entry and count;
@@ -53,5 +55,5 @@ The game draws these lights in both looks, so this is not a Faithful / Meitou sw
 ## Open
 
 - What Building slot 59 returns and what byte +0x240 is, which decide the night-only flag ([lights](formats/lights.md#when-a-light-is-on)).
-- Lanterns carried by characters and pack beasts, and the lights of weather effects, are not in the list (formats/lights.md).
+- The lights of weather effects are not in the list (formats/lights.md).
 - The Large Torch Post's light may sit about 25 units above its flame (scale applied twice, as in the exe); not checked in a picture yet.
