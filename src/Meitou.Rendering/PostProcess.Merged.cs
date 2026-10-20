@@ -53,9 +53,10 @@ public sealed unsafe partial class PostProcess
 
     /// <summary>
     /// The motion target (RG motion, B the upscalers' depth, A the reactivity), and where asked the upscalers' depth image and the reactivity image, in one pass over the depth
-    /// buffers: <see cref="Velocity"/> with its three modes in one dispatch. <paramref name="depthOut"/> and <paramref name="reactiveOut"/> may be null.
+    /// buffers: <see cref="Velocity"/> with its three modes in one dispatch. <paramref name="depthOut"/> and <paramref name="reactiveOut"/> may be null. With
+    /// <paramref name="cleanColour"/> the scene colour's NaN and Inf become 0 in place, for the vendor upscalers (TAA cleans its own taps; FSR keeps a NaN in its history).
     /// </summary>
-    void VelocityMerged(Target2D motionOut, Target2D? depthOut, Target2D? reactiveOut)
+    void VelocityMerged(Target2D motionOut, Target2D? depthOut, Target2D? reactiveOut, bool cleanColour = false)
     {
         if (velocityProgram is null)
         {
@@ -72,31 +73,32 @@ public sealed unsafe partial class PostProcess
             TanEye = new Vector4(tanY * aspectNow, tanY, eyeNow.Y, WaterHeight ?? float.MinValue),
             Right = new Vector4(r.M11, r.M21, r.M31, WaterReactive),
             Up = new Vector4(r.M12, r.M22, r.M32, farSliceDrawn ? 1 : 0),
-            Back = new Vector4(r.M13, r.M23, r.M33, (depthOut is not null ? 1 : 0) | (reactiveOut is not null ? 2 : 0)),
+            Back = new Vector4(r.M13, r.M23, r.M33, (depthOut is not null ? 1 : 0) | (reactiveOut is not null ? 2 : 0) | (cleanColour ? 4 : 0)),
             Sun = sunMotion.Sun, SunMotion = sunMotion.Motion,
         };
         var data = Gpu.Frame.Constants.Write(new ReadOnlySpan<VelocityParams>(in p), 256);
         var cmd = Segment();
         var near = Sampled(sceneDepth!);
         var far = Sampled(farDepth!);
-        var infos = stackalloc Vk.DescriptorImageInfo[5];
+        var infos = stackalloc Vk.DescriptorImageInfo[6];
         infos[0] = new Vk.DescriptorImageInfo(Point(), near.View, Vk.ImageLayout.General);
         infos[1] = new Vk.DescriptorImageInfo(Point(), far.View, Vk.ImageLayout.General);
         infos[2] = new Vk.DescriptorImageInfo(default, motionOut.Texture.View(), Vk.ImageLayout.General);
         infos[3] = new Vk.DescriptorImageInfo(default, (depthOut ?? motionOut).Texture.View(), Vk.ImageLayout.General);
         infos[4] = new Vk.DescriptorImageInfo(default, (reactiveOut ?? motionOut).Texture.View(), Vk.ImageLayout.General);
+        infos[5] = new Vk.DescriptorImageInfo(default, (cleanColour ? sceneColour! : motionOut).Texture.View(), Vk.ImageLayout.General);
         var buffer = new Vk.DescriptorBufferInfo(data.Handle, data.Offset, (ulong)sizeof(VelocityParams));
-        var writes = stackalloc Vk.WriteDescriptorSet[6];
-        for (int i = 0; i < 5; i++)
+        var writes = stackalloc Vk.WriteDescriptorSet[7];
+        for (int i = 0; i < 6; i++)
             writes[i] = new Vk.WriteDescriptorSet
             {
-                SType = Vk.StructureType.WriteDescriptorSet, DstBinding = (uint)i, DescriptorCount = 1, PImageInfo = &infos[i],
+                SType = Vk.StructureType.WriteDescriptorSet, DstBinding = (uint)(i < 5 ? i : 6), DescriptorCount = 1, PImageInfo = &infos[i],
                 DescriptorType = i < 2 ? Vk.DescriptorType.CombinedImageSampler : Vk.DescriptorType.StorageImage,
             };
-        writes[5] = new Vk.WriteDescriptorSet { SType = Vk.StructureType.WriteDescriptorSet, DstBinding = 5, DescriptorCount = 1, DescriptorType = Vk.DescriptorType.StorageBuffer, PBufferInfo = &buffer };
+        writes[6] = new Vk.WriteDescriptorSet { SType = Vk.StructureType.WriteDescriptorSet, DstBinding = 5, DescriptorCount = 1, DescriptorType = Vk.DescriptorType.StorageBuffer, PBufferInfo = &buffer };
         cmd.Barrier(BarrierBatch.Full);
         cmd.BindPipeline(velocityPipeline!);
-        cmd.PushDescriptors(velocityProgram.Layout, 0, new ReadOnlySpan<Vk.WriteDescriptorSet>(writes, 6), Vk.PipelineBindPoint.Compute);
+        cmd.PushDescriptors(velocityProgram.Layout, 0, new ReadOnlySpan<Vk.WriteDescriptorSet>(writes, 7), Vk.PipelineBindPoint.Compute);
         var size = new Vector2(width, height);
         cmd.PushConstants(velocityProgram.Layout, Vk.ShaderStageFlags.ComputeBit, in size);
         cmd.Dispatch((uint)((width + 15) / 16), (uint)((height + 15) / 16));
@@ -161,7 +163,8 @@ public sealed unsafe partial class PostProcess
 /// <summary>The merged post kernels (<see cref="PostProcess.MergePasses"/>).</summary>
 static class MergedShaders
 {
-    /// <summary><see cref="UpscaleShaders.Velocity"/>'s three modes in one dispatch (bit 0 of the outputs: the upscalers' depth image, bit 1: the reactivity image; the motion image always).</summary>
+    /// <summary><see cref="UpscaleShaders.Velocity"/>'s three modes in one dispatch (bit 0 of the outputs: the upscalers' depth image, bit 1: the reactivity image, bit 2: the
+    /// scene colour's NaN and Inf to 0 in place; the motion image always, its NaN and Inf as 0).</summary>
     public const string Velocity = """
         #version 450
         layout(local_size_x = 16, local_size_y = 16) in;
@@ -175,8 +178,10 @@ static class MergedShaders
             mat4 nearToPrev; mat4 farToPrev;
             vec4 planes; vec4 full; vec4 tanEye; vec4 right; vec4 up; vec4 back; vec4 sun; vec4 sunMotion;
         } p;
+        layout(set = 0, binding = 6, rgba16f) uniform image2D uColour;
         layout(push_constant) uniform Push { vec2 size; } pc;
 
+        float finite(float v) { return isnan(v) || isinf(v) ? 0.0 : v; }
         float viewZ(float d, vec2 nf) { float zd = 2.0 * d - 1.0; return nf.x * nf.y / (nf.y - zd * (nf.y - nf.x)); }
 
         void main()
@@ -204,8 +209,13 @@ static class MergedShaders
             // The sky round the sun moves with the sun (PostProcess.SunMotion.cs).
             if (p.sunMotion.w != 0.0 && d >= 1.0)
                 motion += p.sunMotion.xy * smoothstep(p.sunMotion.z, p.sun.w, dot(normalize(offset), p.sun.xyz));
-            imageStore(uMotion, px, vec4(motion, depth, reactive));
+            imageStore(uMotion, px, vec4(finite(motion.x), finite(motion.y), depth, reactive));
             int outputs = int(p.back.w);
+            if ((outputs & 4) != 0)
+            {
+                vec4 c = imageLoad(uColour, px);
+                if (any(isnan(c)) || any(isinf(c))) imageStore(uColour, px, vec4(finite(c.r), finite(c.g), finite(c.b), finite(c.a)));
+            }
             if ((outputs & 1) != 0) imageStore(uUpscaleDepth, px, vec4(depth, 0.0, 0.0, 1.0));
             if ((outputs & 2) != 0) imageStore(uReactive, px, vec4(reactive, 0.0, 0.0, 1.0));
         }

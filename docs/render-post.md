@@ -20,6 +20,8 @@ must use the corresponding projection. `sun-motion` adds clock-driven sky motion
 Reset temporal histories after cuts, target resize or incompatible setting changes.
 DLSS (the default) where Streamline reports it unsupported runs FSR, then TAA. TAA zeroes NaN/Inf
 in its inputs and output: GLSL `max` need not drop NaN (AMD keeps it), and one in the history spreads.
+For FSR/DLSS the merged velocity kernel zeroes them in the scene colour in place and in the motion
+(Observed: the FSR fallback on an RX 9070 XT still flickered without it).
 
 Game/viewer builds and publishes copy the five Streamline/DLSS DLLs from `MEITOU_STREAMLINE_PATH`
 or the git-ignored root `dlss-runtime/` folder when present; `-p:StreamlineRuntimePath=...`

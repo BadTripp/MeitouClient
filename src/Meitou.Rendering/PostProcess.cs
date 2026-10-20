@@ -1047,7 +1047,7 @@ public sealed unsafe partial class PostProcess : IDisposable
         var external = ExternalFor(Options.Upscale.Kind);
         bool merged = MergeVelocity && MergeSupported;
         PrepareSunMotion();
-        if (merged) VelocityMerged(motion!, external is null ? null : upscaleDepth!, external is null || WaterHeight is null ? null : reactive!);
+        if (merged) VelocityMerged(motion!, external is null ? null : upscaleDepth!, external is null || WaterHeight is null ? null : reactive!, cleanColour: external is not null);
         else Velocity(motion!, 0);
         if (ObjectMotion is { } objectMotion)
         {
