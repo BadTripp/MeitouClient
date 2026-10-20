@@ -1048,6 +1048,13 @@ public sealed partial class PopulationSystem : IStateHashed
         squad.War = AssaultTargets(world, p.Campaign!, p.Campaign!.Leader == p.Id);
         if (p.CampaignGoal is not { } goal || !table.TryResolveNext(squad.Leader, out int slot)) return;
         if (p.Campaign!.Leader == p.Id) TryAnnounce(world, p.Campaign, squad.Leader, table.Next[slot].Position);
+        // Retreating, members the column does not move (a carrier, whom the AI leaves alone) mill round their own town again, not round the raid target the squad last
+        // milled at, so a kidnapper takes its captive home (engine choice; the arrival below still mills them round the goal).
+        if (p.Campaign.Phase == 2 && squad.Town >= 0 && Vector2.Distance(p.Position, goal) > (p.Campaign.Leader == p.Id ? settings.RoamArrivalRadius : CampaignFollowDistance))
+        {
+            squad.HomeCentre = SiteCentre(squad.Town);
+            squad.HomeRadius = 60;
+        }
         if (table.Next[slot].Task is (byte)CharacterTask.Attack or (byte)CharacterTask.PickUp or (byte)CharacterTask.PutDown) return;   // a fight or a lift (a kidnapper) is left to itself
         bool leads = p.Campaign!.Leader == p.Id;
         float arrive = leads ? settings.RoamArrivalRadius : CampaignFollowDistance;

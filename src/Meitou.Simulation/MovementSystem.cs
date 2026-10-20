@@ -354,6 +354,8 @@ public sealed class MovementSystem(PathService paths) : ITickSystem, IDisposable
                     if (mode == SpeedMode.Walk && !cold.Carrying.IsNone) mode = SpeedMode.Run;
                     float top = water > 0 && cold.Race is { } race ? Speed.InWater(water, n.MaxSpeed, race, cold.SwimSpeed) : n.MaxSpeed;
                     desired = cold.SpeedOverride > 0 ? cold.SpeedOverride : MathF.Min(top, SpeedMode.Cap(mode, n.WalkSpeed));
+                    // A fighter in its footwork closes in at a shuffle (docs/game/combat.md "Combat stance").
+                    if (cold.InCombat && !cold.CombatRunning && n.Task == (byte)CharacterTask.Attack) desired = MathF.Min(desired, Combat.CombatTuning.FootworkSpeed);
                     if (mode == SpeedMode.Group && cold.SpeedOverride <= 0) desired = MathF.Min(desired, SlowestOfSquad(world, cold));
                     if ((cold.Orders & CharacterOrders.Sneak) != 0 && cold.SpeedOverride <= 0) desired = MathF.Min(desired, Orders.SneakSpeed(desired, Orders.Stealth(cold)));
                 }

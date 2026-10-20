@@ -277,8 +277,10 @@ lengths, masks and selection data. Movement, held care/lying clips, melee/ranged
 reactions use researched animation rules. Root motion advances with clip time; relocation keeps
 separation by footprint radii and drops blocked components. Rendering consumes snapshot layers;
 shape/skinning belongs to the character renderer. [animation.md](animation.md).
-A fighter on a path to its target further than `CombatTuning.StanceRange` (40 units, engine choice) keeps the plain walk/run clips and
-the drawn weapon; the combat clips (and the signed speed) start within it ([combat](game/combat.md#combat-stance)).
+`PursuitSystem` sets `CharacterCold.CombatRunning` by the original's rule (body gap over `CombatTuning.RunGap` 90, off under
+`FootworkGap` 70, on while the target flees; footprints stand in for the radii, the navmesh-blocked chase is not modelled). Running, a
+fighter keeps the plain walk/run clips, full speed and the drawn weapon; otherwise it takes the combat clips and the signed speed, capped
+at `FootworkSpeed` 18 ([combat](game/combat.md#combat-stance)).
 
 ## Bodies
 
@@ -538,7 +540,7 @@ Arrests, the recognition meter and the marker are hashed only while set. What a 
   not an animal, not already someone's pick, and not of the kidnapper's faction or an ally (engine reading of the **Unknown** class bits). Player characters included; sleepers in beds are not taken.
 - **Lift**: the free member (awake, not fighting, fleeing or held, able to carry, not a player character) lifts it with `CarrySystem.BeginPickUp`, then goes back to following its leader.
   An AI squad's member starts only when a free cage of its faction is in range (the original's "all cages full" stops the goal); a campaign member always does.
-- **Carry**: a campaign carrier marches home with its squad. Within 1.5 x the radius of a town of its faction it registers the town's fixtures (`RegisterSite`, no spawn needed) and
+- **Carry**: a campaign carrier marches home with its squad (a retreating squad mills round its own town again, not the raid target, engine choice). Within 1.5 x the radius of a town of its faction it registers the town's fixtures (`RegisterSite`, no spawn needed) and
   takes the best free cage of its faction in range (`FindCage`, the original's weights; other carriers' cages reserved), walks there and within `use range` + 15 lets go and imprisons
   the victim (`Imprison`, `CharacterCold.Kidnapped`). Home with no free cage, three failed walks, or an AI carrier waiting 60 s: it drops the victim, who is then left alone for 2 game hours
   (engine choices; the original's give-up rule is **Unknown**). A carrier that goes down drops its load (Carry). Zones follow a carried player character, so its platoon stays loaded all the way.
