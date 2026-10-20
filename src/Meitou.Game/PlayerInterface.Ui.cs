@@ -71,7 +71,7 @@ sealed partial class PlayerInterface
     internal (MyGuiLayout Layout, UiBindings Bindings) FaithfulBindings(string id) =>
         id == "hud" ? (faithfulHud, BindUi()) : (faithfulScreens.Layout(id), BindFaithfulScreen(id));
 
-    public void CreateUiPainter(DebugOverlay overlay, Func<string, string?> resolve) { uiPainter = new(overlay, uiResources, resolve); findAsset = resolve; }
+    public void CreateUiPainter(DebugOverlay overlay, Func<string, string?> resolve) { uiPainter = new(overlay, uiResources, resolve) { Mode = UiMode }; findAsset = resolve; }
     public void DisposeUi() { uiPainter?.Dispose(); uiPainter = null; uiRegistration?.Dispose(); uiRegistration = null; }
     /// <summary>Future code-mod loader entry point; disposal removes the extension's owned registrations.</summary>
     public IDisposable RegisterUiExtension(IUiExtension extension) => uiHost.Register(extension);
@@ -85,6 +85,7 @@ sealed partial class PlayerInterface
     public void SetUiMode(UiMode mode)
     {
         UiMode = mode;
+        if (uiPainter is not null) uiPainter.Mode = mode;
         dragFrom = null;
         dragging = false;
         steering = false;
