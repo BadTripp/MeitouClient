@@ -23,9 +23,15 @@ public sealed record DebugMaxSkills(IReadOnlyList<CharacterId> Characters) : Deb
 /// <summary>One cut of <see cref="Cut"/> damage to each character, on a part chosen as a blow's is.</summary>
 public sealed record DebugDamage(IReadOnlyList<CharacterId> Characters, float Cut) : DebugCommand;
 
-/// <summary>Puts <see cref="Quantity"/> of item record <see cref="Record"/> into the character's inventory.</summary>
-public sealed record DebugGiveItem(CharacterId Character, string Record, int Quantity) : DebugCommand
+/// <summary>
+/// Puts <see cref="Quantity"/> of item record <see cref="Record"/> into the character's inventory, at <see cref="Quality"/> (0 to 100) for the types that have one;
+/// what does not fit is dropped at the character's feet.
+/// </summary>
+public sealed record DebugGiveItem(CharacterId Character, string Record, int Quantity, int Quality = 0) : DebugCommand
 {
+    /// <summary>The record types whose items have a quality (grade).</summary>
+    public static readonly FcsRecordType[] QualityTypes = [FcsRecordType.WEAPON, FcsRecordType.ARMOUR, FcsRecordType.CROSSBOW, FcsRecordType.LIMB_REPLACEMENT];
+
     /// <summary>The record types an item can be made from.</summary>
     public static readonly FcsRecordType[] ItemTypes =
         [FcsRecordType.WEAPON, FcsRecordType.ARMOUR, FcsRecordType.ITEM, FcsRecordType.CONTAINER, FcsRecordType.BLUEPRINT, FcsRecordType.MAP_ITEM, FcsRecordType.CROSSBOW, FcsRecordType.LIMB_REPLACEMENT];
@@ -82,7 +88,10 @@ static class DebugCheats
             case DebugGiveItem give when data is not null:
                 if (!table.TryResolveNext(give.Character, out int owner) || table.Cold(owner)?.Inventory is not { } inventory) break;
                 if (data.Items.Create(give.Record, give.Quantity) is not { } item) { world.Post($"No item record {give.Record}."); break; }
-                if (!inventory.Add(item)) world.Post($"{item.Quantity} x {item.Name} did not fit.");
+                if (DebugGiveItem.QualityTypes.Contains(item.Type)) item.Quality = Math.Clamp(give.Quality, 0, 100);
+                if (inventory.Add(item)) break;
+                world.GroundItems.Drop(item, table.Next[owner].Position, 0);
+                world.Post($"{item.Quantity} x {item.Name} did not fit; dropped on the ground.");
                 break;
         }
     }

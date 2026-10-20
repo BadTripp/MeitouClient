@@ -347,7 +347,7 @@ The settings panel and the native Meitou UI have their own keyboard focus ([nati
 
 Meitou only (no original counterpart). F10 (`ToggleDebugMenu`, rebindable) opens a cheat list; while open it takes every key (Up/Down, typing, Enter, Esc).
 Rows send `DebugCommand`s, applied in the next tick's Inputs phase: teleport the selection to the camera target, spawn a character record there
-(own squad, first faction hostile to the player), give an item record (`name x5`) to the first selected, add or remove money (signed number),
+(own squad, first faction hostile to the player), give an item record (`name x5 q80`; quality 0-100 for weapons, armour, crossbows and limbs; what does not fit drops at their feet) to the first selected, add or remove money (signed number),
 heal fully (`MedicalState.Heal`), every stat to 100, one cut of n damage. Heal, stats and damage fall back to the inspected character. Names match a record's string id,
 its exact name, else the shortest name containing the text. Replaces the game's F10 key list (the viewer keeps its own).
 
