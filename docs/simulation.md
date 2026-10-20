@@ -907,6 +907,10 @@ patrol/bar/shop/sleep/retreat/contracts, combat stances and off-screen roaming j
 TaskData semantics: [ai.md](game/ai.md), [ai-tasks.md](game/ai-tasks.md). Full planner, wars,
 prisoners and resident town simulation off screen are incomplete. Hash blackboards/minds/jobs when present.
 
+Combat stances (`AiStance`, the most aggressive combat goal in its hours; none at all attacks on sight): PROTECT_OWN_SQUAD joins only
+fights of its own squad, against a mate's target or a mate's attacker (as the original's finder, [ai-tasks](game/ai-tasks.md#combat-goals));
+the other PROTECT goals still join any fighting enemy (engine).
+
 Scoring follows the original (`TaskProfiles`: desire, commitment, crowding per goal type); a desire
 the original computes in a function of its own counts as 1. Town goals ([ai-tasks.md](game/ai-tasks.md#town-goals)):
 wandering and patrolling in town walk to a general node of a town building, shopping to a node of a

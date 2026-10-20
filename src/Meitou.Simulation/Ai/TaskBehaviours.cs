@@ -84,7 +84,7 @@ public static class TaskBehaviours
         [TaskType.ATTACK_ENEMIES_AND_NEUTRALS] = AiStance.AggressiveNeutrals,
         [TaskType.TERRITORIAL_AGGRESSION_BUT_DONT_LEAVE_HOME] = AiStance.Territorial,
         [TaskType.PROTECT_ALLIES] = AiStance.Defensive,
-        [TaskType.PROTECT_OWN_SQUAD] = AiStance.Defensive,
+        [TaskType.PROTECT_OWN_SQUAD] = AiStance.ProtectSquad,
         [TaskType.PROTECT_ALLIES_STAY_IN_TOWN] = AiStance.Defensive,
         [TaskType.ATTACK_TROUBLE_MAKERS] = AiStance.Defensive,
         [TaskType.ATTACK_ENEMIES_OF_MY_SLAVEMASTER] = AiStance.Defensive,

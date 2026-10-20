@@ -264,14 +264,16 @@ public enum AiStance : byte
 {
     /// <summary>Starts no fight (it still fights back when attacked).</summary>
     Passive = 0,
+    /// <summary>Attacks enemies fighting its own squad: a mate's target or a mate's attacker (PROTECT_OWN_SQUAD, docs/game/ai-tasks.md "Combat goals").</summary>
+    ProtectSquad = 1,
     /// <summary>Attacks enemies that are fighting (PROTECT_ALLIES and the like).</summary>
-    Defensive = 1,
+    Defensive = 2,
     /// <summary>Attacks enemies within its home (TERRITORIAL_AGGRESSION_BUT_DONT_LEAVE_HOME).</summary>
-    Territorial = 2,
+    Territorial = 3,
     /// <summary>Attacks enemies on sight (ATTACK_ENEMIES; also the default for a character whose lists hold no combat goal, the old rule).</summary>
-    Aggressive = 3,
+    Aggressive = 4,
     /// <summary>Attacks enemies and neutrals on sight (ATTACK_ENEMIES_AND_NEUTRALS).</summary>
-    AggressiveNeutrals = 4,
+    AggressiveNeutrals = 5,
 }
 
 /// <summary>What the AI decided for one character (<see cref="CharacterCold.Ai"/>): the goal it acts out, where its post and bed are, how readily it fights.</summary>
