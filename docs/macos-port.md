@@ -63,7 +63,9 @@ this computer.` — a message that reads like a missing OS feature but is only t
 GLFW 3.4 supports Vulkan on macOS through MoltenVK; a plain launch (`meitou-run.sh`, a shell
 function, or a bare `cmd &`) opens the window. The same strip invalidates probes of
 `glfwVulkanSupported` made from `/usr/bin/python3` (reports 0 even with the variable set); probe
-from the app's own process instead.
+from the app's own process instead. The engine now names this cause itself: `VulkanDevice.Create`
+checks the loader's findability on macOS and fails with the fix in the message instead of letting
+the cryptic error surface.
 
 ### 2.2 `vkCreateInstance` → `ErrorIncompatibleDriver` (headless, windowless!)
 The macOS Vulkan loader hides portability drivers unless the instance opts in:
