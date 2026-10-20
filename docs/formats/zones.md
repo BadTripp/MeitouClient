@@ -145,6 +145,9 @@ block:  int32 count, count ×
 - The five-part handle fields (`C`, `CS`, `I`, `S`, `TYPE`): serialized object references (Observed: a
   building's `town*` handle matches a town state's `hand*` by `C` and `CS`, see "Materials" above; the game gives
   a new handle a random serial from `rand()`, FUN_1400d1c20). Why most town handles match no town state.
+- Town membership of unlinked buildings (**Observed**, Sho-Battai: 148 of its streets carry no `town*` handle; its radius is 350 and they spread to 5 radii; the original's rule is
+  **Unknown**). Meitou (`TownBuildings.ClaimedByChain`, engine choice): an unlinked building joins its nearest town within 1.5 radii, or further (to 8 radii) when within 300 of a
+  building already in it, chained; a lone building stays out. Sho-Battai goes from 21 to 169 buildings.
 - What the INVENTORY_STATE entries in the building list are for; INVENTORY_* and ITEM_PLACEMENT_GROUP
   contents; the game's building layout lookup (the 13 unresolved exterior names) and nest debris scatter.
 - ROAD `start`/`end`, the road point x parameter, road foliage w.

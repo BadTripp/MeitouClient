@@ -133,6 +133,7 @@ public static class TownBuildings
         var names = new Dictionary<(string, bool), IReadOnlySet<string>>();
         List<TownFixture>? fixtures = null;
         var result = new Dictionary<string, List<TownBuilding>>(StringComparer.Ordinal);
+        var reached = ClaimedByChain(db, levels, terrainHeight, towns, radius);
         foreach (var b in levels.Buildings())
         {
             if (BuildingPlacements.Resolve(b, db, levels, terrainHeight) is not { } resolved) continue;
@@ -141,7 +142,7 @@ public static class TownBuildings
             var state = b.StateId is not null && levels.Zones.TryGetValue(b.Zone, out var zoneDb) ? zoneDb.Find(b.StateId) : null;
             var linked = towns.TownByHandle(state);
             if ((linked ?? towns.NearestTown(resolved.Position)) is not { } town || !radius.TryGetValue(town.InstanceId, out float r)) continue;
-            if (linked is null && Vector2.Distance(new Vector2(town.Position.X, town.Position.Z), new Vector2(resolved.Position.X, resolved.Position.Z)) > r * 1.5f) continue;
+            if (linked is null && Vector2.Distance(new Vector2(town.Position.X, town.Position.Z), new Vector2(resolved.Position.X, resolved.Position.Z)) > r * 1.5f && !reached.Contains(b.Key)) continue;
             var functionality = FunctionOf(db, record, functions);
             TurretPost? turret = functionality is { } fn && fn.GetInt("function") == ObjectRanges.TurretFunction
                 ? new TurretPost(resolved.Position, YawOf(b.Rotation), fn.GetFloat("use range", 10),
@@ -213,6 +214,63 @@ public static class TownBuildings
         return result;
     }
 
+
+    /// <summary>A building with no town handle joins a town's chain when it stands within this far of a building already in it (<b>engine choice</b>).</summary>
+    const float ChainGap = 300;
+    /// <summary>...and within this many town radii of the town (the chain stops there).</summary>
+    const float ChainReach = 8;
+
+    /// <summary>
+    /// The buildings with no town handle that lie beyond 1.5 town radii but continue a town (docs/game/factions-squads-towns.md "Town buildings"): a level-data town as big as
+    /// Sho-Battai carries no handle on most of its buildings, so the 1.5 x radius rule leaves its outer streets to nobody. Starting from the buildings a town already has
+    /// (its handle's, and the unlinked ones within 1.5 radii), an unlinked building whose nearest town it is joins when it stands within <see cref="ChainGap"/> of one of them,
+    /// up to <see cref="ChainReach"/> radii out; repeated until none joins. A lone building far from every town stays out.
+    /// </summary>
+    static HashSet<string> ClaimedByChain(GameDatabase db, WorldLevelData levels, Func<double, double, float> terrainHeight, BuildingTowns towns, Dictionary<string, float> radius)
+    {
+        var joined = new HashSet<string>(StringComparer.Ordinal);
+        var grid = new Dictionary<(string Town, int X, int Y), List<Vector2>>();
+        var pending = new List<(string Key, string Town, Vector2 At)>();
+        static (int, int) Cell(Vector2 p) => ((int)MathF.Floor(p.X / ChainGap), (int)MathF.Floor(p.Y / ChainGap));
+        void Claim(string town, Vector2 at)
+        {
+            var (cx, cy) = Cell(at);
+            if (!grid.TryGetValue((town, cx, cy), out var list)) grid[(town, cx, cy)] = list = [];
+            list.Add(at);
+        }
+        foreach (var b in levels.Buildings())
+        {
+            if (BuildingPlacements.Resolve(b, db, levels, terrainHeight) is not { } resolved) continue;
+            if (resolved.Record.GetBool("is node") || resolved.Record.GetBool("is foliage")) continue;
+            var state = b.StateId is not null && levels.Zones.TryGetValue(b.Zone, out var zone) ? zone.Find(b.StateId) : null;
+            var at = new Vector2(resolved.Position.X, resolved.Position.Z);
+            if (towns.TownByHandle(state) is { } linked) { Claim(linked.InstanceId, at); continue; }
+            if (towns.NearestTown(resolved.Position) is not { } near || !radius.TryGetValue(near.InstanceId, out float r)) continue;
+            float d = Vector2.Distance(new Vector2(near.Position.X, near.Position.Z), at);
+            if (d <= r * 1.5f) Claim(near.InstanceId, at);
+            else if (d <= r * ChainReach) pending.Add((b.Key, near.InstanceId, at));
+        }
+        bool again = true;
+        while (again)
+        {
+            again = false;
+            for (int i = pending.Count - 1; i >= 0; i--)
+            {
+                var (key, town, at) = pending[i];
+                var (cx, cy) = Cell(at);
+                bool near = false;
+                for (int dx = -1; dx <= 1 && !near; dx++)
+                    for (int dy = -1; dy <= 1 && !near; dy++)
+                        if (grid.TryGetValue((town, cx + dx, cy + dy), out var list)) near = list.Any(p => Vector2.DistanceSquared(p, at) <= ChainGap * ChainGap);
+                if (!near) continue;
+                joined.Add(key);
+                Claim(town, at);
+                pending.RemoveAt(i);
+                again = true;
+            }
+        }
+        return joined;
+    }
     /// <summary>The key of the building a state's <c>mounted</c> handle names; null when the handle is null, not a building, or unknown.</summary>
     static string? MountedOn(Dictionary<(int C, int I), string> instances, GameRecord? state) =>
         state is not null && state.GetInt("mountedTYPE") == (int)FcsRecordType.BUILDING && state.Ints.ContainsKey("mountedI") &&
