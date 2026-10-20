@@ -7,7 +7,7 @@ public sealed record MyGuiEvent(string Screen, string Widget, string Action, str
 public sealed record MyGuiScreenFrame(string Id, IReadOnlyList<UiControl> Controls);
 
 /// <summary>Window lifetime, z-order, capture, focus and template events for the original MyGUI layouts.</summary>
-public sealed class MyGuiScreenHost(MyGuiResources resources)
+public sealed partial class MyGuiScreenHost(MyGuiResources resources)
 {
     sealed class Screen(MyGuiLayout layout, bool modal, bool centreRoot)
     {

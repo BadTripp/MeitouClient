@@ -33,7 +33,7 @@ public sealed class UiBindings
     public Dictionary<string, float> ScrollOffsets { get; } = new(StringComparer.Ordinal);
 }
 
-public static class MyGuiPresentation
+public static partial class MyGuiPresentation
 {
     public static IReadOnlyList<UiControl> Arrange(MyGuiLayout layout, int width, int height, UiBindings bindings, IReadOnlyList<string> layers)
     {
