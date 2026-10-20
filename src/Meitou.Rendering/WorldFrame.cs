@@ -696,9 +696,8 @@ static class WorldFrame
         Console.WriteLine($"gc        {GcName()}, latency mode {System.Runtime.GCSettings.LatencyMode}");
     }
 
-    /// <summary>Which collector runs: Satori (a replaced runtime, docs/engine.md), else the runtime's server or workstation GC.</summary>
-    public static string GcName() =>
-        GC.GetConfigurationVariables().ContainsKey("SatoriGC") ? "satori" : System.Runtime.GCSettings.IsServerGC ? "server" : "workstation";
+    /// <summary>Which collector runs: the runtime's server or workstation GC (docs/engine.md).</summary>
+    public static string GcName() => System.Runtime.GCSettings.IsServerGC ? "server" : "workstation";
 
     /// <summary>
     /// Feeds the particle renderer the weather state's effect list, strength and wind (the renderer is made the first time a weather has effects; a weather

@@ -37,12 +37,9 @@ navmesh-gated spawns are retried while loading. Warm-up and the flight hold the 
 The Meitou title waits for terrain, scenery, character assets and used textures (including deferred loads), then
 one full second of <40ms frames (max5s of ready content for frame pacing, so slow GPUs reach the menu). Its menu artwork/fonts/pipelines warm under the opaque cover too;
 streaming uploads retire and a compacting GC completes before that final smooth run.
-**GC: Satori** (github.com/VSadov/Satori, experimental low-pause collector) is the default in the self-contained publish: the `PublishWithSatoriGC`
-MSBuild SDK line in `Meitou.Game.csproj` and `Meitou.ModelViewer.csproj` swaps `coreclr`, `clrjit` and `System.Private.CoreLib` (both exes share one
-runtime in the release zip, so both carry it). Plain `dotnet build` keeps the stock runtime (server GC, four heaps); `-p:UseSatoriGC=false` publishes
-stock. The startup `gc` line names the collector (`GcName`); **Verified** `satori` from a published build (2026-10-18). **Observed** earlier A/B (RTX 4070,
-10.0.13 Satori vs stock 10.0.12 fast flight): longest GC pause 15-21 ms stock vs 1-18 ms, frames unchanged (long frames are foliage updates, docs/viewer.md).
-Satori reports `LowLatency` whatever the latency mode.
+**GC:** the stock runtime (server GC, four heaps) in builds and release zips alike; the startup `gc` line names the collector (`GcName`). The
+experimental Satori GC (github.com/VSadov/Satori, `PublishWithSatoriGC` SDK) is not used in official builds. **Observed** earlier A/B (RTX 4070, 10.0.13
+Satori vs stock 10.0.12 fast flight): longest GC pause 15-21 ms stock vs 1-18 ms Satori, frames unchanged (long frames are foliage updates, docs/viewer.md).
 Cancel on window close. Helpers/services dispose/join with their owning scene/session.
 After warm-up, loading panels ease off the left/right edges over 0.7s while the loading image fades to the live scene and UI.
 Input remains blocked through this reveal. A new game ends warm-up as soon as the squad's characters are drawable, skips the sky arrival and opens the
