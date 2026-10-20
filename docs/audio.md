@@ -190,7 +190,7 @@ through one helper (`FUN_1405c9a70(char, event, maxSqDist)`): **dropped when the
   a type past 8 reads beyond it (**Unknown**; one record, `Bridgehead`, has `interior material` 9). In order:
   1. Height under 100: `Water`.
   2. The ground ray (`FUN_14065f160`, run for the movement: from 20 units above the character straight down) leaves the hit's collision group and the hit object's handle on the movement. Its masks are `0x7de04` (groups 2,
-     9..12, 14, 15..18) when the character is in no building and `0x7f9e00` (groups 9..12, 15..22; no terrain or foliage) when it is in one. The terrain also wins when its height is above the hit's. Group 2 (the terrain,
+     9..12, 14, 15..18) when the character is in no building and `0x7f9e00` (groups 9..12, 15..22; no terrain or foliage) when it is in one. The terrain can override a lower hit (**Observed**; gated by a character flag at `+0x1a9` and, in a building, a building property via vfunc `0x330`; not decoded). Group 2 (the terrain,
      **Observed**): the BIOMES record under the point (biome map pixel, five bytes: ground, slope, grass, dirt, road type) picks by the overlay map's channels at that point (A above `0xA0` road, B dirt, G or R grass, else
      ground), only within ~346 units of the camera (squared 120,000).
   3. Any other group: when the hit object is a BUILDING (handle type 0; any other object, such as a foliage one, leaves the switch as it was), the building's `exterior material` (`FUN_14029e0c0` reads both fields into
@@ -224,7 +224,7 @@ surface limit (120,000 squared; the exe has none for buildings, but footsteps so
 position) are listed on a worker; a building's floor collision (`FloorSurfaces.For`: ordinary and stairs parts, groups 9..12 and 15..18) is made on a worker when a character first comes within 400 units. The highest floor
 triangle under the feet and at most 20 above them is the hit, taken when within 4 units below the feet (engine choice: the sim stands on the navigation mesh); the highest across buildings wins. The character is "in a
 building" when the renderer's indoor hull test (`InteriorAt`, margin 2) holds, else outdoors. A hit gives the building's `interior material` or `exterior material`; no hit, or the floors not made yet, leaves the terrain overlay
-(and a material past 8 changes nothing). Differences from the exe (**Observed**, engine choices): destroyed buildings are left out (the exe hits their `destroyed collision`); furniture (groups 19..22, in the indoor mask) is not
+(and a material past 8 changes nothing). Differences from the exe (**Observed**, engine choices): the terrain override above is not implemented (a floor slab at or just below the terrain, within the 4 units, gives the building's material where the exe may say terrain); destroyed buildings are left out (the exe hits their `destroyed collision`); buildings under construction count as finished (the exe shifts their parts to the passable groups until built); furniture (groups 19..22, in the indoor mask) is not
 a floor, and terrain showing through holes in an indoor floor falls to the overlay (the exe's indoor ray has no terrain bit); walkable foliage outdoors uses the overlay (the exe leaves the switch unchanged); a building
 whose floor lies farther than 400 units from its position is missed at that distance; the first steps near a building not yet loaded use the overlay.
 
