@@ -424,7 +424,13 @@ unless marked; Meitou: `PlayerInterface.Squads.cs`, commands in `SquadManagement
     right, a vertical scrollbar, no other panels; the HUD stays. The character panel reads `Disguise: None`. Its text boxes and empty cells are dark, where the install's skins draw parchment; the cause (a UI mod or setting) is **Unknown**.
 - **Item tooltip** (**Observed**, decompile): name, then `Value` (`c.{1,num}` with ` (+N%)`/` (-N%)` when the price factor is not 1) and `Sell value` (`FUN_14079e7a0`); weight `{1,num} kg`,
   quality, charges, damage, nutrition and kind lines (`FUN_1407ae130`); armour classes and resistances (`FUN_1407a1650`); `Stolen` / `Stolen from:` (`FUN_1407a0ea0`); `Buyback` (`FUN_1407a13a0`).
-  Meitou shows name, Value, Sell value (stack prices) and weight while trading, name and weight otherwise, plus `Stolen`.
+  Meitou shows name, Value, Sell value (stack prices) and weight while trading, name and weight otherwise, plus `Stolen`. Armour also gets (`ArmourTooltip`): the grade name in its `ItemGrade` colour,
+  `[Heavy Armour Class]` / `[Metal Plate]`, Blunt resistance, Cut resistance, Cut resistance efficiency (1 - cut into stun), Harpoon resistance (flat pierce, `pts`), `-Weight` (two decimals), a
+  `[Coverage]` list (Chest, Stomach, Right Arm, Left Arm; percentages) and a `[Skills]` list of the effects that are not neutral: Crossbows and Precision shooting (both the record's `ranged skill mult`), Dodge
+  skill, Attack damage (`damage output mult`), Assassination skill, Melee attack bonus (`combat attk bonus`), Martial arts bonus (`unarmed bonus`). **Observed** on a screenshot of the Samurai Armour at all six
+  grades (5, 20, 40, 60, 80, 95): the resistances equal `ArmourPiece.Create` to the printed digit at every grade. **Unknown**, so not shown: the Stealth effect and Combat speed effect lines (they grow with the
+  grade: stealth 0.00, 0.02, 0.06, 0.12, 0.21, 0.29x and combat speed 0.85, 0.86, 0.88, 0.90, 0.92, 0.94x on that armour, whose records say stealth mult 1 and combat speed mult 0.94), the labels and rules
+  for dexterity, athletics, defence, perception and ranged bonuses, the cut-offs between grades for other qualities, and weapons, food and tools (no stat lines yet).
 - **Fencing prompt** (**Observed**, `FUN_140712920`), shown for a stolen item over the trader: stolen from the trader's own faction, `Fencing chance:` and `N%` (`FUN_140793490`) in Bad;
   stolen from others and the trader buys stolen goods, `Stolen goods?` / `No problem!` in Good; otherwise nothing. Stealing from a stock shows `Stealing chance:`; illegal goods
   `Illegal goods?` / `ILLEGAL GOODS!` (smuggling, not built).
