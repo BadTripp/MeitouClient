@@ -34,6 +34,9 @@ public sealed class NavmeshWalkability : IWalkability
     /// <summary>Replaces the loaded meshes; only <see cref="NavMeshService"/> calls it, under its publish lock.</summary>
     internal void SetWorld(NavWorld value) => world = value;
 
+    /// <summary>Keeps the pruned region a point stands on (<see cref="NavMeshService.KeepAt"/>); true when the world changed. Set by <see cref="NavSystem"/>.</summary>
+    internal Func<Vector3, bool>? KeepStanding { get; set; }
+
     /// <summary>
     /// How far (in height) a walkable collision surface may be from the mesh for its height to be used instead, and the terrain's where no collision
     /// surface is near (engine choices). The mesh is a simplified surface: about 0.5 off on the flat, but a polygon is planar only between its corners,
@@ -172,6 +175,13 @@ public sealed class NavmeshWalkability : IWalkability
         if (!fromLoaded || !w.Contains(WorldLayout.ZoneOf(to.X, to.Z))) return LongRoute(w, from, to, agent, fromLoaded);
         var exact = Exact(w, from, to, agent);
         if (exact.Found) return exact;
+        // A walker on a region its zone's pruning dropped (its way to a seed leads through a zone not loaded): that region is kept, and the path asked again.
+        if (!IsWalkable(from.X, from.Z, from.Y) && KeepStanding?.Invoke(from) == true)
+        {
+            w = world;
+            exact = Exact(w, from, to, agent);
+            if (exact.Found) return exact;
+        }
         // Unreachable over the loaded zones (shut in, or the way round leads through zones not loaded): as near as can be got, then on to the goal
         // provisionally, which asks again a few times on the way (MovementSystem) before the walker gives up.
         var part = Toward(w, from, to, agent);

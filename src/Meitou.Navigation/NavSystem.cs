@@ -29,6 +29,7 @@ public sealed class NavSystem : IDisposable
             return (x, z) => grid.TryHeightAt(x, z, out float h) ? h : terrainHeight(x, z);
         });
         service = new NavMeshService(install, db, levels, Walkability, settings, cache, Runtime);
+        Walkability.KeepStanding = service.KeepAt;
         Walkability.DoorGeometry = new NavDoorGeometry(install, db);
     }
 

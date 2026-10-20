@@ -120,7 +120,11 @@ Kept area grows by 0.04..1.1% (zones 20.32, 21.32, 20.29, 18.35) while polygons 
 **Zone borders** (engine choice): each zone is pruned by its own seeds only and cached that way; when a zone loads, points on the
 kept edges of each shared border seed the neighbour's full mesh (and back) until nothing grows, so the kept set does not depend on load
 order. The original seeds a new zone from already built neighbours' border midpoints (order dependent) but ships prebuilt tiles, so
-players never see the order. **Observed** (World's End, zones 25..27 × 12..14, `meitou-tools navmesh --around 1`): with neighbour seeds
+players never see the order. A region kept only through a neighbour is lost when its zone loads without that neighbour (a save loaded
+mid-zone: only zones within 340 of a walker are active); a path that fails from a pruned polygon keeps the region the walker stands on
+(`NavMeshService.KeepAt`, not cached) and asks again. **Observed** ("6 dudes" save, scratch harness): zone 14.26 has 1 seed and keeps
+598 of 12,862 polygons alone; a character 2,300 from its borders stood on a pruned polygon and could not path. The original
+`tile14.26.hkt` has a polygon under it (y 702, point-in-polygon in the same harness). **Observed** (World's End, zones 25..27 × 12..14, `meitou-tools navmesh --around 1`): with neighbour seeds
 zone 26.14 kept 7,943 polygons in raster order and 3,790 in reverse; with the closure every order gives the same kept sets and paths.
 An interior whose mask crosses a zone border is built in each zone it reaches, its box ending on the border line; a part without a
 seed keeps nothing (no largest-region fallback) and is kept through the closure from the part with the door. **Observed** (zones

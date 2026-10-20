@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Numerics;
 using Meitou.Content;
 using Meitou.Data;
 using Meitou.Data.World;
@@ -79,6 +80,25 @@ internal sealed class NavMeshService : IDisposable
         var existing = pending.GetOrAdd(zone, tcs);
         if (ReferenceEquals(existing, tcs)) queue.Add(zone);
         return existing.Task;
+    }
+
+    /// <summary>
+    /// Keeps the region of a loaded zone's pruned polygons that <paramref name="at"/> stands on, and what it reaches across the loaded borders, and publishes
+    /// it: a walker on ground its zone's own seeds do not reach, whose way to a seed leads through a zone that is not loaded (a save loaded in the middle of
+    /// a zone, docs/game/pathfinding.md "Zone borders"). Not cached: the cache holds the zone's own pruning. True when the kept set grew.
+    /// </summary>
+    public bool KeepAt(Vector3 at)
+    {
+        var zone = WorldLayout.ZoneOf(at.X, at.Z);
+        lock (publishLock)
+        {
+            if (!full.TryGetValue(zone, out var mesh) || Walkability.World.Find(zone) is null || !SeedPruner.Extend(mesh, [at], Settings)) return false;
+            var world = Walkability.World;
+            foreach (var other in ZoneKeptClosure.Spread(full, zone, Settings))
+                if (other != zone && world.Find(other) is not null) world = world.With(full[other].WithoutPruned());
+            Walkability.SetWorld(world.With(mesh.WithoutPruned()));
+            return true;
+        }
     }
 
     /// <summary>Drops a zone's mesh from the loaded world (the cache file stays).</summary>
