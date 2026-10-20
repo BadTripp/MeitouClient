@@ -118,6 +118,12 @@ public sealed class Machine
     public bool GetsBattery { get; set; } = true;
     /// <summary>The save's <c>power on</c> (default on; no UI switch yet).</summary>
     public bool PowerOn { get; set; } = true;
+    /// <summary>
+    /// What the machine tells its sound emitter (docs/audio.md "Point emitters"): the exe's efficiency (<c>FarmBuilding::vfunc_108</c>) and whether it has power (<c>FUN_140299370</c>). Derived
+    /// every tick for the host's display; not saved, not hashed.
+    /// </summary>
+    public float Efficiency { get; set; }
+    public bool HasPower { get; set; }
 
     internal void Hash(ref StateHasher h)
     {

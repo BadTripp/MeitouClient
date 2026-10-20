@@ -17,6 +17,8 @@ public sealed partial class ProductionSystem
     /// <summary>Per town, whether batteries covered a shortfall last tick (the original's town <c>+0x470</c>, read the frame after it is set; not saved).</summary>
     readonly Dictionary<int, bool> batteryMode = [];
     readonly Dictionary<int, List<Machine>> grids = [];
+    /// <summary>Per town, whether its generators give power and its batteries can (the town object's <c>+0x474</c> and <c>+0x480</c> above 0 after <c>Town::vfunc_87</c>); what <see cref="HasPower"/> reads. Not saved.</summary>
+    readonly Dictionary<int, (bool Generators, bool Batteries)> townSupply = [];
 
     float Rated(World world, Machine m) => m.Data.PowerOutput + world.Research.Upgrade(m.Data.Id).PowerIncrease;
     float Capacity(World world, Machine m) => m.Data.PowerCapacity + world.Research.Upgrade(m.Data.Id).CapacityIncrease;
@@ -52,6 +54,42 @@ public sealed partial class ProductionSystem
                 m.Status = (byte)(m.Demand > 0 ? 2 : 0);
                 if (m.Inputs.Length > 0 && m.PowerOn) BurnFuel(m, dt);
             }
+        foreach (var m in world.Machines.All)
+        {
+            bool built = world.Buildings.Find(m.Site) is { Complete: true };
+            m.Efficiency = built ? Efficiency(world, m) : 0;
+            m.HasPower = built && HasPower(world, m, world.Buildings.Find(m.Site)!.Town);
+        }
+    }
+
+    /// <summary>
+    /// The efficiency a machine's sound emitter hears (<c>FarmBuilding::vfunc_108</c>, <b>Observed</b>): the share of its operators (1 when the data has no operator count) x health (1 here) x the
+    /// granted share of its demand (1 with no demand; for a battery, below its capacity, the share of its rate it is charging, negative while it drains) x the yield x the BUILDING's raw
+    /// output rate x the research production multiplier. A wind generator hears its turbine's animation (<c>WindGeneratorBuilding::vfunc_110</c>, <b>Unknown</b>): <see cref="WindFraction"/> (engine choice).
+    /// </summary>
+    float Efficiency(World world, Machine m)
+    {
+        if (m.Data.IsWind) return WindFraction;
+        float share = m.Data.PowerOperators > 0 ? (float)m.Operators / m.Data.PowerOperators : 1;
+        float saturation = m.Power;
+        if (m.Data.IsBattery)
+        {
+            float rate = Rated(world, m);
+            saturation = rate > 0 && m.Charge < Capacity(world, m) ? m.Granted / rate : 1;
+        }
+        return share * saturation * m.Yield * m.Data.OutputRate * world.Research.Upgrade(m.Data.Id).ProductionMult;
+    }
+
+    /// <summary>
+    /// Whether a machine counts as powered for its sound emitter (<c>FUN_140299370</c>, <b>Observed</b>): a generator always (fuel and switch are not asked); a machine drawing nothing always; else
+    /// it must be switched on and its town's generators give power, or its batteries do while the grid is in battery mode and the machine takes battery power.
+    /// </summary>
+    bool HasPower(World world, Machine m, int town)
+    {
+        if (m.Data.IsGenerator || Rated(world, m) == 0) return true;
+        if (!m.PowerOn) return false;
+        if (!townSupply.TryGetValue(town, out var supply)) return true;
+        return supply.Generators || (m.GetsBattery && batteryMode.GetValueOrDefault(town) && supply.Batteries);
     }
 
     /// <summary>
@@ -78,6 +116,7 @@ public sealed partial class ProductionSystem
             }
         }
         float generated = supply;
+        townSupply[town] = (generated > 0, batteries > 0);
         consumers.Sort((a, b) => a.Demand != b.Demand ? a.Demand.CompareTo(b.Demand) : string.CompareOrdinal(a.Site, b.Site));
         int left = consumers.Count, short_ = 0;
         foreach (var c in consumers)
