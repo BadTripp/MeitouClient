@@ -76,7 +76,7 @@ sealed partial class PlayerInterface
         if (down && target.CarriedBy.IsNone && carriers.Length == 0 && target.Prison is null)
         {
             verbs.Add(("Pick Up", () => Say(new Meitou.Simulation.Carrying.PickUpOrder([], id) { Tick = session.World.Tick })));
-            verbs.Add(("Loot", () => Say(new Meitou.Simulation.Carrying.LootOrder([], id) { Tick = session.World.Tick })));
+            verbs.Add(("Loot", () => Say(new Meitou.Simulation.Carrying.OpenLootOrder([], id) { Tick = session.World.Tick })));
         }
         return verbs;
     }

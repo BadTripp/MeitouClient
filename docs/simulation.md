@@ -357,7 +357,11 @@ paths; preserve current ordering. Original threshold/sense/retreat facts:
 
 `CarrySystem`: serial links, pickup/put-down, dropping on KO/death/attack, rescue jobs and inventory
 looting. Carried bodies follow the carrier and affect load. Loot can raise witnessed theft and
-stolen ownership marks. [carry-loot.md](game/carry-loot.md). It also runs the stealth knock-out
+stolen ownership marks. [carry-loot.md](game/carry-loot.md). Loot window (engine choice):
+`OpenLootOrder` walks the looter over, then `PlayerState.OpenLoot` publishes the body's main grid as a
+container (`MachineSnapshot.Body`); `TakeLootItem` / `PutLootItem` move single items (taking counts as a
+loot for theft); it closes as a container does, or when the body comes round or is lifted. Backpack and
+worn gear are not shown. It also runs the stealth knock-out
 (`StealthKo` task, reusing `CarryTarget`/`LiftTime`): [combat](game/combat.md#stealth-knock-out).
 
 ## Ragdolls

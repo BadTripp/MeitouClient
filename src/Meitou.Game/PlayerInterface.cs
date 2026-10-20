@@ -140,8 +140,8 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
         if (PickTarget(p) is { } victim && Hostile(victim)) return ("attk", victim, () => Say(new Meitou.Simulation.Combat.AttackOrder(selection, victim) { Tick = session.World.Tick }));
         if (PickHurtAlly(p) is { } patient) return ("med", patient, () => Say(new Meitou.Simulation.FirstAid.TreatOrder(selection, patient) { Tick = session.World.Tick }));
         if (PickDowned(p, ownOnly: true) is { } ally) return ("lift", ally, () => Say(new Meitou.Simulation.Carrying.PickUpOrder([], ally) { Tick = session.World.Tick }));
-        // Anyone else's knocked-out or dead body is looted (take all, as Alt + right click).
-        if (PickDowned(p) is { } body) return ("search", body, () => Say(new Meitou.Simulation.Carrying.LootOrder([], body) { Tick = session.World.Tick }));
+        // Anyone else's knocked-out or dead body: the nearest walks over and its inventory opens to take from (Alt + right click takes all at once).
+        if (PickDowned(p) is { } body) return ("search", body, () => Say(new Meitou.Simulation.Carrying.OpenLootOrder([], body) { Tick = session.World.Tick }));
         return null;
     }
 

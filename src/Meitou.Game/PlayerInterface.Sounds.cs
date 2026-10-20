@@ -170,7 +170,7 @@ sealed partial class PlayerInterface
     /// <summary>The player's orders (the commands that give a character a job), by type name: they make the order dispatcher's click.</summary>
     static readonly HashSet<string> OrderCommands = new(StringComparer.Ordinal)
     {
-        "MoveOrder", "AttackOrder", "BuildOrder", "DismantleOrder", "GetOutOrder", "LootOrder", "PayBailOrder", "PickLockOrder", "PickUpOrder", "PutDownOrder", "PutInCageOrder", "PutShacklesOrder",
+        "MoveOrder", "AttackOrder", "BuildOrder", "DismantleOrder", "GetOutOrder", "LootOrder", "OpenLootOrder", "PayBailOrder", "PickLockOrder", "PickUpOrder", "PutDownOrder", "PutInCageOrder", "PutShacklesOrder",
         "OperateOrder", "RestOrder", "SplintOrder", "StealthKoOrder", "TalkOrder", "TreatOrder",
     };
 

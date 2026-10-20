@@ -101,7 +101,7 @@ public sealed partial class World
         PreviousSnapshot = Snapshot;
         Snapshot = new WorldSnapshot(Tick, list) { Projectiles = projectiles?.PublishProjectiles() ?? [], Trade = trades?.PublishTrade(), Conversation = dialogues?.PublishConversation(), Speech = dialogues?.PublishSpeech() ?? [], DialogueRequest = dialogues?.PublishRequest(), Towns = Player.Towns, Camps = Player.Camps, SquadAi = Player.SquadAi, PlayerSquads = PublishSquads(), ActiveSquad = Player.Squad,
             Buildings = Buildings.Published(), BuildingsRevision = Buildings.Revision, GroundItems = GroundItems.Published(), GroundItemsRevision = GroundItems.Revision, UnlockedBuildings = Research.Unlocked, Doors = Fixtures.PublishedDoors(), Containers = Fixtures.ContainerSpots, DoorPicks = Fixtures.DoorPicks, InspectedBuilding = Fixtures.DetailOf(Player.InspectedBuilding),
-            Machines = OpenContainerView() is { } container ? [.. production is null ? [] : Machines.Published(production.Items), container] : production is null ? [] : Machines.Published(production.Items), MachinesVersion = Machines.Version, Research = production?.ResearchView(this) ?? Production.ResearchSnapshot.Empty,
+            Machines = (OpenContainerView() ?? OpenLootView()) is { } container ?[.. production is null ? [] : Machines.Published(production.Items), container] : production is null ? [] : Machines.Published(production.Items), MachinesVersion = Machines.Version, Research = production?.ResearchView(this) ?? Production.ResearchSnapshot.Empty,
             Crafts = production?.CraftsView(this) ?? Snapshot.Crafts };
     }
 
@@ -116,6 +116,17 @@ public sealed partial class World
             Array.AsReadOnly(grid.Items.Select((item, index) => new InventoryItemView(index, item.Record, item.Name, "main", item.X, item.Y, item.Width, item.Height, item.Quantity, item.Weight, item.Quality)
                 { Material = item.MaterialId, Charge = item.ChargeFraction, Company = item.CompanyId, Level = item.Level, Charges = item.Charges, MaxCharges = item.MaxCharges }).ToArray()));
         return new Production.MachineSnapshot(id, f.RecordId, [], null, storage, null, 0, 0, 0) { IsContainer = true };
+    }
+
+    /// <summary>The open loot (<see cref="PlayerState.OpenLoot"/>) as a container: the body's main grid, each item indexed by its place in the inventory's items (what <see cref="Carrying.TakeLootItem"/> takes).</summary>
+    Production.MachineSnapshot? OpenLootView()
+    {
+        if (!Characters.TryResolveNext(Player.OpenLoot, out int slot) || Characters.Cold(slot) is not { Inventory: { } grid } body) return null;
+        var items = grid.Items.Select((item, index) => (item, index)).Where(p => p.item.Section == "main")
+            .Select(p => new InventoryItemView(p.index, p.item.Record, p.item.Name, "main", p.item.X, p.item.Y, p.item.Width, p.item.Height, p.item.Quantity, p.item.Weight, p.item.Quality)
+                { Material = p.item.MaterialId, Charge = p.item.ChargeFraction, Company = p.item.CompanyId, Level = p.item.Level, Charges = p.item.Charges, MaxCharges = p.item.MaxCharges }).ToArray();
+        return new Production.MachineSnapshot($"loot:{Player.OpenLoot}", "", [], null, new InventoryView(grid.Width, grid.Height, 0, 0, Array.AsReadOnly(items)), null, 0, 0, 0)
+            { IsContainer = true, Body = Player.OpenLoot, Title = body.Name };
     }
 
     /// <summary>The sneaker's watchers of the last <see cref="AggroSystem.WatcherSeconds"/> that are still about, where they stand now.</summary>
