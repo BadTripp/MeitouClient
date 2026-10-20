@@ -34,6 +34,9 @@ public static class UiTooltips
     /// <summary>MyGUI's <c>ToolTipManager</c> delay before a tooltip shows over a still pointer (<b>Verified</b>, MyGUI 3.2 source).</summary>
     public const float ShowDelaySeconds = 0.5f;
 
+    /// <summary>The HUD <c>TooltipPanel</c>'s box (<c>Kenshi_MainPanel.layout</c>: <c>position_real</c> 0 0 1 0.972222) as a fraction of the panel's height.</summary>
+    public const float FixedBoxFraction = 0.972222f;
+
     /// <summary>The tone of an inline colour tag <c>#rrggbb</c> (the exe's static colour strings), else <see cref="TooltipTone.Default"/>.</summary>
     public static TooltipTone ToneOf(string hex) => hex.ToLowerInvariant() switch
     {
@@ -101,6 +104,8 @@ public static class UiTooltips
         float scale = screenHeight / 1080f, widgetWidth = 0.25f * screenWidth, widgetHeight = 0.2f * screenHeight;
         // A tooltip given a widget of its own (the overview's AI panel) measures its margins from that widget.
         if (kind == TooltipKind.Static && anchor is { } given) (widgetWidth, widgetHeight) = (given.Width, given.Height);
+        // The HUD's fixed one is built on the anchor panel's first child, the parchment box of 97.2 % of the panel's height (FUN_14072d3b0 passes it to FUN_140921440).
+        if (kind == TooltipKind.Fixed && anchor is { } box) (widgetWidth, widgetHeight) = (box.Width, box.Height * FixedBoxFraction);
         float offset = MathF.Round((kind == TooltipKind.Inventory ? 0.04f : 0.025f) * scale * widgetWidth);
         float margin = MathF.Round(0.1f * widgetHeight), gap = MathF.Round(0.01f * widgetHeight);
         float wrap = Math.Max(1, widgetWidth - 2 * offset);
@@ -131,7 +136,8 @@ public static class UiTooltips
         }
         float bottom = lines.Count == 0 ? margin : y - gap;
         float panelHeight = bottom + margin;
-        if (kind == TooltipKind.Fixed && anchor is { } fixedAnchor) panelHeight = Math.Max(panelHeight, fixedAnchor.Height);
+        // Fixed: the anchor keeps its height unless the rows (plus the anchor's part outside the box) need more (ToolTipFixed::vfunc_9).
+        if (kind == TooltipKind.Fixed && anchor is { } fixedAnchor) panelHeight = Math.Max(panelHeight + fixedAnchor.Height - widgetHeight, fixedAnchor.Height);
         if (kind == TooltipKind.Static && anchor is { } staticAnchor) panelHeight = staticAnchor.Height;
         // Placement: bottom right corner at the pointer, an axis that would leave the screen taking the pointer itself instead (ToolTip / ToolTipDynamic); fixed: the anchor's left, its bottom edge
         // (grown upwards); inventory: from the pointer. Kept on the screen (engine choice).

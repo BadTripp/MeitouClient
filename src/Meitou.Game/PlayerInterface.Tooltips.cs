@@ -156,7 +156,7 @@ sealed partial class PlayerInterface
         {
             // Kenshi_FloatingPanelLight: the floating panel skin with the parchment box in it (inset 5 for the inventory's; the HUD's own panel keeps 97.2 % of its height).
             controls.Add(new("tooltip-panel", "Widget", panel, "", "", "Kenshi_FloatingPanelSkin", true, new Dictionary<string, string>(), none, Pickable: false));
-            var inner = kind == TooltipKind.Fixed ? panel with { Height = panel.Height * 0.972222f }
+            var inner = kind == TooltipKind.Fixed ? panel with { Height = panel.Height * UiTooltips.FixedBoxFraction }
                 : new UiRect(panel.X + 5 * scale, panel.Y + 5 * scale, Math.Max(0, panel.Width - 10 * scale), Math.Max(0, panel.Height - 10 * scale));
             controls.Add(new("tooltip-box", "Widget", inner, "", "", "Kenshi_GenericTextBoxSkin", true, new Dictionary<string, string>(), none, Pickable: false));
         }
