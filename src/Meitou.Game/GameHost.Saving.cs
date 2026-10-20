@@ -114,6 +114,7 @@ sealed partial class GameHost
             preparedBase = null;   // used, or stale
             game = SaveCapture.Capture(world, popData!, new SaveClock((int)clock.Day, clock.Hour, clock.Minute), loadedSave, CaptureOptions(), prepared);
             WriteWeather(game, (int)clock.Day, clock.HourOfDay);
+            WriteDecals(game);
             player.WriteBiome(game.Camera);
         }
         catch (Exception e)
@@ -224,6 +225,7 @@ sealed partial class GameHost
         preparedBase = null;
         worldEpoch++;
         var world = session.World;
+        BloodForNewWorld(read.Result.Decals);
         session.Clock.SetTime(loaded!.Clock.Day, loaded.Clock.HourOfDay);
         // The regions' weather the save holds (docs/formats/save.md "BIOMES"); a save without (an old Meitou one) keeps the schedule rolled from day 0.
         if (gpu.Weather is { } weather && read.Result.Biomes is { } biomes && SaveWeather.Read(biomes) is { Count: > 0 } regions)

@@ -70,4 +70,5 @@ count and distance (**Observed**; we take the nearest).
 One faithful path, no switch. Engine choices: the blood is mixed into the terrain colour shader's
 albedo before lighting (our terrain is forward-lit, no second pass); the cells are a texture array
 read by cell index. Marks more than 20 units above the ground are dropped (upper floors). Decals
-are not yet saved or loaded: `SaveBuilder` writes an empty TERRAIN_DECALS record.
+are saved and loaded as stored (`SaveDecals`, TERRAIN_DECALS in [save.md](../formats/save.md#folder-and-state-mapping));
+the bleed tokens are not, so a pool under a still-bleeding character starts anew after a load.

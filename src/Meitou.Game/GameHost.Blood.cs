@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using Meitou.Audio;
+using Meitou.Data.Fcs;
 using Meitou.Data.Ogre;
+using Meitou.Data.Save;
 using Meitou.Data.World;
 using Meitou.Rendering;
 using Meitou.Rendering.Gpu;
@@ -44,14 +46,7 @@ sealed partial class GameHost
     {
         if (decalStore is not { } store || gpu.Decals is not { } decals) return;
         var world = session.World;
-        if (!ReferenceEquals(bloodFor, world))
-        {
-            store.Clear();
-            bloodQueue.Clear();
-            world.BloodMarks = bloodQueue;
-            bloodFor = world;
-            bloodTick = world.Tick;
-        }
+        if (!ReferenceEquals(bloodFor, world)) BloodForNewWorld(null);
         float tick = world.TickSeconds;
         while (bloodQueue.TryDequeue(out var m))
         {
@@ -71,6 +66,28 @@ sealed partial class GameHost
         long ticks = world.Tick - bloodTick;
         bloodTick = world.Tick;
         if (ticks > 0) store.Age(ticks * tick, decals.Drawn);
+    }
+
+    /// <summary>
+    /// The store emptied for the session's world and hooked to its marks, then given the decals of the save's TERRAIN_DECALS record <paramref name="saved"/> when the
+    /// world was loaded from one (the load calls it before the new world's first frame).
+    /// </summary>
+    void BloodForNewWorld(FcsRecord? saved)
+    {
+        if (decalStore is not { } store) return;
+        var world = session.World;
+        store.Clear();
+        bloodQueue.Clear();
+        world.BloodMarks = bloodQueue;
+        bloodFor = world;
+        bloodTick = world.Tick;
+        if (saved is not null) store.Load(SaveDecals.Read(saved));
+    }
+
+    /// <summary>The store's decals into the save's TERRAIN_DECALS record (with <c>Blood</c> off the record keeps what the loaded save had).</summary>
+    void WriteDecals(SaveGame game)
+    {
+        if (decalStore is { } store && game.Decals is { } record) SaveDecals.Write(record, store.All);
     }
 
     /// <summary>0xRRGGBB as the decal's ABGR colour bytes (alpha 0).</summary>

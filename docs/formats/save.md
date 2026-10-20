@@ -45,7 +45,9 @@ progress of research taken off the queue is not saved (as the original).
 **Terrain decals** (TERRAIN_DECALS in `quick.save`, **Verified**: two saves, writer `FUN_1408de5d0`): int `total`; one instance per cell copy of a decal
 ([blood decals](../game/blood-decals.md)), id = the 1-based counter as raw int32 bytes, target `-`, the 24-byte `DecalInfo` in the seven position/rotation
 floats as raw bits: x = local X | local Z << 16 (shorts, 1/1000 of the 288-unit cell), y = half width | half height << 16 (size × texels × 10),
-z = rotation (short, rad × 1000), qw = colour ABGR, qx = cell key, qy = type | variant << 8, qz = life (a real float). Meitou writes it empty, reads nothing.
+z = rotation (short, rad × 1000), qw = colour ABGR, qx = cell key, qy = type | variant << 8, qz = life (a real float); the upper 16 bits of z and qy are 0 in both.
+Meitou (`SaveDecals`) reads it into the blood store on load and writes the store back on save, bit-identical for both saves (**Verified**, read → write → read in a
+scratch harness); with `Blood` off the loaded record is kept as it was.
 
 **Player-built buildings** (Meitou `Saving/BuildingSave`): an instance in the zone's `0-buildinglist` with id `<n>-zone<X>.<Y>-INGAME` and a
 GAMESTATE_BUILDING `<id>-S23` carrying `name`, `owner faction ID`, `floornum`, `destroyed`, `flags`, `is complete`, `pause`, `construction progress`,

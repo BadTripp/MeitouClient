@@ -56,6 +56,22 @@ public sealed class TerrainDecalStore
         Count = 0;
     }
 
+    /// <summary>Every cell's copy of every decal, cell by cell (what a save holds).</summary>
+    public IEnumerable<TerrainDecal> All => cells.Values.SelectMany(list => list);
+
+    /// <summary>Decals as a save holds them, each into its own cell as it is (no placing again); one of no known type is skipped.</summary>
+    public void Load(IEnumerable<TerrainDecal> decals)
+    {
+        foreach (var d in decals)
+        {
+            if ((int)d.Type >= sizes.Length) continue;
+            if (!cells.TryGetValue(d.Key, out var list)) cells[d.Key] = list = [];
+            list.Add(d);
+            Count++;
+            Touch(d.Key);
+        }
+    }
+
     /// <summary>
     /// A new decal (<c>FUN_1408dce50</c>, <c>FUN_1408dc6b0</c>): a random texture of <paramref name="type"/>'s, turned so its width runs along
     /// <paramref name="direction"/> (X/Z), its width and height <paramref name="size"/> × the texture's texels × the cell's 288 units / 2048, stored in each cell its
