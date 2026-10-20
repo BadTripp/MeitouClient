@@ -44,7 +44,7 @@ Brought in line with a documented fact:
 
 Engine choices that remain; the original is **Unknown** for each:
 
-- Message box captions (YES / CANCEL), window titles ("INVENTORY - name", "PROSPECTING RESULTS"), confirmation texts other than "Are you sure you want to exit?".
+- Message box captions (YES / CANCEL), window titles ("INVENTORY - name"; "Prospecting Results" is the exe's text, shown upper-cased like the other titles), confirmation texts other than "Are you sure you want to exit?".
 - Overview faction name shows "Player"; the original shows the player faction's name.
 - The hover label is a plain text box; the original uses the HUD's `TooltipPanel`, whose children are not mapped.
 - Medical rows: the parts are ordered head, torso, arms, legs (left first) by their names, matching the original for people; an animal's parts keep that grouping.

@@ -86,7 +86,7 @@ sealed partial class PlayerInterface
         string wind = ((WindSpeed?.Invoke() ?? 0) * 0.22369362f).ToString("0.0", CultureInfo.InvariantCulture);
         var panel = new List<HudLine> { new("Wind Speed:", $"{wind} mph") };
         var environment = r.Environment.Count == 0 ? ["Dead"] : r.Environment.Select(l => $"{l.Name} {N(l.Percent)}%").ToArray();
-        for (int i = 0; i < environment.Length; i++) panel.Add(new(i == 0 ? "Environment:" : "", environment[i]));
+        for (int i = 0; i < environment.Length; i++) panel.Add(new(i == 0 ? "Environment:" : "", environment[i], null, MainColour));
         AddLines(controls, "OverviewDatapanel2", panel, row, pixels);
 
         if (controls.FirstOrDefault(c => c.Name == "ResourcesList") is not { } list) return;
