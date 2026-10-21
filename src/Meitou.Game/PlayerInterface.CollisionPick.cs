@@ -9,9 +9,6 @@ namespace Meitou.Game;
 /// </summary>
 sealed partial class PlayerInterface
 {
-    /// <summary>True: a building is picked by its collision triangles (the original's way); false: by its merged hull prism (the earlier way).</summary>
-    public bool PickByCollisionMesh { get; set; } = true;
-
     readonly Dictionary<string, IReadOnlyList<(Vector3[] Vertices, int[] Indices)>> collisionMeshes = [];
 
     IReadOnlyList<(Vector3[] Vertices, int[] Indices)> CollisionMeshOf(string record)
@@ -23,13 +20,13 @@ sealed partial class PlayerInterface
     }
 
     /// <summary>
-    /// Where the ray meets a building: its hull prism first (null: no hit), then, when <see cref="PickByCollisionMesh"/> is on and the record has collision triangles, the nearest of
+    /// Where the ray meets a building: its hull prism first (null: no hit), then, when the record has collision triangles, the nearest of
     /// those (null: the ray passes through the prism without touching the building). <paramref name="y"/> is the building's base height.
     /// </summary>
     float? BuildingRayT((Vector3 Origin, Vector3 Direction) ray, Vector2[] hull, float yMin, float yMax, string? record, Vector3 position, float y, Quaternion rotation)
     {
         if (RayPrism(ray.Origin, ray.Direction, hull, y + yMin, y + yMax) is not { } prism) return null;
-        if (!PickByCollisionMesh || record is null) return prism;
+        if (record is null) return prism;
         var mesh = CollisionMeshOf(record);
         return mesh.Count == 0 ? prism : RayMesh(ray, mesh, new Vector3(position.X, y, position.Z), rotation);
     }

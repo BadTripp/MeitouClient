@@ -31,7 +31,7 @@ public sealed class FoliageResourceNodes(FoliageWorld world, GameDatabase db, Fu
         if (meshBounds.TryGetValue(meshPath, out var known)) return known;
         (Vector3, float)? bounds = null;
         if ((findMesh(meshPath) ?? findMesh(Path.GetFileName(meshPath.Replace('\\', '/')))) is { } path && Meitou.Data.Ogre.OgreMeshReader.TryReadBounds(path, out var b) && b.Max.X >= b.Min.X)
-            {
+        {
             // The longest half-extent of the bounds box, not its half-diagonal (a rock of 71 x 72 x 66 is 36 across, not 60: the diagonal made the pick sphere nearly twice the rock).
             var size = b.Max - b.Min;
             bounds = ((b.Min + b.Max) / 2, Math.Max(size.X, Math.Max(size.Y, size.Z)) / 2);

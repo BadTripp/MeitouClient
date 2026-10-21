@@ -46,14 +46,6 @@ sealed partial class PlayerInterface
         new(buildHost?.ItemName(rock.Record) ?? rock.Record, null, null, null, ProductionSystem.NaturalId(rock.Record, rock.Position), ProductionSystem.NaturalId(rock.Record, rock.Position),
             rock.Position, null, Record: rock.Record);
 
-    /// <summary>A right click on a rock: the selection mines it, with Shift as a job (true: taken).</summary>
-    bool RockClick(Vector2 p, bool shift)
-    {
-        if (SelectedIds() is not { Count: > 0 } selection || PickRock(p) is not { } rock) return false;
-        MineRock(selection, rock, shift);
-        return true;
-    }
-
     void MineRock(IReadOnlyList<CharacterId> selection, ResourceNode rock, bool asJob)
     {
         string site = ProductionSystem.NaturalId(rock.Record, rock.Position);
