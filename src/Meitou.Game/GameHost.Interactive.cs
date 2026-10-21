@@ -241,6 +241,13 @@ sealed partial class GameHost
                 }
                 if (panel is not null && KeyMap.Map(k) is { } settingsToggle && session.Bindings.Get(InputAction.ToggleSettings).Contains(Binding.Of(settingsToggle)))
                 { panel.Visible = true; return; }
+                // Esc is the game menu's, never Quit's while there is a game: with the interface hidden (F7) it comes back with the menu open,
+                // under the cinema's clean picture it does nothing.
+                if (k == SilkKey.Escape && !g.NoPopulation && !player.UiVisible)
+                {
+                    if (interfaceHidden && !cinema.Clean) { interfaceHidden = false; player.UiVisible = true; player.UiKey(EngineKey.Escape); }
+                    return;
+                }
                 if (KeyMap.Map(k) is { } uiKey && player.UiKey(uiKey, keyboard.IsKeyPressed(SilkKey.ControlLeft) || keyboard.IsKeyPressed(SilkKey.ControlRight), shiftDown)) return;
                 bool ctrl = keyboard.IsKeyPressed(SilkKey.ControlLeft) || keyboard.IsKeyPressed(SilkKey.ControlRight);
                 if (k == SilkKey.KeypadDivide && !IsDuel)
