@@ -735,7 +735,10 @@ public sealed partial class ProductionSystem : ITickSystem
         return false;
     }
 
-    /// <summary>Put an item into a container's grid (<see cref="PlayerSystem.ContainerFor"/>): the cell must be free; a bag or limb item is refused like the machine's.</summary>
+    /// <summary>
+    /// Put an item into a container's grid (<see cref="PlayerSystem.ContainerFor"/>): at a free cell, or with X below 0 where it first fits (<see cref="PutInMachine.Count"/> units); a bag or limb
+    /// item is refused like the machine's.
+    /// </summary>
     static void PutInContainer(World world, Locks.Fixture container, CharacterCold cold, PutInMachine put)
     {
         var root = cold.Inventory!;
@@ -745,7 +748,13 @@ public sealed partial class ProductionSystem : ITickSystem
         if (item is null || item.Record != token.Record || item.Section != token.Section || item.X != token.X || item.Y != token.Y || item.Quantity != token.Quantity || item.LockedOn ||
             !InventoryCommands.IsMovableSection(item.Section) || item.Contents is not null && item.Section == "backpack_attach") return;
         var owner = root.Items.Contains(item) ? root : root.Backpack?.Contents;
-        if (owner is null || put.X < 0 || put.Y < 0 || put.X > storage.Width - item.Width || put.Y > storage.Height - item.Height || !storage.IsFree("main", put.X, put.Y, item.Width, item.Height)) return;
+        if (owner is null) return;
+        if (put.X < 0)
+        {
+            if (InventoryCommands.MoveUnits(owner, item, put.Count, storage) > 0) world.Machines.Touch();
+            return;
+        }
+        if (put.Y < 0 || put.X > storage.Width - item.Width || put.Y > storage.Height - item.Height || !storage.IsFree("main", put.X, put.Y, item.Width, item.Height)) return;
         owner.Remove(item);
         item.Section = "main";
         item.X = put.X;
@@ -754,15 +763,12 @@ public sealed partial class ProductionSystem : ITickSystem
         world.Machines.Touch();
     }
 
-    /// <summary>Take an item out of a container into the character's inventory; what does not fit stays in the container.</summary>
+    /// <summary>Take an item (<see cref="TakeFromMachine.Count"/> units) out of a container into the character's inventory; what does not fit stays in the container.</summary>
     static void TakeFromContainer(World world, Locks.Fixture container, CharacterCold cold, TakeFromMachine take)
     {
         var storage = container.Contents!;
         if (take.Index < 0 || take.Index >= storage.Items.Count) return;
-        var item = storage.Items[take.Index];
-        storage.Items.RemoveAt(take.Index);
-        if (!cold.Inventory!.Add(item) && item.Quantity > 0 && storage.FindCell("main", item.Width, item.Height, out int x, out int y)) { item.Section = "main"; item.X = x; item.Y = y; storage.Items.Add(item); }
-        world.Machines.Touch();
+        if (InventoryCommands.MoveUnits(storage, storage.Items[take.Index], take.Count, cold.Inventory!) > 0) world.Machines.Touch();
     }
 
     void Put(World world, PutInMachine put)
@@ -784,7 +790,7 @@ public sealed partial class ProductionSystem : ITickSystem
         {
             if (put.Slot >= m.Inputs.Length || m.Inputs[put.Slot] is not { } input || input.Item != item.Record) return;
             int room = input.Recipe.Capacity - input.Count;
-            int n = Math.Min(room, item.Quantity);
+            int n = Math.Min(room, put.Count > 0 ? Math.Min(put.Count, item.Quantity) : item.Quantity);
             if (n <= 0) return;
             input.Count += n;
             item.Quantity -= n;
@@ -798,7 +804,12 @@ public sealed partial class ProductionSystem : ITickSystem
                 world.Post($"{m.Data.Name} does not take {item.Name}.");
                 return;
             }
-            if (put.X < 0 || put.Y < 0 || put.X > storage.Width - item.Width || put.Y > storage.Height - item.Height || !storage.IsFree("main", put.X, put.Y, item.Width, item.Height)) return;
+            if (put.X < 0)
+            {
+                if (InventoryCommands.MoveUnits(owner, item, put.Count, storage) > 0) world.Machines.Touch();
+                return;
+            }
+            if (put.Y < 0 || put.X > storage.Width - item.Width || put.Y > storage.Height - item.Height || !storage.IsFree("main", put.X, put.Y, item.Width, item.Height)) return;
             owner.Remove(item);
             item.Section = "main";
             item.X = put.X;
@@ -820,22 +831,17 @@ public sealed partial class ProductionSystem : ITickSystem
         if (take.Slot == -1)
         {
             if (m.Storage is not { } storage || take.Index < 0 || take.Index >= storage.Items.Count) return;
-            var item = storage.Items[take.Index];
-            storage.Items.RemoveAt(take.Index);
-            if (!root.Add(item))
-            {
-                // What did not fit stays in the storage.
-                if (item.Quantity > 0 && storage.FindCell("main", item.Width, item.Height, out int x, out int y)) { item.Section = "main"; item.X = x; item.Y = y; storage.Items.Add(item); }
-            }
-            world.Machines.Touch();
+            // What does not fit stays in the storage.
+            if (InventoryCommands.MoveUnits(storage, storage.Items[take.Index], take.Count, root) > 0) world.Machines.Touch();
             return;
         }
         if (take.Slot == -2 && m.Craft is { } craft)
         {
-            TakeCrafted(world, m, craft, root, take.Index);
+            TakeCrafted(world, m, craft, root, take.Index, take.Count);
             return;
         }
         (string Item, int Count) held = take.Slot == -2 ? (m.Output?.Recipe.Item ?? "", m.Output?.Count ?? 0) : take.Slot >= 0 && take.Slot < m.Inputs.Length ? (m.Inputs[take.Slot].Item, m.Inputs[take.Slot].Count) : ("", 0);
+        if (take.Count > 0) held.Count = Math.Min(held.Count, take.Count);
         if (held.Count <= 0 || items.Create(held.Item, held.Count) is not { } made) return;
         int moved = Placed(root, made);
         if (moved <= 0) return;

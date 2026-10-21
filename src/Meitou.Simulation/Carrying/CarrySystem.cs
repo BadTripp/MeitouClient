@@ -544,6 +544,20 @@ public sealed partial class CarrySystem(GameConstants constants, BodyOptions opt
             if (cold.IsPlayer) world.Post($"{cold.Name} cannot wear {item.Name} there.");
             return;
         }
+        if (!all && take.Section is null && take.Count > 0 && take.Count < item.Quantity)
+        {
+            // Some units of a stack (a right click): the rest stays, unmarked.
+            var owner = from.Items.Contains(item) ? from : from.Backpack?.Contents ?? from;
+            int moved = InventoryCommands.MoveUnits(owner, item, take.Count, cold.Inventory!);
+            item.StolenFrom = mark;
+            if (moved == 0)
+            {
+                if (cold.IsPlayer) world.Post($"{cold.Name} has no room for {item.Name}.");
+                return;
+            }
+            all = true;
+            wear = false;
+        }
         if (!all)
         {
             wear = false;
@@ -580,6 +594,16 @@ public sealed partial class CarrySystem(GameConstants constants, BodyOptions opt
         var item = looter.Inventory!.All().ElementAtOrDefault(put.Item.Index);
         if (item is null || item.Contents is not null && item.Section == "backpack_attach") return;
         bool worn = InventoryCommands.IsEquipmentSection(item.Section);
+        if (put.FirstFit)
+        {
+            var token = put.Item;
+            if (item.Record != token.Record || item.Section != token.Section || item.X != token.X || item.Y != token.Y || item.Quantity != token.Quantity || item.LockedOn ||
+                !InventoryCommands.IsMovableSection(item.Section)) return;
+            var owner = looter.Inventory.Items.Contains(item) ? looter.Inventory : looter.Inventory.Backpack?.Contents;
+            if (owner is null || InventoryCommands.MoveUnits(owner, item, put.Count, body.Inventory!) == 0) return;
+            if (worn) Assembly?.RefreshEquipment(looter);
+            return;
+        }
         if (!InventoryCommands.Transfer(looter.Inventory, put.Item, body.Inventory!, put.Section, put.X, put.Y)) return;
         if (worn) Assembly?.RefreshEquipment(looter);
         if (InventoryCommands.IsEquipmentSection(put.Section)) Assembly?.RefreshEquipment(body);

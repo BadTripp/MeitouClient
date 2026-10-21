@@ -59,6 +59,29 @@ public static class InventoryCommands
     public static bool Move(Inventory root, InventoryItemToken token, string section, int x, int y) => Transfer(root, token, root, section, x, y, limbs: true);
 
     /// <summary>
+    /// Moves at most <paramref name="count"/> units (0: all) of <paramref name="item"/>, held directly by <paramref name="owner"/>, into <paramref name="into"/> where they first fit
+    /// (<see cref="Inventory.Add"/>: stacks of it, then free cells); what does not fit stays where it was. Returns the units moved. A right click between two open windows moves one unit this
+    /// way, with Shift the stack (docs/game/ui-input.md, the input tables).
+    /// </summary>
+    public static int MoveUnits(Inventory owner, ItemInstance item, int count, Inventory into)
+    {
+        if (count <= 0 || count >= item.Quantity)
+        {
+            int before = item.Quantity, at = owner.Items.IndexOf(item);
+            if (at < 0) return 0;
+            owner.Items.RemoveAt(at);
+            if (into.Add(item)) return before;
+            if (item.Quantity > 0) owner.Items.Insert(at, item);
+            return before - item.Quantity;
+        }
+        var unit = item.WithQuantity(count);
+        item.Quantity -= count;
+        if (into.Add(unit)) return count;
+        item.Quantity += unit.Quantity;
+        return count - unit.Quantity;
+    }
+
+    /// <summary>
     /// Moves the item <paramref name="token"/> names in <paramref name="from"/> to <paramref name="section"/> at (<paramref name="x"/>, <paramref name="y"/>) of <paramref name="into"/>: the same
     /// inventory (<see cref="Move"/>) or another character's (the loot window), by the same rules. Prosthetic sections only with <paramref name="limbs"/>. False, nothing moved: the token is
     /// stale or the place does not take the item.
