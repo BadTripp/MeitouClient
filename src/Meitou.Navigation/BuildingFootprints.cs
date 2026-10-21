@@ -144,9 +144,18 @@ public sealed class BuildingFootprints
     }
 
     /// <summary>
-    /// The level data's buildings (footprints already read; the others are being read) whose placement lies within reach of the ray's ground track: the candidates a click picks from.
+    /// The level data's buildings whose placement lies within reach of the ray's ground track: the candidates a click picks from. Their footprints are read now (in parallel) if they
+    /// were not yet, so the first click on a building picks it.
     /// </summary>
     public IEnumerable<PlacedBuilding> Along(Vector3 origin, Vector3 direction, float maxDistance)
+    {
+        var near = Near(origin, direction, maxDistance).ToList();
+        foreach (var b in near) _ = Request(b.BuildingId);
+        foreach (var b in near)
+            if (Wait(b.BuildingId) is { } footprint) yield return new PlacedBuilding(b, footprint);
+    }
+
+    IEnumerable<BuildingPlacement> Near(Vector3 origin, Vector3 direction, float maxDistance)
     {
         var map = index.Value;
         const float Reach = 200;
@@ -172,7 +181,7 @@ public sealed class BuildingFootprints
                 var p = new Vector2(b.Position.X, b.Position.Z);
                 float s = lengthSquared < 1e-6f ? 0 : Math.Clamp(Vector2.Dot(p - from, track) / lengthSquared, 0, 1);
                 if (Vector2.DistanceSquared(p, from + track * s) > Reach * Reach) continue;
-                if (Of(b.BuildingId) is { } footprint) yield return new PlacedBuilding(b, footprint);
+                yield return b;
             }
         }
     }
