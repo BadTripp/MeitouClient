@@ -70,11 +70,15 @@ public static class InventoryCommands
             int before = item.Quantity, at = owner.Items.IndexOf(item);
             if (at < 0) return 0;
             owner.Items.RemoveAt(at);
+            bool death = item.Death;
+            item.Death = false;   // leaving its owner, it is no longer a death item
             if (into.Add(item)) return before;
+            item.Death = death;
             if (item.Quantity > 0) owner.Items.Insert(at, item);
             return before - item.Quantity;
         }
         var unit = item.WithQuantity(count);
+        unit.Death = false;
         item.Quantity -= count;
         if (into.Add(unit)) return count;
         item.Quantity += unit.Quantity;
@@ -116,6 +120,7 @@ public static class InventoryCommands
         foreach (var other in target.Items)
             if (other != item && other.Section == section && x < other.X + other.Width && other.X < x + item.Width && y < other.Y + other.Height && other.Y < y + item.Height) return false;
         if (owner != target) { owner.Items.Remove(item); target.Items.Add(item); }
+        if (into != from) item.Death = false;
         item.Section = section; item.X = x; item.Y = y; return true;
     }
     public static bool Arrange(Inventory root)

@@ -465,7 +465,9 @@ public sealed partial class CarrySystem(GameConstants constants, BodyOptions opt
             End(table, i);
             return;
         }
+        int death = DeathUnits(victim.Inventory!);
         var (taken, left) = TakeAll(bag, victim.Inventory!, Crime.CrimeSystem.IsLootTheft(cold, victim) ? victim.Faction : -1);
+        Butcher(world, i, t, death);
         bool seen = Looted(world, table, i, t, taken, left);
         if (cold.IsPlayer)
         {
@@ -535,7 +537,7 @@ public sealed partial class CarrySystem(GameConstants constants, BodyOptions opt
             return;
         }
         bool worn = InventoryCommands.IsEquipmentSection(item.Section), wear = take.Section is { } s && InventoryCommands.IsEquipmentSection(s);
-        int mark = item.StolenFrom, before = item.Quantity;
+        int mark = item.StolenFrom, before = item.Quantity, death = DeathUnits(from);
         if (Crime.CrimeSystem.IsLootTheft(cold, victim)) item.StolenFrom = victim.Faction;
         bool all = take.Section is { } section && InventoryCommands.Transfer(from, token, cold.Inventory!, section, take.X, take.Y);
         if (!all && wear)
@@ -561,8 +563,11 @@ public sealed partial class CarrySystem(GameConstants constants, BodyOptions opt
         if (!all)
         {
             wear = false;
+            bool flagged = item.Death;
+            item.Death = false;
             all = cold.Inventory!.Add(item);
             if (all) from.Remove(item);
+            else item.Death = flagged;
         }
         if (!all) item.StolenFrom = mark;
         if (!all && item.Quantity == before)
@@ -570,6 +575,7 @@ public sealed partial class CarrySystem(GameConstants constants, BodyOptions opt
             if (cold.IsPlayer) world.Post($"{cold.Name} has no room for {item.Name}.");
             return;
         }
+        Butcher(world, i, t, death);
         if (worn) Assembly?.RefreshEquipment(victim);
         if (wear) Assembly?.RefreshEquipment(cold);
         // Seen taking from one open window: one relations penalty and one message, as a take-all (engine choice).
@@ -579,6 +585,27 @@ public sealed partial class CarrySystem(GameConstants constants, BodyOptions opt
             if (first && cold.IsPlayer) world.Post($"{cold.Name} was seen looting {victim.Name}");
             seenLoot = world.Player.OpenLoot;
         }
+    }
+
+    /// <summary>The units of <paramref name="inventory"/>'s death items (<see cref="ItemInstance.Death"/>).</summary>
+    static int DeathUnits(Inventory inventory)
+    {
+        int n = 0;
+        foreach (var item in inventory.All()) if (item.Death) n += item.Quantity;
+        return n;
+    }
+
+    /// <summary>
+    /// A live, down body that had <paramref name="before"/> units of death items and now has fewer is butchered: it dies, "{name} has been butchered" (<c>FUN_14075e7e0</c>, docs/game/animals.md
+    /// "Death items"; posted when the looter or the body is the player's, engine choice).
+    /// </summary>
+    void Butcher(World world, int looter, int body, int before)
+    {
+        var table = world.Characters;
+        var victim = table.Cold(body)!;
+        if (victim.Medical is not { Dead: false } medical || DeathUnits(victim.Inventory!) >= before) return;
+        medical.Butcher();
+        if (table.Cold(looter)!.IsPlayer || victim.IsPlayer) world.Post($"{victim.Name} has been butchered");
     }
 
     /// <summary>The open loot whose looting was already seen (see <see cref="TakeLoot"/>).</summary>
@@ -627,7 +654,9 @@ public sealed partial class CarrySystem(GameConstants constants, BodyOptions opt
         foreach (var item in items)
         {
             int mark = item.StolenFrom;
+            bool death = item.Death;
             if (stolenFrom >= 0) item.StolenFrom = stolenFrom;
+            item.Death = false;
             if (into.Add(item))
             {
                 from.Remove(item);
@@ -636,6 +665,7 @@ public sealed partial class CarrySystem(GameConstants constants, BodyOptions opt
             else
             {
                 item.StolenFrom = mark;
+                item.Death = death;
                 left++;
             }
         }
