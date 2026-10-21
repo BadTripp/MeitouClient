@@ -125,9 +125,13 @@ Same targets as picking; Task_CutLock / Task_BruteForceLock share the shackle ta
   `o = 0`: `slide x d x doa`; else `t = |o| / (0.25 |d| + |o|)` and `doa < t`: `out x o x doa / t`, otherwise
   `slide x d x (doa - t) / (1 - t) + out x o`. `slide` is the door collision shape's local axis `door axis` (0 X, 1 Y, 2 Z); `out`
   is the shape box's thinnest other axis, sign-flipped by a dot test against the shape position (`FUN_14029cc90`; the reference
-  point is not decoded, **Observed**: Meitou points it away from the building origin, which matches the Storm House doors in game).
-  Data (35 door records): houses slide sideways (axis 0, 16..30 units, speed 1), gates up (`Concrete Gate Door` axis 1, 85) or along
-  Z (defensive gates 65..100, speed 0.2..0.25); 14 TwoStorey doors step out 0.6..13 units first.
+  point is not decoded, **Observed**: Meitou points it away from the part's origin, which matches the Storm House doors in game).
+  The axes are the box's in the collision file's Z-up PhysX frame (actor and shape pose composed), so an unrotated box's axis 1 is
+  the part's -Z and axis 2 is up (**Observed**: with this frame no door of the 35 slides along its thinnest box side, and
+  Defensive Gate IV lowers from the top as in game; the mesh frame instead slid 5 Storm House doors through their own thickness).
+  Data (35 door records): houses slide sideways (axis 0, 16..30 units, speed 1); defensive gates (65..100, speed 0.2..0.25), Saloon,
+  Makeshift Gate Panel and Storm House B/D/F..I lift (axis 2); `Concrete Gate Door` (85) and Moor C doors slide sideways (axis 1);
+  Outpost Door III/IV sink (-20, -27); 14 TwoStorey doors step out 0.6..13 units first.
 - **Who opens and closes** (**Observed**, callers of the two functions): opening: Task_OpenDoor (its start and update; the update
   fails on a locked lock), the door panel button, a broken lock (bashing), dialogue effect 0x36 (the speaker's building's door).
   Closing: Task_CloseDoor, Task_LockDoor and the door panel. The planner opens doors for walks: Moving (1, 29, 67) lists states 59
