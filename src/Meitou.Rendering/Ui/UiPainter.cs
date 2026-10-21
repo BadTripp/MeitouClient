@@ -290,6 +290,7 @@ public sealed partial class UiPainter : IDisposable
             textColour.W *= Alpha(c.Properties);
             font.Target = overlay.Target;
             float scale = c.TextScale ?? (c.Skin.Length > 0 ? Math.Clamp(height / 1080f, 0.5f, 1.5f) : 1);
+            bool original = false;
             // Settings request a font baked at its physical pixel size rather than scaling the 16px atlas.
             if (int.TryParse(c.Properties.GetValueOrDefault("FontPixels"), out int pixels) && StandardSource() is { } standardFace)
             {
@@ -304,8 +305,10 @@ public sealed partial class UiPainter : IDisposable
                 font = resourceFont;
                 font.Target = overlay.Target;
                 scale = 1;
+                // MyGUI never scales text to its widget: a font resource keeps its size in the Faithful mode, overflowing the line box and clipped by the widget.
+                original = Mode == UiMode.Faithful;
             }
-            if (minimumTextPixels > 0)
+            if (minimumTextPixels > 0 || original)
             {
                 // Short captions keep the main UI's readable size. Centre the line box over
                 // its inset client and clip to the widget instead of shrinking the lettering.
