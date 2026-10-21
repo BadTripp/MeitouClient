@@ -26,6 +26,7 @@ sealed partial class GameHost
     TerrainDecalStore? decalStore;
     World? bloodFor;
     long bloodTick;
+    double debrisClock;
     readonly ConcurrentQueue<BloodMark> bloodQueue = new();
     readonly Random bloodRandom = new();
 
@@ -83,7 +84,10 @@ sealed partial class GameHost
         long ticks = world.Tick - bloodTick;
         bloodTick = world.Tick;
         if (ticks > 0 && decalStore is { } aging && gpu.Decals is { } decals) aging.Age(ticks * tick, decals.Drawn);
-        UpdateDebris(world, Math.Max(ticks, 0) * tick);
+        // The pieces move by the game time between frames, the tick count plus the simulation's alpha, so they fly smoothly at the display rate, not in tick steps.
+        double clock = world.Tick + session.SimulationAlpha;
+        UpdateDebris(world, (float)Math.Clamp((clock - debrisClock) * tick, 0, 0.5));
+        debrisClock = clock;
     }
 
     /// <summary>
@@ -98,6 +102,7 @@ sealed partial class GameHost
         bloodQueue.Clear();
         bloodFor = world;
         bloodTick = world.Tick;
+        debrisClock = world.Tick + session.SimulationAlpha;
         if (decalStore is not { } store) return;
         store.Clear();
         world.BloodMarks = bloodQueue;

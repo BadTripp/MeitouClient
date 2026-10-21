@@ -21,6 +21,9 @@ sealed partial class GameHost
     /// <summary>The blood particle systems: the splash at the burst and where flesh lands, and the spray (along its +Z) thrown out of the body.</summary>
     const string BurstSplash = "Bloodsplash01", BurstSpray = "HackBlood-system";
 
+    /// <summary>The burst's mist: its sprites twice the systems' size and living 3 times as long (they keep growing, so they end about 6 times as big).</summary>
+    const float MistSize = 2, MistLife = 3;
+
     const int BonesPerBurst = 12, MeatPerBurst = 4, SpraysPerBurst = 5, MaxPieces = 400, BurstSplashes = 24;
     const float Gravity = 98, BurstHeight = 10, Bounce = 0.35f, Grip = 0.6f, BurstReach = 60, BoneScale = 0.12f;
 
@@ -60,12 +63,12 @@ sealed partial class GameHost
         characterSounds?.Burst(centre);
         if (bleeds && gpu.Particles is { } particles)
         {
-            particles.Burst(BurstSplash, centre, Quaternion.Identity, 0.2f);
+            particles.Burst(BurstSplash, centre, Quaternion.Identity, 0.3f, MistSize, MistLife);
             for (int i = 0; i < SpraysPerBurst; i++)
             {
                 var d = Vector2.Normalize(RandomDirection() + blow * 0.6f);
                 var spray = Vector3.Normalize(new Vector3(d.X, 0.3f + bloodRandom.NextSingle() * 0.7f, d.Y));
-                particles.Burst(BurstSpray, centre, Turn(Vector3.UnitZ, spray), 0.15f + bloodRandom.NextSingle() * 0.15f);
+                particles.Burst(BurstSpray, centre, Turn(Vector3.UnitZ, spray), 0.4f + bloodRandom.NextSingle() * 0.3f, MistSize, MistLife);
             }
         }
         if (gpu.Debris is not { } debris) return;
@@ -159,7 +162,7 @@ sealed partial class GameHost
         if (!p.Landed && p.Flesh)
         {
             characterSounds?.Splat(p.Position);
-            if (p.Colour != 0) gpu.Particles?.Burst(BurstSplash, p.Position, Quaternion.Identity, 0.15f);
+            if (p.Colour != 0) gpu.Particles?.Burst(BurstSplash, p.Position, Quaternion.Identity, 0.15f, 1.3f, 1.5f);
         }
         p.Landed = true;
         var flat = new Vector2(p.Velocity.X, p.Velocity.Z);

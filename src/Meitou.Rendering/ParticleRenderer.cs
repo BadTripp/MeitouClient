@@ -229,13 +229,14 @@ public sealed unsafe class ParticleRenderer : IDisposable
 
     /// <summary>
     /// Fires the particle system <paramref name="system"/> once at <paramref name="position"/>, its emitters turned by <paramref name="orientation"/>, emitting for
-    /// <paramref name="seconds"/> of the frame clock (luckyren Mode's blood). Drawn with the map's placers; an unknown system does nothing.
+    /// <paramref name="seconds"/> of the frame clock, the particles <paramref name="size"/> times as big and <paramref name="lifeScale"/> times as long-lived
+    /// (luckyren Mode's blood). Drawn with the map's placers; an unknown system does nothing.
     /// </summary>
-    public void Burst(string system, Vector3 position, Quaternion orientation, float seconds)
+    public void Burst(string system, Vector3 position, Quaternion orientation, float seconds, float size = 1, float lifeScale = 1)
     {
         if (!Enabled) return;
         Sync();
-        if (BurstGroup(system) is { } group) group.Spawn(position, orientation, seconds);
+        if (BurstGroup(system) is { } group) group.Spawn(position, orientation, seconds, size, lifeScale);
     }
 
     /// <summary>Makes the <see cref="Burst"/> groups of <paramref name="systems"/> and starts decoding their textures, so a first burst is not drawn without them.</summary>
