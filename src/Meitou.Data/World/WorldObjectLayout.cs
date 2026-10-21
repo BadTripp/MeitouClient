@@ -65,7 +65,7 @@ public sealed record BuildingState(bool Destroyed = false, GameRecord? TownMater
 /// random generator seeded from the building's position (<see cref="BuildingRandom"/>), recursively; each part draws
 /// its <c>phs or mesh</c> (or <c>destroyed mesh</c>) on its own scene node: moved by <c>offset X/Y/Z</c> × <c>scale</c>,
 /// scaled by <c>scale</c>, parented to its parent part's node or the building's (position + rotation). Doors listed in
-/// <c>doors</c> are buildings of their own at the same position and rotation. A map feature draws its MAP_FEATURES
+/// <c>doors</c> are buildings of their own at the same position, rotation and <c>scale</c>. A map feature draws its MAP_FEATURES
 /// <c>mesh</c> scaled, rotated and moved by its <c>features.dat</c> entry.
 /// </summary>
 public static class WorldObjectLayout
@@ -129,13 +129,14 @@ public static class WorldObjectLayout
         state ??= new BuildingState();
         var result = new List<PlacedMesh>();
         AddBuilding(db, building, placementId, worldPosition, rotation, state, result, lights);
-        // Doors: one building per "doors" entry at the parent's position and rotation, not for destroyed buildings (game: Building::createPhysical).
+        // Doors: one building per "doors" entry at the parent's position, rotation and scale (the door's own scale is not used: Defensive
+        // Gate III/IV are 0.85, their doors 1), not for destroyed buildings (game: Building::createPhysical).
         if (!state.Destroyed && !building.GetBool("is node"))
         {
             var doors = building.GetReferences("doors");
             for (int i = 0; i < doors.Count; i++)
                 if (db.Find(doors[i].TargetStringId) is { Type: FcsRecordType.BUILDING } door)
-                    AddBuilding(db, door, placementId, worldPosition, rotation, state, result, lights, i);
+                    AddBuilding(db, door, placementId, worldPosition, rotation, state, result, lights, i, building.GetFloat("scale", 1));
         }
         return result;
     }
@@ -161,10 +162,10 @@ public static class WorldObjectLayout
     }
 
     static void AddBuilding(GameDatabase db, GameRecord building, string placementId, Vector3 position, Quaternion rotation, BuildingState state,
-        List<PlacedMesh> result, List<PlacedLight>? lights, int doorIndex = -1)
+        List<PlacedMesh> result, List<PlacedLight>? lights, int doorIndex = -1, float? parentScale = null)
     {
         if (building.GetBool("is node")) return;
-        float scale = building.GetFloat("scale", 1);
+        float scale = parentScale ?? building.GetFloat("scale", 1);
         var a = new Assembly(db, building, placementId, state, result, lights)
         {
             Scale = scale > 0 ? scale : 1,
