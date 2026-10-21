@@ -111,7 +111,7 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
             else if (GroundItemClick(p)) { }
             else if (ContainerClick(p)) { }
             else if (DoorClick(p, alt)) { }
-            else if (RockClick(p, shift)) { }
+            else if (RockPress(p)) { }
             else if (Ray(p) is { } ray && MoveHit(ray.Origin, ray.Direction) is { } hit)
             {
                 Move(hit, shift);
@@ -163,7 +163,7 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
         if (button == MouseButton.Left) { InventoryPointerUp(p); JobDragEnd(p); SquadPointerUp(p, shift); faithfulScreens.PointerUp(); mapDrag = null; }
         if (button == MouseButton.Middle) mapDrag = null;
         if (button == MouseButton.Right && MapRightUp(p)) return;
-        if (button == MouseButton.Right) { ContextRelease(); SiteRelease(); }
+        if (button == MouseButton.Right) { ContextRelease(); SiteRelease(); RockRelease(); }
         if (button == MouseButton.Right && steering)
         {
             Steer(final: true);

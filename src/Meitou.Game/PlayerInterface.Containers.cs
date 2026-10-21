@@ -32,6 +32,7 @@ sealed partial class PlayerInterface
     bool ContainerClick(Vector2 p)
     {
         if (SelectedIds().Count == 0 || PickContainer(p) is not { } container) return false;
+        closedMachine = null;   // a container whose window was closed opens again when it is asked for (the sim may not have dropped it yet, e.g. while paused)
         Say(new Meitou.Simulation.Items.OpenContainerOrder([], container.Id) { Tick = session.World.Tick });
         return true;
     }

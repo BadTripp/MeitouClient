@@ -92,6 +92,7 @@ sealed partial class PlayerInterface
             else if (PickContainer(mouse) is not null) chosen = ("search", null);
             else if (PickDoor(mouse) is { } door) chosen = (DoorPointer(door), null);
             else if (SitePointer(mouse) is { } siteMode) chosen = (siteMode, null);
+            else if (PickRock(mouse) is not null) chosen = ("mine", null);   // a resource rock a right click would mine (the original's `mine` pointer)
         }
         chosen.Target ??= PickWhere(mouse, _ => true);
         // A hostile character shows the attack pointer and the red outline even with nobody selected to send at it.

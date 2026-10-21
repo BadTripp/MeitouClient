@@ -782,7 +782,7 @@ crafting benches, generators and batteries. Facts: [production](game/buildings-p
   with an operable mine; with a rock source, one of it must stand there), owned by no faction, so player-only lookups skip it. Its machine
   yields `ResourceField.NodeYield` (at least 0.1) and is kept in memory, not saved; a saved job keeps the id (`meitou pjob<i>`). The ore stays in
   the rock's output (5) until taken: a left click selects the rock and opens its machine window once it has been mined (**Observed** by the
-  owner: the base game's ore is picked up by hand), or a storage within `HaulRange` takes it as for any machine. Engine choices: the rock is picked as a sphere of `NodeRadius` 25; level-placed `is foliage`
+  owner: the base game's ore is picked up by hand), or a storage within `HaulRange` takes it as for any machine. Engine choices: the rock is picked as a sphere round its mesh's bounds (radius the longest half-extent of the bounds box), scaled by the instance, at least `NodeRadius` 25 (the radius also sizes its resource richness; the original takes the mesh's bounds the same way); without the mesh file a rock is a sphere of 25 round its origin; the pointer over a rock is `mine` (with characters selected, after sites and doors, as the click order is); level-placed `is foliage`
   buildings (not drawn, not in `FoliageResourceNodes`) cannot be mined. NPC town mines are not run (the original's make output while NPCs
   operate them).
 - **Items.** `PutInMachine` and `TakeFromMachine` move items between a character within 200 of the building and the machine:

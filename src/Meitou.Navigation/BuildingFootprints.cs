@@ -104,6 +104,25 @@ public sealed class BuildingFootprints
         return result;
     }
 
+    /// <summary>
+    /// The triangles of a building record's collision shapes in its own space (scale applied, as the hull is): what a click on a building is tested against after its hull. Read from the
+    /// cache on demand, not kept; empty without a database record or collision files.
+    /// </summary>
+    public IReadOnlyList<(Vector3[] Vertices, int[] Indices)> Mesh(string buildingId)
+    {
+        var result = new List<(Vector3[], int[])>();
+        if (db.Find(buildingId) is not { } building) return result;
+        float scale = building.GetFloat("scale", 1);
+        if (scale <= 0) scale = 1;
+        foreach (var mesh in WorldObjectLayout.Building(db, building, "footprint", Vector3.Zero, Quaternion.Identity, new BuildingState()))
+        {
+            string path = mesh.Source.GetPath("xml collision");
+            if (path.Length == 0 || collision.Get(path) is not { } prepared) continue;
+            foreach (var shape in prepared.Shapes) result.Add(([.. shape.Vertices.Select(v => v * scale)], shape.Indices));
+        }
+        return result;
+    }
+
     Task<BuildingFootprint?> Request(string buildingId) => byRecord.GetOrAdd(buildingId, id => Task.Run(() => Compute(id)));
 
     BuildingFootprint? Compute(string buildingId)

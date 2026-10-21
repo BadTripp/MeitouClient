@@ -69,15 +69,16 @@ sealed partial class PlayerInterface
         }
     }
 
-    void ArrangeContainerGrid(string id, List<UiControl> controls, int columns, int rows)
+    /// <summary>The grid is laid in the window with <paramref name="above"/> (default 50) layout pixels over it and <paramref name="below"/> (default 58) under it.</summary>
+    void ArrangeContainerGrid(string id, List<UiControl> controls, int columns, int rows, float above = 50, float below = 58)
     {
         int index = controls.FindIndex(c => c.Name == "backpack_content");
         var root = controls.FirstOrDefault(c => c.Type == "Window");
         if (index < 0 || root is null) return;
         float scale = InventoryScale, cell = InventoryCell;
         var r = root.Bounds;
-        float top = 50 * scale;
-        var view = new UiRect(r.X + 18 * scale, r.Y + top, Math.Max(0, r.Width - 40 * scale), Math.Max(0, r.Height - top - 58 * scale));
+        float top = above * scale;
+        var view = new UiRect(r.X + 18 * scale, r.Y + top, Math.Max(0, r.Width - 40 * scale), Math.Max(0, r.Height - top - below * scale));
         float maximum = Math.Max(0, rows * cell - view.Height);
         if (maximum < 0.01f) maximum = 0;
         float scroll = Math.Clamp(inventoryScroll.GetValueOrDefault(id), 0, maximum);
