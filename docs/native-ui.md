@@ -24,6 +24,8 @@ Every Graphics sub-page starts with two rows (`SettingsMenu.Presets.cs`):
   cascade only; Custom otherwise), not saved.
 - **All graphics features** sets every Faithful / Meitou graphics switch to one side (gameplay switches and sliders
   untouched); mixed switches show neither side. A switch that does not take (indirect light without ray queries) is ignored.
+  Advanced (**All gameplay changes**) and Fixes (**All fixes**) start with the same switch over their own page's
+  switches and sliders with both marks (attackers per target); luckyren Mode is left out.
 The modal pauses simulation and captures world input; wheel/PageUp/PageDown scroll, Tab/arrows
 focus/adjust, Enter activates. Binding capture rejects conflicting/reserved controls; Esc cancels,
 Delete unbinds. Defaults and cache deletion ask first. The viewer retains its debug panel.

@@ -47,14 +47,11 @@ sealed partial class SettingsMenu
     const string FifthCascade = "Shadow cascade 5 (Meitou)";
 
     /// <summary>The Faithful / Meitou switches whose reading stays put when set (Indirect light without ray queries); the all switch ignores them.</summary>
-    readonly HashSet<Toggle> stuckSwitches = [];
+    readonly HashSet<string> stuckSwitches = [];
 
     Entry PresetEntry => new("Quality preset", "Sets draw distances, foliage, shadow, water, particle and texture settings together; High is the default. "
         + "Low also turns the costliest Meitou effects off (indirect light, light shafts, clouds, ambient occlusion, Meitou shadows and water). Anti-aliasing and render scale stay as they are.",
         Choice: new(() => PresetNames, CurrentPreset, ApplyPreset));
-
-    Entry LookEntry => new("All graphics features", "Every graphics feature as the game ships it, or every Meitou improvement. The quality settings stay as they are.",
-        Choice: new(() => ["Faithful", "Meitou"], CurrentLook, SetLook), Segmented: true);
 
     float PresetTarget(PresetSlider p, Slider slider, int preset)
     {
@@ -103,19 +100,33 @@ sealed partial class SettingsMenu
         notice = $"{PresetNames[preset]} quality applied.";
     }
 
-    IEnumerable<Toggle> LookSwitches => values.Toggles.Where(t => t.Remaster && !stuckSwitches.Contains(t));
-
-    /// <summary>1 when every graphics switch is Meitou, 0 when every one is Faithful, -1 when they are mixed.</summary>
-    int CurrentLook() => LookSwitches.All(t => t.Get()) ? 1 : LookSwitches.All(t => !t.Get()) ? 0 : -1;
-
-    void SetLook(int side)
-    {
-        bool meitou = side == 1;
-        foreach (var toggle in values.Toggles.Where(t => t.Remaster && t.Get() != meitou))
+    /// <summary>
+    /// A page's all-Faithful / all-Meitou switch over its Faithful / Meitou <paramref name="toggles"/> and the <paramref name="sliders"/> with both marks;
+    /// it reads 1 when all are Meitou, 0 when all are Faithful, -1 when they are mixed.
+    /// </summary>
+    Entry SidesEntry(string label, string hint, string what, IReadOnlyList<Toggle> toggles, IReadOnlyList<Slider> sliders) => new(label, hint, Segmented: true,
+        Choice: new(() => ["Faithful", "Meitou"], () =>
         {
-            toggle.Set(meitou);
-            if (toggle.Get() != meitou) stuckSwitches.Add(toggle);
-        }
-        notice = meitou ? "Every graphics feature is Meitou." : "Every graphics feature is as the game ships it.";
-    }
+            var live = toggles.Where(t => !stuckSwitches.Contains(t.Label)).ToList();
+            bool AtMark(Slider s, float? mark) => mark is { } m && MathF.Abs(s.Get() - m) <= 0.002f * (s.Max - s.Min);
+            return live.All(t => t.Get()) && sliders.All(s => AtMark(s, s.Meitou)) ? 1 : live.All(t => !t.Get()) && sliders.All(s => AtMark(s, s.Faithful)) ? 0 : -1;
+        }, side =>
+        {
+            bool meitou = side == 1;
+            foreach (var toggle in toggles.Where(t => t.Get() != meitou))
+            {
+                toggle.Set(meitou);
+                if (toggle.Get() != meitou) stuckSwitches.Add(toggle.Label);
+            }
+            foreach (var slider in sliders) slider.Set((meitou ? slider.Meitou : slider.Faithful)!.Value);
+            notice = meitou ? $"Every {what} is Meitou." : $"Every {what} is as the game ships it.";
+        }));
+
+    Entry LookEntry => SidesEntry("All graphics features", "Every graphics feature as the game ships it, or every Meitou improvement. The quality settings stay as they are.",
+        "graphics feature", values.Toggles.Where(t => t.Remaster).ToList(), []);
+
+    /// <summary>The Advanced or Fixes page's all switch, over that page's switches (luckyren Mode, a joke mode off by default, left out) and sliders with both marks.</summary>
+    Entry PageSidesEntry(List<Entry> entries, string label, string hint, string what) => SidesEntry(label, hint, what,
+        entries.Select(e => e.Toggle).OfType<Toggle>().Where(t => t.Remaster && t.Label != "luckyren Mode").ToList(),
+        entries.Select(e => e.Slider).OfType<Slider>().Where(s => s.Faithful is not null && s.Meitou is not null).ToList());
 }

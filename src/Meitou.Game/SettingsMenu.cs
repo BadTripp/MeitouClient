@@ -249,6 +249,10 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
                     pendingAction = action.Run; confirmation = action.Question(); focus = -1;
                 }));
         }
+        if (page == 4)
+            result.Insert(0, PageSidesEntry(result, "All gameplay changes", "Every change on this page as the game plays, or every Meitou change (luckyren Mode stays as it is).", "gameplay change"));
+        if (page == 6)
+            result.Insert(0, PageSidesEntry(result, "All fixes", "Every bug on this page as the game ships it, or every fix.", "fix"));
         return result;
     }
 
