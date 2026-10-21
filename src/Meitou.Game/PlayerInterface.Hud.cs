@@ -1,4 +1,5 @@
 using System.Numerics;
+using Meitou.Data.Ui;
 using Meitou.Engine.Time;
 using Meitou.Rendering;
 using Meitou.Simulation;
@@ -28,7 +29,31 @@ sealed partial class PlayerInterface
         uiMessages.Add(notice);
         if (uiMessages.Count > 200) uiMessages.RemoveAt(0);
         noticeIsError = error;
-        noticeUntil = System.Diagnostics.Stopwatch.GetTimestamp() + (long)((error ? 6 : 2.5) * System.Diagnostics.Stopwatch.Frequency);
+        noticeStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+        noticeUntil = noticeStarted + (long)((error ? 6 : 2.5) * System.Diagnostics.Stopwatch.Frequency);
+    }
+
+    long noticeStarted;
+    /// <summary>The original's message panel (<c>MessageRoller</c>, <c>Kenshi_MessagePanel</c>), the faithful mode's notice.</summary>
+    MyGuiLayout? rollerLayout;
+    /// <summary>The roller shows a message 4 s, then fades it out (MyGUI <c>ControllerFadeAlpha</c> at coefficient 3: a third of a second).</summary>
+    const double RollerSeconds = 4, RollerFade = 1 / 3.0;
+
+    /// <summary>
+    /// The faithful mode's notice (<c>MessageRoller</c>, docs/game/ui-screens.md): the <c>Kenshi_MessagePanel</c> layout (parchment, centred word-wrapped text) where the HUD's
+    /// <c>MessagePanel</c> is, over every window, never taking the pointer. A new message replaces the shown one.
+    /// </summary>
+    void AddMessageRoller(List<UiControl> controls)
+    {
+        if (UiMode != UiMode.Faithful || notice is null || rollerLayout is null || faithfulHud.Find("MessagePanel") is not { } slot) return;
+        double age = System.Diagnostics.Stopwatch.GetElapsedTime(noticeStarted).TotalSeconds;
+        float alpha = age < RollerSeconds ? 1 : (float)(1 - (age - RollerSeconds) / RollerFade);
+        if (alpha <= 0) { notice = null; return; }
+        var b = new UiBindings { TemplateScale = Height / 1080f };
+        b.Text["MessageTextBox"] = notice;
+        b.Positions["Root"] = slot.Position.RelativeTo(new(0, 0, Width, Height), slot.RealPosition);
+        b.Properties["Root"] = new Dictionary<string, string> { ["NeedMouse"] = "false", ["Alpha"] = alpha.ToString(System.Globalization.CultureInfo.InvariantCulture) };
+        controls.AddRange(MyGuiPresentation.Arrange(rollerLayout, Width, Height, b, uiResources.Layers).Select(c => c with { Pickable = false }));
     }
 
     /// <summary>Drops the transient state of the mouse (a drag box, a steering right click): the world it belonged to is gone.</summary>
@@ -136,7 +161,7 @@ sealed partial class PlayerInterface
         }
 
         DrawGameUi(o, width, height);
-        DrawNotice(o, width);
+        if (UiMode != UiMode.Faithful) DrawNotice(o, width);
         o.Flush(width, height);
     }
 }

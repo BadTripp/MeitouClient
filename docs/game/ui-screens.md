@@ -194,7 +194,7 @@ to Jobs, independent of the saved `chase mode` flag whose relationship is **Unkn
   splint % × 0.01 + green, number floor(H − S + 0.1); arrows `<<   ` below 0 and degenerating, `<<!!   ` at the KO point, `!!!   ` destroyed. Blood:
   green blood / capacity, number floor(blood + 0.1), arrows a run of `<`, ceil(|bleed rate| / 0.05) of them (at most 100). Hunger (0..3): number
   (int)(hunger × 100), Green hunger − 2, Yellow hunger − 1, Red hunger; arrows `>   ` recovering, `<!   ` below 2, else `<   `. The parts come in the
-  order head, stomach, chest, left arm, right arm, left leg, right leg for people (**Observed**, screenshot); Meitou reads the RACE `combat anatomy` references in another order (right leg first), so how the original orders its part list is **Unknown** and Meitou sorts by part name to match.
+  medical part array's order ([part order](character-stats.md#part-order), **Verified**): head, torso, arms, legs, left before right.
 - Information panel: `ExtendingPanel` starts collapsed, its bottom moved onto the panel's bottom (behind the Overlapped `StatsPanel`), and slides over
   0.5 s to its layout place when `ExtendedStatsButton` is pressed (**Verified**). `BountyPanel` shows only for one selected character with a bounty or
   a status line (Imprisoned, Slave, Escaped slave, Committing Crime!, Leader...; **Verified**).
@@ -223,6 +223,15 @@ to Jobs, independent of the saved `chase mode` flag whose relationship is **Unkn
   built the index is 0 (Walk) until the first refresh. **Verified**: `kenshi_images.xml`, the panel's name list in FUN_14072b540 (exe bytes
   `Run`/`Jog`/`Walk`), arrows FUN_140722580 / FUN_140722630, apply FUN_140722500, refresh FUN_140726930. While any selected
   character's state at +0xe0 is 1 the arrows re-apply without stepping (FUN_1407f3a20); what that state is is **Unknown**.
+
+### Message roller
+
+`MessageRoller` (`FUN_140724af0`, push `FUN_140724530`, update `FUN_140724310`, show `FUN_140723590`; **Observed**): the game's notices
+(`FUN_140724a00`, e.g. the editor's export message). Layout `Kenshi_MessagePanel` (`Kenshi_MessageSkin`, centred word-wrapped large text). Its
+point is the HUD's `MessagePanel` absolute position (set by the HUD, `FUN_14072d3b0`); while a HUD panel (`DAT_1421337d0 + 0x38`, **Unknown** which)
+is visible it sits 10 x UI scale above that panel's top instead. A message shows 4 s, then a `ControllerFadeAlpha` (alpha 0, coefficient 3)
+fades it and the next queued one shows; a push without the queue flag clears the queue. Meitou (`PlayerInterface.AddMessageRoller`, faithful mode):
+at `MessagePanel` always, a new message replaces the shown one, never takes the pointer.
 
 ### Biome banner
 
@@ -374,7 +383,8 @@ decompile unless marked; Meitou's adapter is `PlayerInterface.Map.cs`.
   `meitou-nest:<wild site>:<TOWN id>` and reads them back; the place is filled in when the nest next loads.
 - **Discovery** (`14092f6b0`): a character within 400 units (XZ) sets `discovered` and `explored` (that it is a player character's is **Observed**);
   else, not yet discovered, within 8500 (17000 for type Town, halved for Nest and Ruins) sets `discovered` with the message "Discovered {1}", none for
-  nests. Meitou skips types 8 and 10 (whether the original does is **Unknown**) and checks with the population's zone refresh (every 15 ticks), a camp only after its nest has loaded; flags per placed town
+  nests. The new game's messages show after the character editor's CONFIRM (**Observed**, vanilla play); Meitou checks nothing while `PlayerState.InCreation`.
+  Meitou skips types 8 and 10 (whether the original does is **Unknown**) and checks with the population's zone refresh (every 15 ticks), a camp only after its nest has loaded; flags per placed town
   (`PlayerState.Towns`) and per camp (`PlayerState.Camps`), read and written as the GAMESTATE_TOWN bools.
 - **Map items** (MAP_ITEM: `towns` with v0 = how many of that TOWN, 0 all, v1 = weight; `unlock count`, 0 all): only by right-clicking the item in a
   player character's inventory (`140714a20` → `14075f550`). Candidates per link: the placed towns of that record (not types 0, 8, 10) not yet
