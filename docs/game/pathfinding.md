@@ -85,6 +85,12 @@ none when destroyed; it holds interior stairs and upper floors. **Verified** (ti
 `4933-Newwworld-INGAME`): the original mesh ramps +4→+68 over (+30..+65, −45..−5) from the origin to the roof storey at +69..+72,
 inside the bounds of `Storm_House_01_Interior-stairs` (`is stairs`, only in `interior`). **Observed** (scratch NavSystem probe):
 without the list that storey and the Watchtower `2-Newwworld-INGAME` floors +130/+190/+290 were unkept; with it paths from the door seed reach them.
+**Destroyed interiors**: a part with a `destroyed mesh` but no `destroyed collision` keeps its intact `xml collision` (**Verified**,
+`FUN_14055f6e0`; with no `phs or mesh` its `xml collision` is cleared instead). A destroyed building has no doors, so its interior has no seed.
+Engine choice: such an interior keeps nothing (no largest-region fallback); the ruin's floor is the exterior's. **Observed** (zone 20.32,
+`meitou-tools navmesh`, "flyin" save): all 17 seedless interiors there are destroyed; the Bughouse `4937-Newwworld-INGAME` kept 149
+polygons at Y1710..1757 (its `Storm_House_02_UpstairsWALLS-AND-ROOF.xml` floor and wall tops; terrain ~1580) and outlaws stood on them
+under the drawn ruined roof. The original exterior tile has no polygons above Y1680 there; whether its interior job keeps that island is **Unknown**.
 **Doors**: every part of a `doors`-list building is group 5. **Observed** (35 door records): only
 `Defensive Gate level 4/5 Door` lack `is door`, yet open in game; without the rule Squin was sealed.
 **Entrance seeds** (engine choice): cross the door's width axis, then use the lowest collision floor with agent-height headroom.
