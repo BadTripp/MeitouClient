@@ -95,9 +95,10 @@ public sealed class ItemFactory(GameDatabase db, GameConstants constants)
         if (character is not null)
             foreach (var r in character.GetReferences("death items"))
             {
-                if (r.Values.Value0 < 1 || Create(r.TargetStringId, r.Values.Value0) is not { } item) continue;
-                item.Death = true;
-                inventory.Add(item);
+                // One stack of the whole quantity in the first free cell, whatever the item's stack limit (as the saves hold them).
+                if (r.Values.Value0 < 1 || Create(r.TargetStringId, r.Values.Value0) is not { } item || !inventory.FindCell("main", item.Width, item.Height, out int x, out int y)) continue;
+                (item.Death, item.X, item.Y) = (true, x, y);
+                inventory.Items.Add(item);
             }
         return inventory;
     }
