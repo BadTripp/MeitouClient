@@ -74,7 +74,7 @@ sealed partial class PlayerInterface
         {
             b.Disabled.Remove("ResearchButton");
             b.Actions["ResearchButton"] = "ResearchButton";
-            if (m is { IsContainer: true }) b.Hidden.Add("ResearchButton");
+            if (m is not { TechLevel: > 0 }) b.Hidden.Add("ResearchButton");
             b.Disabled.Remove("ArrangeButton");
             b.Hidden.Add("ArrangeButton");
             if (m?.Storage is { } grid)
