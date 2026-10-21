@@ -164,7 +164,8 @@ exe decompile unless marked; Meitou: `CharacterDraft` (data), `EditCharacter` / 
   layers, face/body pose weights (morph set recomputed per frame in a scratch ring of `MorphArena`) and skin/hair colours; a look with another
   head, hair or clothes swaps at once. The original's own slider behaviour is **Unknown**.
 - **Keys**: `in editor` true while open; a mode 0 character without a body file is randomised on open (Meitou's start characters are already
-  rolled). Closing in mode 0 also sets health from the race's `starting health` (Meitou: a new race at creation gets a new body).
+  rolled). Closing in mode 0 also sets health from the CHARACTER's `starting health` (Meitou: a new race at creation gets a new body, which
+  applies it; the edited look keeps stumps and prosthetics).
 - **Meitou validation** (`CharacterEditing.Apply`, `CharacterDraft.Sanitize`): player character with a person's look; creation only while
   `PlayerState.InCreation` (new game until CONFIRM) and within the start's force races; surgery needs the surgeon alive within 60 units
   (engine choice), the same race and gender, money > price, and takes the price. Head/hair/beard must be the race's, sliders and poses are

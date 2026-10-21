@@ -168,6 +168,28 @@ public sealed partial class MedicalState
         return item;
     }
 
+    /// <summary>
+    /// One CHARACTER <c>starting health</c> entry on a new body (<c>FUN_140645ef0</c>): below -M a limb becomes a stump (flesh 0, the treated pool 5); otherwise the flesh is
+    /// <paramref name="value"/> clamped to [-M, M] and the rest, M - flesh, is already treated. A part the anatomy lacks is ignored.
+    /// </summary>
+    public void ApplyStartingHealth(string partId, float value)
+    {
+        if (Parts.FirstOrDefault(p => p.Template.StringId == partId) is not { } p) return;
+        float max = p.MaxHp;
+        if (value < -max && p.Template.LimbSlot is >= 0 and < 4)
+        {
+            p.Limb = LimbState.Stump;
+            p.Flesh = 0;
+            p.Bandage = 5;
+        }
+        else
+        {
+            p.Flesh = Math.Clamp(value, -max, max);
+            p.Bandage = max - p.Flesh;
+        }
+        p.WasDown = p.IsDown;
+    }
+
     // ------------------------------------------------------------------ KO and death
 
     void StartKo(in MedicalContext ctx, List<MedicalEvent>? events) => ApplyKo(KoTime(ctx), events);

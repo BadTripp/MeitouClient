@@ -271,6 +271,9 @@ replaced, 3 crushed) and the fitted item (holder `FUN_1400cd3f0`; **Verified** b
   `stun`; the part becomes base 5, flesh 5, wear/stun 0. On load the item is fitted keeping the saved part floats.
 - Sever (`FUN_14064edc0`) returns for a replaced slot; from state 0 or 3 it makes a stump, awards toughness,
   drops the RACE `severed limbs` item of the slot at `bone name 2` and opens a wound.
+- CHARACTER `starting health` (LOCATIONAL_DAMAGE, val0), applied to a new (not loaded) character (`FUN_140645ef0`, **Observed**): with
+  M the part's maximum, val0 < -M makes the limb a stump (flesh 0, bandaged pool 5); else flesh = clamp(val0, -M, M) and the
+  bandaged pool M - flesh. **Verified** by probe: Rock Bottom's `Naked dude` has Left Arm -150, a left-arm stump. Meitou ignores it on non-limbs.
 - A stump shows the RACE `limb replacement` record whose `slot` is 50 + k (`uses_limb_replacement`); a crushed
   limb attaches no mesh. Hidden body vertices: [characters.md](../characters.md#hidden-body-parts-verified--140075600--140071f90--140531cc0-hlsl-skinhlsl).
 - Meitou in play: fitted items sit in the inventory's `*_replace` sections (the limbs window), weigh nothing, are not traded and
@@ -389,8 +392,7 @@ read and at least one consumer found through the data cross-references; base val
 - Which callers feed `FUN_1408c7250` / `FUN_1408c7310` for which activity, the exact medic XP time curve (`DAT_142133794` is the scaled frame time, [game-loop.md](game-loop.md#the-three-time-values)), and the 0.1 floor / 6x cap of the skill-difference factor
   (not in `FUN_1408c5fa0`; maybe clamped by its callers). Meaning of XP event 6.
 - The defaults of the new-game option block (zero in the exe image).
-- RACE `combat move speed mult`, the `starting health` reference (editor: value -100..100 per part, below -100
-  amputated), animal CHARACTER fields.
+- RACE `combat move speed mult`, animal CHARACTER fields.
 - Which of the two ints of a `combat anatomy` reference is HP and which the hit weight (the part constructor
   `FUN_14064d0e0` takes the weight into +0x38, the HP into +0x54 and a scale into +0x58, but the call arguments
   are hidden in the decompile, so the assignment is inferred from consumers and data), and the meaning of the
