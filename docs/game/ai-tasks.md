@@ -138,7 +138,7 @@ single effect (+0x128). **List A is what a row achieves, list B what it needs, t
 to achieve** (**Observed**, [planner](#planner)). The `ALWAYS_IMPOSSIBLE_TASK` row's text is the string "null". Two states (33 and 85)
 are registered with an empty name.
 
-A/B/effect use StateType IDs below. `!` and `*` retain their original meanings; literal `none`/`-` remain unchanged. Unmapped or ambiguous names remain literal. Row order is registration order.
+A/B/effect use StateType IDs below; `isAtLocation` is two ids, 1 and 46 (67 Running achieves 46, so it is no provider of 1). `!` and `*` retain their original meanings; literal `none`/`-` remain unchanged. Unmapped or ambiguous names remain literal. Row order is registration order.
 
 | ID | Text | Flags | A | B | Effect |
 | ---: | --- | --- | --- | --- | --- |

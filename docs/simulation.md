@@ -916,6 +916,8 @@ act-out does the walk and the goal's own action; steps of their own are getting 
 whose first step is neither the goal nor a step the engine carries out (`AiSystem.Carried`) fails. Engine choices:
 - Everyone plans with category 0x1; no character is squadless, so restricted rows (lockpicking, cutting, opening gates) never
   enter a plan. A row without a finder wants its effect for its own target. At most 64 nodes per search.
+- A node is made once per row and target (the original allows four copies), so the ancestor-repeat test never fires; a child already
+  closed is skipped rather than accepted from the node.
 - Only the step being carried out counts as queued, and only while it can run (Meitou's steps do not end on their own).
 - Finders: the spots, beds, seats, turrets and towns the act-outs already pick, at the floor point the walk ends on (`PlanContext.Find`); other finders find nothing,
   so such goals do not plan. Rows on the way have their `TaskProfiles` desire, else 1.
