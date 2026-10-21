@@ -10,6 +10,9 @@ through OpenAL Soft, quicksave/load, original UI). All engine changes are `Opera
   lacks it). SIP-restricted launchers such as `nohup` strip that variable; GLFW then reports it "doesn't support
   Vulkan". `VulkanDevice.Create` checks for `libvulkan.1.dylib` first and names this cause.
 - `MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS=1` is needed (lifts Metal's 16-sampler cap for regular descriptor sets).
+- The launcher's Play sets both for the game (Homebrew lib dirs holding `libvulkan.1.dylib` appended to any existing
+  `DYLD_LIBRARY_PATH`; an existing MVK value is kept): a Finder-started launcher has neither (#20). **Unknown**: not yet
+  confirmed on a Mac. A `~/lib` symlink does not help (**Observed**, #20).
 - Screenshots and other `C:\Temp` defaults land in a folder literally named `C:\Temp` under the CWD.
 
 ## MoltenVK constraints and the fixes

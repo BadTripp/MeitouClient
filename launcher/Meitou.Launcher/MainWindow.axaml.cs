@@ -832,6 +832,7 @@ public sealed partial class MainWindow : Window
             UseShellExecute = false,
         };
         start.Environment[GameInstall.EnvironmentVariable] = install.Root;
+        if (OperatingSystem.IsMacOS()) AddMacVulkanEnvironment(start.Environment);
         foreach (var arg in SplitArguments(config.LaunchArguments)) start.ArgumentList.Add(arg);
         try
         {
@@ -842,6 +843,19 @@ public sealed partial class MainWindow : Window
         {
             Status($"Could not start Meitou {version}: {ex.Message}");
         }
+    }
+
+    // dlopen's default path lacks Homebrew's lib dir, and a launcher started from Finder has no DYLD_LIBRARY_PATH, so the game
+    // would not find the Vulkan loader (#20); MoltenVK also needs argument buffers (docs/macos-port.md). Values already set win.
+    static void AddMacVulkanEnvironment(IDictionary<string, string?> environment)
+    {
+        environment.TryGetValue("DYLD_LIBRARY_PATH", out var existing);
+        var dirs = (existing ?? "").Split(':', StringSplitOptions.RemoveEmptyEntries).ToList();
+        foreach (var dir in new[] { "/opt/homebrew/lib", "/usr/local/lib" })
+            if (!dirs.Contains(dir) && File.Exists(Path.Combine(dir, "libvulkan.1.dylib"))) dirs.Add(dir);
+        if (dirs.Count > 0) environment["DYLD_LIBRARY_PATH"] = string.Join(':', dirs);
+        if (!environment.TryGetValue("MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS", out var mvk) || string.IsNullOrEmpty(mvk))
+            environment["MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS"] = "1";
     }
 
     // Space-separated, with double quotes around arguments that contain spaces.
