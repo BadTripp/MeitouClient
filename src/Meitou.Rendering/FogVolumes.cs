@@ -9,8 +9,8 @@ namespace Meitou.Rendering;
 /// haze, the Skinner's Roam dome, the two beams and the rest, plus the weather's EFFECT_FOG_VOLUME spheres (the twisters' dust balls,
 /// docs/formats/weather.md "Fog volumes"), which the game draws with the same classes and shaders. Each frame <see cref="Update"/> keeps every
 /// volume that can show in the view (its box within the far clip and inside the camera's horizontal wedge), sorts them back to front as the
-/// game's transparent queue does, and packs them into the frame block's <c>uFogVolumeData</c>, which <see cref="FogVolumeShaders"/> reads and the
-/// cloud shadows' <c>atmoFogCover</c> (<see cref="AtmosphereShaders"/>). No GPU resource of its own.
+/// game's transparent queue does, and packs them into the frame block's <c>uFogVolumeData</c>, which every world shader reads through
+/// <see cref="FogVolumeShaders"/>. No GPU resource of its own.
 /// </summary>
 internal sealed class FogVolumes
 {
@@ -19,9 +19,8 @@ internal sealed class FogVolumes
     public const float SectionHeight = -1000f;
     /// <summary>The highest height the box reaches for a block open upwards (far above the game's camera).</summary>
     public const float HighHeight = 30000f;
-    /// <summary>Meitou cloud shadows fade inside a block by its density times this length (<c>atmoFogCover</c>): fully in the swamp's fog
-    /// (distance 2000 and 4500), half at 10000, a fifth in the Floodlands' 23500.</summary>
-    public const float CloudShadowFogLength = 5000f;
+    /// <summary>Meitou cloud shadows weaken as the eye nears a placed block, linearly over this distance, and are gone inside one (<see cref="CloudShadowScale"/>).</summary>
+    public const float CloudShadowFade = 2000f;
 
     /// <summary>One volume: its packed vec4s, the box a ray must cross (culling) and the point the game's queue sorts it by (its node).</summary>
     internal sealed class Volume(string name, int type)
@@ -165,6 +164,9 @@ internal sealed class FogVolumes
     public List<string> Active { get; } = [];
     /// <summary>The volumes in view that did not fit <c>uFogVolumeData</c> in the last <see cref="Update"/> (the farthest ones; none in the base game).</summary>
     public int Dropped { get; private set; }
+    /// <summary>The cloud shadows' strength factor from the last <see cref="Update"/>: the eye's distance outside the nearest placed block over
+    /// <see cref="CloudShadowFade"/> (0 inside one, 1 with none near or the volumes off).</summary>
+    public float CloudShadowScale { get; private set; } = 1;
     /// <summary>The vec4s of <c>uFogVolumeData</c> in use after the last <see cref="Update"/>.</summary>
     public int UsedData => used;
     /// <summary>The weather effects' fog volumes handed to the last <see cref="Update"/>, and how many of them were in view and drawn.</summary>
@@ -300,6 +302,10 @@ internal sealed class FogVolumes
         kept = 0;
         EffectVolumes = effectFogs?.Count ?? 0;
         EffectVolumesDrawn = 0;
+        CloudShadowScale = 1;
+        if (on && Enabled && !HidePlaced)
+            foreach (var f in Features)
+                CloudShadowScale = MathF.Min(CloudShadowScale, f.DistanceOutside(eye) / CloudShadowFade);
         if (on && Enabled)
         {
             var wedge = Wedge.From(forward, fieldOfView, aspect);

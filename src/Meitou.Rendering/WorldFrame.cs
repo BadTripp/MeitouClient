@@ -1259,6 +1259,7 @@ static class WorldFrame
         {
             gpu.Particles?.CollectFogVolumes(gpu.EffectFogs);
             fogVolumes.Update(eye, camera.Forward, camera.FieldOfView, rw / (float)Math.Max(rh, 1), gpu.Sky.HazeDistance, sun.Y, true, gpu.EffectFogs, gpu.Sky.FogCullDistance);
+            gpu.Sky.CloudShadowScale = fogVolumes.CloudShadowScale;
         }
         StageClock.Lap(13);
         if (gpu.Shadow is not null) gpu.Shadow.RangeCap = gpu.FogVolumes?.AtmosphereDistance;   // the cascades end where the weather fog hides everything

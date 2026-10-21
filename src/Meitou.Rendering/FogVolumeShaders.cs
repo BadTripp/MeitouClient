@@ -12,7 +12,7 @@ namespace Meitou.Rendering;
 static class FogVolumeShaders
 {
     /// <summary>The vec4s of <c>uFogVolumeData</c> (the frame block's array; its GLSL size is written out in <see cref="NativeShaders.FrameBlock"/>
-    /// and <see cref="AtmosphereShaders.Functions"/>).</summary>
+    /// and <see cref="Functions"/>).</summary>
     public const int MaxData = 512;
 
     /// <summary>Type tags (the first vec4's w) and the vec4s each type takes.</summary>
@@ -35,7 +35,10 @@ static class FogVolumeShaders
     /// </summary>
     public const string Functions = """
 
-        // ---- placed fog volumes (fogfeatures.dat and the weather's EFFECT_FOG_VOLUME spheres); their uniforms are in AtmosphereShaders.Functions ----
+        // ---- placed fog volumes (fogfeatures.dat and the weather's EFFECT_FOG_VOLUME spheres) ----
+        uniform vec4 uFogVolumeEye;        // xyz the eye (for the sky pass), w the blocks' light: max(0.08, sunColour.w * 1.6 * saturate(3 sunY + 0.2))
+        uniform vec4 uFogVolumeInfo;       // x the vec4s in use, y sunColour.w (the spheres' and beams' light)
+        uniform vec4 uFogVolumeData[512];  // the volumes in view, farthest first (FogVolumeShaders: block 10, sphere 3, beam 4 vec4s)
 
         // post/fog.hlsl fogValue: the ease-in-out curve of saturate(depth * density).
         float fogVolumeCurve(float amount)
