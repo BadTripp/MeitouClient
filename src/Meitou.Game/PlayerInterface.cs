@@ -92,7 +92,6 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
         if (button == MouseButton.Right && CloseContextMenu()) return true;
         if (button == MouseButton.Right && MapRightDown(p)) return true;
         if (button == MouseButton.Middle && UiVisible && MapPointerDown(p)) return true;
-        if (button == MouseButton.Right && !OverHud(p) && SitePress(p)) return true;
         if (button == MouseButton.Right && !OverHud(p))
         {
             // Alt + right click on a downed or dead character: the nearest selected loots it (take all). Ctrl + right click: picks it up, or puts it down when a selected
@@ -104,14 +103,14 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
                 Say(new Meitou.Simulation.Carrying.PutDownOrder(carriers) { Tick = session.World.Tick });
             else if (ctrl && downed is { } lift && SelectedIds() is { Count: > 0 })
                 Say(new Meitou.Simulation.Carrying.PickUpOrder([], lift) { Tick = session.World.Tick });
-            // On a character: the quick order (trade with a trader, attack anyone else, treat a hurt ally, pick up a downed one of yours, loot anyone else's) is given when the button comes up
-            // before the context menu's hold time; held longer, the menu opens instead (PlayerInterface.ContextMenu.cs).
-            else if (QuickOrder(p)?.Do is var quick && ContextPress(p, quick)) { }
-            else if (quick is not null) quick();
-            else if (GroundItemClick(p)) { }
-            else if (ContainerClick(p, alt)) { }
-            else if (DoorClick(p, alt)) { }
-            else if (RockPress(p)) { }
+            // Else the nearest target along the ray (PickAt). On a character: the quick order (trade with a trader, attack anyone else, treat a hurt ally, pick up a downed one of yours,
+            // loot anyone else's) is given when the button comes up before the context menu's hold time; held longer, the menu opens instead (PlayerInterface.ContextMenu.cs).
+            else if (PickAt(p).Kind is var kind && kind == Picked.Character) { var quick = QuickOrder(p)?.Do; if (!ContextPress(p, quick)) quick?.Invoke(); }
+            else if (kind == Picked.GroundItem && GroundItemClick(p)) { }
+            else if (kind == Picked.Container && ContainerClick(p, alt)) { }
+            else if (kind == Picked.Door && DoorClick(p, alt)) { }
+            else if (kind == Picked.Rock && RockPress(p)) { }
+            else if (kind is Picked.Site or Picked.None && SitePress(p)) { }
             else if (Ray(p) is { } ray && MoveHit(ray.Origin, ray.Direction) is { } hit)
             {
                 Move(hit, shift);

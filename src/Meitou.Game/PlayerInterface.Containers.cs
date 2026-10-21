@@ -13,17 +13,20 @@ sealed partial class PlayerInterface
     const float ContainerPickPixels = 30;
 
     /// <summary>The container whose middle (half a unit above its origin) projects nearest the pixel within <see cref="ContainerPickPixels"/>, if any, and is not hidden behind a wall.</summary>
-    ContainerSpot? PickContainer(Vector2 pixel)
+    ContainerSpot? PickContainer(Vector2 pixel) => PickContainerAt(pixel)?.Container;
+
+    /// <summary><see cref="PickContainer"/> with the ray distance to the container's middle.</summary>
+    (ContainerSpot Container, float T)? PickContainerAt(Vector2 pixel)
     {
         if (Ray(pixel) is not { } ray) return null;
-        ContainerSpot? best = null;
+        (ContainerSpot, float)? best = null;
         float bestDistance = ContainerPickPixels;
         foreach (var c in session.CurrentSnapshot.Containers)
         {
             var middle = c.Position + new Vector3(0, 0.5f, 0);
             if (Project(middle) is not { } at) continue;
-            float d = Vector2.Distance(at, pixel);
-            if (d < bestDistance && !Hidden(ray, Vector3.Distance(ray.Origin, middle))) (best, bestDistance) = (c, d);
+            float d = Vector2.Distance(at, pixel), t = Vector3.Distance(ray.Origin, middle);
+            if (d < bestDistance && !Hidden(ray, t)) (best, bestDistance) = ((c, t), d);
         }
         return best;
     }

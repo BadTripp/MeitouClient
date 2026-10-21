@@ -22,20 +22,23 @@ sealed partial class PlayerInterface
     /// The ground item whose label is under the pixel, else whose middle (half a unit above where it lies) projects nearest the pixel within
     /// <see cref="GroundItemPickPixels"/>, if any; one inside or behind a building seen from outside does not count.
     /// </summary>
-    int? PickGroundItem(Vector2 pixel)
+    int? PickGroundItem(Vector2 pixel) => PickGroundItemAt(pixel)?.Id;
+
+    /// <summary><see cref="PickGroundItem"/> with the ray distance to the item's middle (0 for a label: it is drawn over everything).</summary>
+    (int Id, float T)? PickGroundItemAt(Vector2 pixel)
     {
         if (HighlightFocus is not null)
             foreach (var (id, rect) in itemLabels)
-                if (rect.Contains(pixel.X, pixel.Y)) return id;
+                if (rect.Contains(pixel.X, pixel.Y)) return (id, 0);
         if (Ray(pixel) is not { } ray) return null;
-        int? best = null;
+        (int, float)? best = null;
         float bestDistance = GroundItemPickPixels;
         foreach (var g in session.CurrentSnapshot.GroundItems)
         {
             var middle = g.Position + new Vector3(0, 0.5f, 0);
             if (Project(middle) is not { } at) continue;
-            float d = Vector2.Distance(at, pixel);
-            if (d < bestDistance && !Hidden(ray, Vector3.Distance(ray.Origin, middle))) (best, bestDistance) = (g.Id, d);
+            float d = Vector2.Distance(at, pixel), t = Vector3.Distance(ray.Origin, middle);
+            if (d < bestDistance && !Hidden(ray, t)) (best, bestDistance) = ((g.Id, t), d);
         }
         return best;
     }
