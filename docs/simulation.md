@@ -470,10 +470,15 @@ Arrests, the recognition meter and the marker are hashed only while set. What a 
   bounty with its faction reaches its class threshold spots it, at once while `RecentlyWanted` > 0 (250 game seconds after
   a booking or a witnessed crime; engine: the countdown), else after 45 s of being seen (engine: one meter per target,
   rate not decoded); only the nearest free police-like looker acts. MILITARY threshold: engine 2000 (original 4000 or 2000);
-  the police-like NPCs of the five towns `CrimeInstallTests` loads are MILITARY (**Observed**), so there a fine comes only from a booking.
-  A police-like NPC in its own town arrests an escaped prisoner (`CharacterCold.Escaped`) it sees. `AggroSystem` no longer
+  the police-like NPCs of the five towns `CrimeInstallTests` loads are MILITARY (**Observed**).
+  A police-like NPC in its own town acts on an escaped prisoner (`CharacterCold.Escaped`) it sees. `AggroSystem` no longer
   attacks wanted characters.
-- **Fine or arrest** (engine stands in for the dialogue): outside his town (engine: farther than 2 x his resident squad's
+- **Spotting talks** (`ArrestSystem.Talk`, the dialogue system, while its event lines are on): the looker fires event 44 (escapee: 45) at the target
+  (`DialogueSystem.FireEvent`, a bubble now) and the data decides ([economy 11.7](game/economy.md#117-arrest)): DA 29 arrests (`ArrestFromDialogue`,
+  below), "Small bounty" sends the leader to talk (DA 2) and its interrupt opens the fine window (DA 8 + 49 pay and clear; the rest DA 29), others
+  say nothing more. The target is then left alone for 60 game s (`SpotRetrySeconds`, engine), longer while the guard still talks or walks up; paying ends it.
+- **Fine or arrest** (engine fallback, only without dialogue events, e.g. headless tests; with them a booking witness is left to its witness
+  event unless it is already fighting, then it arrests at once): outside his town (engine: farther than 2 x his resident squad's
   home radius from its centre) the guard and his free squad mates attack. In it, 1..1049 is fined (`FineFor`; 300 up to 250
   is engine, the data's line being unreachable): he walks up
   (`Engaged`, so the AI leaves him alone), and within 40 takes the fine when the player's money is above it, erasing his
@@ -499,10 +504,11 @@ Arrests, the recognition meter and the marker are hashed only while set. What a 
   locked; an unserved sentence books a pending Escaping Prison and sets `Escaped`, as does any cage of a lawless owner).
   `Imprison`/`Release` clear `Escaped`.
 - **HUD**: `CharacterSnapshot.Prison`; the State line shows the status panel's prison text.
-- **Bail** (`PayBailOrder`, verb "Pay bail (c.N)" on a caged character; engine stands in for the bounty desk dialogue): offered
-  while the cage's owner is neither the player's faction nor lawless; price `BailFor` (11.5); paid when a free, awake player
-  character is within 500 of the cage and the money suffices (a zero bail frees at once): erases the jail's entry, `Release`
-  (no escape). Works for NPC prisoners too (only freed, not recruited).
+- **Bail** (DA 43, [economy 11.5](game/economy.md#115-bail-and-sentence); only the Shek bounty desk and the Inquisitor offer it): the conversation
+  closes and the window reopens as the bail list (engine stand-in for the trading window): "Pay Bounty", one choice "Name (c.N)" per prisoner of
+  `ArrestSystem.BailOffers` (cages within the speaker's town extent, as `InOwnTown`; player-faction or not hostile to the speaker; `BailFor` not
+  null: the cage's owner neither the player's faction nor lawless), `[Leave]`. A click pays (`PayBail(prisoner, payer)`): erases the jail's entry,
+  `Release` (no escape). NPC prisoners are only freed, not recruited. `PayBailOrder` (no UI) is the same bail paid by a player character within 500 of the cage.
 - **Put in Cage / claim** (`PutInCageOrder`, verb on a body a selected character carries; engine): the carrier walks to the
   best free cage within 1500 (`FindCage`; others' cages reserved), `LetGo` + `Imprison` as an arrest does, then `Claim`
   (11.4 caging tests; the slaver exception never applies): the cage owner's unclaimed entry, halved for a dead captive, is
@@ -882,9 +888,9 @@ to the next tick. A hostile target is attacked instead.
   [campaigns](game/factions-squads-towns.md#campaigns); `world state` conditions read the live states), recruiting (DA 3 / 18, `DialogueSystem.Recruit`), crowd
   triggers, `give item`, `change AI` and `AI contract` (`Ai.ChangeAi`, `Ai.StartContract` with the target: `Blackboard.MissionTarget`, followed by goals aimed at the
   squad mission through `AiMind.FollowTarget`; on its end the leader's `contract end talk passive`), DA 25 / 53 (`FixtureRegistry.TagEscaped` / `FreeSlave`) and DA 29
-  (`ArrestSystem.ArrestFromDialogue`); the rest is listed in [dialogue](game/dialogue.md#meitou-design).
+  (`ArrestSystem.ArrestFromDialogue`), DA 43 (the bail list, [Arrest and jail](#arrest-and-jail)); the rest is listed in [dialogue](game/dialogue.md#meitou-design).
 - **Events from other systems**: `DialogueEvent` (deferred to the next tick) fires an event at an NPC as bubbles, or a given DIALOGUE (the contract end talk);
-  first aid, shackles and the release rounds send them.
+  first aid, shackles and the release rounds send them. The police's spotting fires 44 / 45 at once (`FireEvent`, which says whether a line was said).
 - **Recruiting** ([facts](game/dialogue.md#recruiting)): at the `max faction size` cap the line "It looks like your squad is a little full." is
   posted and the conversation ends; otherwise the speaker leaves its squad (its leader passes to the first member left) and joins the player's
   active squad (the first selected player character's, else `Player.Squad`, else the talker's), or a new "blank squad" squad when that one has

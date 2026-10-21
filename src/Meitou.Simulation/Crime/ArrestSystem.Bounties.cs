@@ -77,8 +77,40 @@ public sealed partial class ArrestSystem
     }
 
     /// <summary>
-    /// Pays a prisoner's bail (the original's <c>FUN_1406ae170</c>, economy.md 11.5): a free, awake player character within <see cref="ArrestSettings.BailRange"/> of the cage (<b>engine</b>: the
-    /// original pays at a law NPC's dialogue in that town) and money for it; the jail's entry is erased and the prisoner freed (no escape).
+    /// The prisoners <paramref name="speaker"/>'s bail list offers (<c>DA_CHOOSE_PRISONER_BAIL</c>'s <c>CharacterTrading_PrisonerBailout</c>, economy.md 11.5, <b>Observed</b>): the living
+    /// occupants of cages in the speaker's home town (<b>engine reading</b>: within <see cref="ArrestSettings.TownSlack"/> times its resident squad's home radius) that are of the player's
+    /// faction or not hostile to the speaker's, with their bail (<see cref="BailFor"/>). Empty when the speaker has no town.
+    /// </summary>
+    public List<(CharacterId Prisoner, string Name, int Price)> BailOffers(World world, CharacterId speaker)
+    {
+        var offers = new List<(CharacterId, string, int)>();
+        var table = world.Characters;
+        if (!table.TryResolveNext(speaker, out int s) || table.Cold(s) is not { SquadId: >= 0 } sc || world.Squads.Find(sc.SquadId) is not { TownOwn: true } squad) return offers;
+        float r = squad.HomeRadius * Settings.TownSlack;
+        for (int i = 0; i < table.HighWater; i++)
+        {
+            if (!table.Next[i].Alive || table.Cold(i) is not { IsImprisoned: true, Medical.Dead: false, InWhat: { } where } pc || world.Fixtures.Find(where) is not { } cage) continue;
+            if (Vector2.DistanceSquared(new Vector2(cage.Position.X, cage.Position.Z), squad.HomeCentre) > r * r) continue;
+            if (pc.Faction != world.Player.Faction && Crimes.Relations.Contains(pc.Faction) && Crimes.Relations.Contains(sc.Faction) && Crimes.Relations.IsHostile(pc.Faction, sc.Faction)) continue;
+            if (BailFor(world, pc) is { } price) offers.Add((table.IdOf(i), pc.Name, price));
+        }
+        return offers;
+    }
+
+    /// <summary>The bail list's Pay (<c>FUN_1406ae170</c>): <paramref name="payer"/>'s faction pays <paramref name="prisoner"/>'s bail at the desk, which frees it. False: not offered or too little money.</summary>
+    public bool PayBail(World world, CharacterId prisoner, CharacterId payer)
+    {
+        var table = world.Characters;
+        if (!table.TryResolveNext(prisoner, out int p) || table.Cold(p) is not { IsImprisoned: true, InWhat: { } where } pc || world.Fixtures.Find(where) is not { } cage) return false;
+        if (BailFor(world, pc) is not { } price || !table.TryResolveNext(payer, out int s)) return false;
+        if (world.Player.Money < price) { world.Post($"Not enough money: the bail is c.{price}."); return false; }
+        Bail(world, p, pc, cage, price, s);
+        return true;
+    }
+
+    /// <summary>
+    /// <see cref="PayBailOrder"/>, the engine's bail without the desk (kept for tests and scripts; the game offers bail only through the dialogue): a free, awake player character within
+    /// <see cref="ArrestSettings.BailRange"/> of the cage and money for it.
     /// </summary>
     void PayBail(World world, CharacterId prisoner)
     {
@@ -96,6 +128,14 @@ public sealed partial class ArrestSystem
         }
         if (payer < 0) { world.Post("Nobody is near enough to the jail to pay the bail."); return; }
         if (world.Player.Money < price) { world.Post($"Not enough money: the bail is c.{price}."); return; }
+        Bail(world, p, pc, cage, price, payer);
+    }
+
+    /// <summary>Paying (<c>FUN_1406ae170</c>, economy.md 11.5): the money, the jail's entry erased, the prisoner freed (no escape).</summary>
+    void Bail(World world, int p, CharacterCold pc, Fixture cage, int price, int payer)
+    {
+        var table = world.Characters;
+        var prisoner = table.IdOf(p);
         world.Player.Money -= price;
         if (pc.Bounties is { } ledger && ledger.Of(cage.Owner) is { } entry)
         {

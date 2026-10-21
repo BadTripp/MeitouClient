@@ -188,9 +188,9 @@ race the editor doesn't offer (creation) or another race or sex (surgeon); the d
 same line (val0), gated by `DC_PLAYERMONEY` (2) strictly greater. "plastic surgeon" (CHARACTER 2132 Plastic Surgeon, leader of the bar squads
 "bar plastic surgeon" / "plastic surgeon": Holy Nation, Empire Peasants, United Cities, Deadcat, Waystation, Bark, Sho-Battai...) 200;
 "doctor shop" (hospital squads' `dialog leader` package) 500; Doctor Chung (Mud Town) 200, no money check; Thieves Guild surgeon free
-behind `DC_FACTION_RANK`; Grey free for escaped slaves. Meitou has no dialogue: an NPC whose dialogue offers such a line gated only by money or
-`DC_IS_RECRUITABLE` (`SurgeonDialogues`) gets the context menu verb "Plastic Surgery (c.price)", which opens the editor in mode 1 on the
-first selected character beside it.
+behind `DC_FACTION_RANK`; Grey free for escaped slaves. Meitou: the surgeon is talked to; its line's DA 8 pays and DA 11 opens the editor in
+mode 1, already paid ([dialogue](game/dialogue.md#meitou-design)). An unpaid `EditCharacter` (no UI sends one) is checked against `SurgeonDialogues`:
+a line gated only by money or `DC_IS_RECRUITABLE`.
 
 ## Open questions
 

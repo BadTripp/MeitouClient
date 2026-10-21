@@ -263,7 +263,9 @@ money, mark the entry claimed (it never pays twice) and show "Received c.{1} rew
   the speaker under further tests (`FUN_1405995d0`, `FUN_140599590`, `FUN_14059a920 < 36`). Price `2 * bounty` with a zero faction,
   which through the cage rule of 11.2 is the jail's booking faction; at least 2000 when the prisoner is not of the player's faction.
   Paying (`FUN_1406ae170`) unlocks the cage, erases the jail's entry (`FUN_1408539f0(ledger, 0)`), sets `+0xea = 1`, the prisoner says
-  `EV_BOUGHT_ME_FROM_SLAVERY` and gets 133 `GET_OUT_OF_CAGE_LEGIT`. Base data offers it in law dialogues ("I'm here to bail out a friend.").
+  `EV_BOUGHT_ME_FROM_SLAVERY` and gets 133 `GET_OUT_OF_CAGE_LEGIT`. Only two base dialogues carry DA 43 (**Verified** by probe, 2026-10-21): "Shek law
+  bounty" (shek bounty desk, the reply "I'm here to bail out a friend.") and "Inquisitor heretic bounty" (Holy Nation Inquisitor); no United Cities law
+  dialogue offers bail.
 - **Escape**: leaving by 207/256, or being lifted out, gives a pending Escaping Prison (0xc) and the escaped flag ([locks](locks.md#cages-and-beds));
   a pending crime becomes a bounty only when a booking witness sees it (11.2). Spotting the flag: 11.8.
 - `FUN_140851d10` (a lerp of 350/600 and 450/80-based values by a health fraction) is a different, undecoded function.
@@ -291,11 +293,17 @@ decompile's `DialogActionEnum` / `DialogConditionEnum` / `EventTriggerEnum`, com
   branch on `DC_BOUNTY_AMOUNT_ACTUAL`: "Small bounty" (0 < b < 1050) offers a fine; refusing or lacking money runs `DA_ARREST_TARGET`;
   "small fry" (1050 < b < 25000) and "super high" (> 25000) arrest at once. "Surrender" exists only as these dialogue choices; there is no
   surrender state.
+- **How the fine is reached** (**Verified** by probe of the base load order, 2026-10-21): "Small bounty" is an event-44 monologue (bubbles)
+  for a *leader* (`DC_IS_LEADER` on the speaker); its "I knew it, you're a convict!" line runs `DA_TALK_TO_LEADER` (2: the speaker squad's
+  leader, here itself, gets task 102 and walks up to fire event 1, `FUN_140680560` case 2, **Observed**) and sets `interrupt` "Bounty
+  extortion pay", so that talk opens the fine window. No law package answers event 1 with bounty lines. The other event-44 law roots
+  ("police bounty spotted" b > 500 within talking range, "small fry", "super high", Shek "Shek law spots bounty") say a bubble whose lines
+  run DA 29 (police add DA 33); event 45 roots ("police escaping prisoner", "Law enforcement spots prisoner escaping") likewise.
 - **Fine** (DIALOGUE "Bounty extortion pay", `Npc MILITARY Law 3`; **Verified** by probe of the base load order): one line per bracket,
   `250 < b < 351` -> 400, then +100 per 100 up to `950 < b < 1051` -> 1100; the 300 line (`0 < b < 251`) tests the *speaker's* bounty
   (`who` 0, a data slip: it never shows for a guard without a bounty). Paying needs `DC_PLAYERMONEY > fine` (strict) and runs
   `DA_TAKE_MONEY` (8, the fine) + `DA_CLEAR_BOUNTY` (49); the 1100 line also runs `DA_PAY_BOUNTY` (10). 49 erases two entries, the speaker's booking faction's and the target's town's (or jailer's) ([dialogue](dialogue.md#effects));
-  Meitou clears only the speaker's faction's. As built: [simulation](../simulation.md#arrest-and-jail).
+  As built: [simulation](../simulation.md#arrest-and-jail).
 - **`DA_ARREST_TARGET`** (`FUN_140680560` case 0x1d, **Observed**): when the speaker's ownership town (`Character+0x658 -> +0x30`) is set
   and equals the speaker's status `+0x88` (read as "he is in his own town"), and the target is not an animal (slot `0x248` is `asAnimal`): the speaker gets tasks 240 `LIFT_PERSON_SNATCHING_ALLOWED_IN_TOWN_ONLY`
   ("Capture Target", needs `isTargetDown`) and 112 `FIND_CAGE_AND_PUT_IN` on the target, and the target's squad marks the speaker

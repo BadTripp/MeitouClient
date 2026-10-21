@@ -65,6 +65,10 @@ public sealed partial class DialogueSystem
                     c.Ended = true;
                     request = new DialogueRequest(++requestId, DialogueRequestKind.CharacterEditor, target, me);
                     return;
+                case ChoosePrisonerBail when Arrests is not null:
+                    c.Ended = true;
+                    bailAfter = (me, target);   // the bail list opens as the conversation closes (OpenBail)
+                    return;
                 case DialogueActions.AssignBounty when tc is not null && mc is not null && effect.Value > 0 && data.Relations.Contains(mc.Faction):
                 {
                     tc.Bounties ??= new Crime.BountyLedger();
@@ -93,6 +97,8 @@ public sealed partial class DialogueSystem
                     if (ledger.Of(mc.Faction) is { } entry) ledger.Remove(entry);
                     if (Position(world, target) is { } at && TownAt(at) is >= 0 and var town && town < data.SiteFactions.Count && ledger.Of(data.SiteFactions[town]) is { } local)
                         ledger.Remove(local);
+                    if (ledger.Count == 0) tc.Bounties = null;
+                    tc.Recognition = 0;
                     break;
                 case DialogueActions.LockThisDialog when mc is not null && c.Root is { } current:
                     Lock(mc, current.StringId, true);
