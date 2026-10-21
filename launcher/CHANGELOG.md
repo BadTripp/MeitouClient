@@ -2,6 +2,12 @@
 
 Released with tags `launcher-v<version>` by `.github/workflows/launcher-release.yml`; each release needs its `## v<version>` section.
 
+## v1.1.0
+
+- The launcher updates itself: at startup it installs a new launcher version and restarts into it. Turn this off in Settings
+  with "Update the launcher automatically"; the update button stays for doing it by hand. Updating to 1.1.0 itself still
+  takes one click on that button.
+
 ## v1.0.4
 
 - macOS: Play starts the game again instead of it exiting at once because the Vulkan loader wasn't found. The launcher now
