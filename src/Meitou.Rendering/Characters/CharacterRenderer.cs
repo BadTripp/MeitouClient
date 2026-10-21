@@ -44,6 +44,11 @@ internal sealed unsafe partial class CharacterRenderer : IDisposable
     public float LodBias { get; set; } = 1;
     /// <summary>Further factor on the LOD value in the shadow cascades (a shadow hides detail: coarser levels sooner).</summary>
     public float ShadowLodBias { get; set; } = 2;
+    /// <summary>
+    /// Meitou's generated levels (four reductions, the shadows' own bias and floors; the <c>charlod</c> switch's Meitou side); off: the mesh files' own levels as the
+    /// original picks them (Faithful).
+    /// </summary>
+    public bool GeneratedLod { get; set; } = true;
 
     // Statistics of the last Update / Draw.
     public int Posed { get; private set; }
@@ -64,6 +69,10 @@ internal sealed unsafe partial class CharacterRenderer : IDisposable
     public bool IsPrepared(CharacterAppearance appearance) => assets.ContainsKey(appearance);
     /// <summary>Start preparing a scene's essential characters ahead of the world streaming queue (render thread).</summary>
     public void Prefetch(CharacterAppearance appearance) => content.Fetched(appearance, urgent: true);
+    /// <summary>Prepares a look's meshes without keeping the request (the character editor's next looks), on the urgent queue or the ordinary one; a close-up's without generated levels. Render thread.</summary>
+    public void Warm(CharacterAppearance appearance, bool urgent, bool close = false) => content.Warm(appearance, urgent, close);
+    /// <summary>Starts preparing a look urgently as a close-up (the character editor's): its meshes without generated levels, which take nearly all of a mesh's preparation. Render thread.</summary>
+    public void PrefetchCloseUp(CharacterAppearance appearance) => content.Prefetch(appearance, close: true);
     public List<string> Messages => content.Messages;
 
     /// <summary>One character in range this frame.</summary>
@@ -379,16 +388,23 @@ internal sealed unsafe partial class CharacterRenderer : IDisposable
         if (has[CharacterShaders.SlotBeardOverlay]) flags |= CharacterShaders.HasBeard;
         if (m.ClipOnNormalAlpha && has[CharacterShaders.SlotNormal]) flags |= CharacterShaders.ClipNormalAlpha;
         if (m.Dyed && has[CharacterShaders.SlotColourMap]) flags |= CharacterShaders.Dyed;
-        int vests = 0;
+        if (m.Worn) flags |= CharacterShaders.Worn;
+        // Textures assigned but not resident yet: a hair's diffuse (its cut-out), a clipped item's normal map, the head's maps.
+        if (m.Shading == CharacterShaders.ShadeHair && m.Tex[CharacterShaders.SlotDiffuse] is not null && !has[CharacterShaders.SlotDiffuse]
+            || m.ClipOnNormalAlpha && m.Tex[CharacterShaders.SlotNormal] is not null && !has[CharacterShaders.SlotNormal])
+            flags |= CharacterShaders.AlphaPending;
+        if (m.Tex[CharacterShaders.SlotHeadDiffuse] is not null && !has[CharacterShaders.SlotHeadDiffuse]) flags |= CharacterShaders.HeadPending;
+        if (m.Tex[CharacterShaders.SlotHeadNormal] is not null && !has[CharacterShaders.SlotHeadNormal]) flags |= CharacterShaders.HeadNormalPending;
+        uint vests = 0;
         for (int i = 0; i < 3; i++)
         {
             int s = CharacterShaders.SlotVest + 3 * i;
-            if (has[s] && has[s + 1]) vests = i + 1;
+            if (has[s] && has[s + 1]) vests |= 1u << i;
             if (m.VestColoured[i] && has[s + 2]) flags |= CharacterShaders.Vest0Coloured << i;
         }
         r.Shading = m.Shading;
         r.Flags = flags;
-        r.VestCount = (uint)vests;
+        r.VestCount = vests;
         r.AlphaThreshold = m.AlphaThreshold;
         r.ShirtColour = new Vector4(m.ShirtColour, 1);
         r.SkinTone = new Vector4(m.SkinTone, 0);
