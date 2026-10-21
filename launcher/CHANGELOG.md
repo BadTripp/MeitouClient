@@ -2,6 +2,10 @@
 
 Released with tags `launcher-v<version>` by `.github/workflows/launcher-release.yml`; each release needs its `## v<version>` section.
 
+## v1.0.3
+
+- A new launcher version shows an update button in the title bar, on every page; the status line no longer loses the notice.
+
 ## v1.0.2
 
 - macOS: the launcher starts again instead of crashing at launch (#16).
