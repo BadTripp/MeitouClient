@@ -57,7 +57,7 @@ public sealed partial class World
                 SkillXpMultipliers = detailed && cold!.Race is { } skillRace ? Array.AsReadOnly((float[])skillRace.StatMultipliers.Clone()) : [],
                 Hud = detailed && cold!.Medical is { } hudMed && cold.Race is { } hudRace && cold.Stats is { } hudStats ? HudOf(cold, hudMed, hudRace, hudStats) : null,
                 HealthParts = detailed && cold!.Medical is { } health && cold.Race is { } anatomy ? Array.AsReadOnly(health.Parts.Select(p => new HealthPartView(p.Template.StringId, p.Template.Name, p.Flesh, p.Stun, p.Bandage, p.Rig, p.MaxHp, p.IsRobotic(anatomy))).ToArray()) : [],
-                ItemGrid = selected && cold!.Inventory is { } grid ? new InventoryView(grid.Width, grid.Height, grid.Backpack?.Contents?.Width ?? 0, grid.Backpack?.Contents?.Height ?? 0,
+                ItemGrid = (selected || id == Player.OpenLoot) && cold!.Inventory is { } grid ? new InventoryView(grid.Width, grid.Height, grid.Backpack?.Contents?.Width ?? 0, grid.Backpack?.Contents?.Height ?? 0,
                     Array.AsReadOnly(grid.All().Select((item, index) => new InventoryItemView(index, item.Record, item.Name, item.Section, item.X, item.Y, item.Width, item.Height, item.Quantity, item.Weight, item.Quality) { Material = item.MaterialId, Charge = item.ChargeFraction, Company = item.CompanyId, Level = item.Level, Charges = item.Charges, MaxCharges = item.MaxCharges,
                         StolenFrom = item.IsStolenFor(cold.Faction) ? item.StolenFrom : -1 }).ToArray()))
                     { TotalWeight = grid.ContentWeight(), CarryCapacity = cold.Stats is { } strength && systems.OfType<BodySystem>().FirstOrDefault() is { } bodies
@@ -96,9 +96,9 @@ public sealed partial class World
             });
         }
         PreviousSnapshot = Snapshot;
-        Snapshot = new WorldSnapshot(Tick, list) { Projectiles = projectiles?.PublishProjectiles() ?? [], Trade = trades?.PublishTrade(), Conversation = dialogues?.PublishConversation(), Speech = PublishSpeech(), DialogueRequest = dialogues?.PublishRequest(), Towns = Player.Towns, Camps = Player.Camps, SquadAi = Player.SquadAi, PlayerSquads = PublishSquads(), ActiveSquad = Player.Squad,
+        Snapshot = new WorldSnapshot(Tick, list) { Projectiles = projectiles?.PublishProjectiles() ?? [], Trade = trades?.PublishTrade(), Conversation = dialogues?.PublishConversation(), Speech = PublishSpeech(), DialogueRequest = dialogues?.PublishRequest(), Towns = Player.Towns, Camps = Player.Camps, SquadAi = Player.SquadAi, PlayerSquads = PublishSquads(), ActiveSquad = Player.Squad, OpenLoot = Player.OpenLoot, LootOpener = Player.LootOpener,
             Buildings = Buildings.Published(), BuildingsRevision = Buildings.Revision, GroundItems = GroundItems.Published(), GroundItemsRevision = GroundItems.Revision, UnlockedBuildings = Research.Unlocked, Doors = Fixtures.PublishedDoors(), Containers = Fixtures.ContainerSpots, DoorPicks = Fixtures.DoorPicks, InspectedBuilding = Fixtures.DetailOf(Player.InspectedBuilding),
-            Machines = (OpenContainerView() ?? OpenLootView()) is { } container ?[.. production is null ? [] : Machines.Published(production.Items), container] : production is null ? [] : Machines.Published(production.Items), MachinesVersion = Machines.Version, Research = production?.ResearchView(this) ?? Production.ResearchSnapshot.Empty,
+            Machines = OpenContainerView() is { } container ?[.. production is null ? [] : Machines.Published(production.Items), container] : production is null ? [] : Machines.Published(production.Items), MachinesVersion = Machines.Version, Research = production?.ResearchView(this) ?? Production.ResearchSnapshot.Empty,
             Crafts = production?.CraftsView(this) ?? Snapshot.Crafts };
     }
 
@@ -126,17 +126,6 @@ public sealed partial class World
             Array.AsReadOnly(grid.Items.Select((item, index) => new InventoryItemView(index, item.Record, item.Name, "main", item.X, item.Y, item.Width, item.Height, item.Quantity, item.Weight, item.Quality)
                 { Material = item.MaterialId, Charge = item.ChargeFraction, Company = item.CompanyId, Level = item.Level, Charges = item.Charges, MaxCharges = item.MaxCharges }).ToArray()));
         return new Production.MachineSnapshot(id, f.RecordId, [], null, storage, null, 0, 0, 0) { IsContainer = true };
-    }
-
-    /// <summary>The open loot (<see cref="PlayerState.OpenLoot"/>) as a container: the body's main grid, each item indexed by its place in the inventory's items (what <see cref="Carrying.TakeLootItem"/> takes).</summary>
-    Production.MachineSnapshot? OpenLootView()
-    {
-        if (!Characters.TryResolveNext(Player.OpenLoot, out int slot) || Characters.Cold(slot) is not { Inventory: { } grid } body) return null;
-        var items = grid.Items.Select((item, index) => (item, index)).Where(p => p.item.Section == "main")
-            .Select(p => new InventoryItemView(p.index, p.item.Record, p.item.Name, "main", p.item.X, p.item.Y, p.item.Width, p.item.Height, p.item.Quantity, p.item.Weight, p.item.Quality)
-                { Material = p.item.MaterialId, Charge = p.item.ChargeFraction, Company = p.item.CompanyId, Level = p.item.Level, Charges = p.item.Charges, MaxCharges = p.item.MaxCharges }).ToArray();
-        return new Production.MachineSnapshot($"loot:{Player.OpenLoot}", "", [], null, new InventoryView(grid.Width, grid.Height, 0, 0, Array.AsReadOnly(items)), null, 0, 0, 0)
-            { IsContainer = true, Body = Player.OpenLoot, Title = body.Name };
     }
 
     /// <summary>The sneaker's watchers of the last <see cref="AggroSystem.WatcherSeconds"/> that are still about, where they stand now.</summary>

@@ -56,14 +56,22 @@ public static class InventoryCommands
         return false;
     }
 
-    public static bool Move(Inventory root, InventoryItemToken token, string section, int x, int y)
+    public static bool Move(Inventory root, InventoryItemToken token, string section, int x, int y) => Transfer(root, token, root, section, x, y, limbs: true);
+
+    /// <summary>
+    /// Moves the item <paramref name="token"/> names in <paramref name="from"/> to <paramref name="section"/> at (<paramref name="x"/>, <paramref name="y"/>) of <paramref name="into"/>: the same
+    /// inventory (<see cref="Move"/>) or another character's (the loot window), by the same rules. Prosthetic sections only with <paramref name="limbs"/>. False, nothing moved: the token is
+    /// stale or the place does not take the item.
+    /// </summary>
+    public static bool Transfer(Inventory from, InventoryItemToken token, Inventory into, string section, int x, int y, bool limbs = false)
     {
-        var item = root.All().ElementAtOrDefault(token.Index);
+        var item = from.All().ElementAtOrDefault(token.Index);
+        bool Movable(string s) => IsMovableSection(s) || limbs && IsLimbSection(s);
         if (item is null || item.Record != token.Record || item.Section != token.Section || item.X != token.X || item.Y != token.Y || item.Quantity != token.Quantity || item.Quality != token.Quality ||
-            !(IsMovableSection(item.Section) || IsLimbSection(item.Section)) || !(IsMovableSection(section) || IsLimbSection(section))) return false;
-        if (item.LockedOn && section != item.Section) return false;   // worn locked shackles stay on
-        var owner = root.Items.Contains(item) ? root : root.Backpack?.Contents;
-        var target = section == "backpack_content" ? root.Backpack?.Contents : root;
+            !Movable(item.Section) || !Movable(section)) return false;
+        if (item.LockedOn && (section != item.Section || into != from)) return false;   // worn locked shackles stay on
+        var owner = from.Items.Contains(item) ? from : from.Backpack?.Contents;
+        var target = section == "backpack_content" ? into.Backpack?.Contents : into;
         // A bag cannot contain itself or another container; moving it preserves all its contents.
         if (section == "backpack_content" && item.Contents is not null) return false;
         var size = section is "back" or "hip" ? SectionSize(section) : IsEquipmentSection(section) || IsLimbSection(section) ? (item.Width, item.Height) : (target?.Width ?? 0, target?.Height ?? 0);

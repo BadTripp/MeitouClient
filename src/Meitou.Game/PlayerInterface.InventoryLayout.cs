@@ -20,7 +20,7 @@ sealed partial class PlayerInterface
     void BindInventoryGeometry(string id, UiBindings b)
     {
         b.TemplateScale = InventoryScale;
-        if (id == "bag" && Selected().FirstOrDefault()?.ItemGrid is { } bag)
+        if (id is "bag" or "loot-bag" && (id == "bag" ? Selected().FirstOrDefault() : LootBody())?.ItemGrid is { } bag)
             b.Positions["Root"] = new(0, 0, bag.BagWidth * InventoryCell + 40 * InventoryScale,
                 Math.Min(Height * 0.8f, bag.BagHeight * InventoryCell + 108 * InventoryScale));
         if (id == "trader") BindTraderGeometry(b);
@@ -28,18 +28,19 @@ sealed partial class PlayerInterface
 
     void PlaceBagWindow() => PlaceInventoryBeside("bag", left: true);
 
-    void PlaceInventoryBeside(string id, bool left)
+    /// <summary>Puts window <paramref name="id"/> beside <paramref name="anchor"/>'s, moving the anchor in when the pair would not fit the screen.</summary>
+    void PlaceInventoryBeside(string id, bool left, string anchor = "inventory")
     {
         var frames = faithfulScreens.Arrange(Width, Height, BindFaithfulScreen, AddFaithfulContent);
         UiRect? Root(string screen) => frames.FirstOrDefault(f => f.Id == screen)?.Controls.FirstOrDefault(c => c.Type == "Window")?.Bounds;
-        if (Root(id) is not { } other || Root("inventory") is not { } own) return;
+        if (Root(id) is not { } other || Root(anchor) is not { } own) return;
         float gap = 6 * InventoryScale;
         float x = left ? own.X - other.Width - gap : own.X + own.Width + gap;
         // Make room for the pair before the screen host clamps either window to the viewport.
         if (x < 0 || x + other.Width > Width)
         {
             float ownX = left ? Math.Min(Width - own.Width, other.Width + gap) : Math.Max(0, Width - other.Width - gap - own.Width);
-            faithfulScreens.SetOffset("inventory", faithfulScreens.GetOffset("inventory") + new Vector2(ownX - own.X, 0));
+            faithfulScreens.SetOffset(anchor, faithfulScreens.GetOffset(anchor) + new Vector2(ownX - own.X, 0));
             x = left ? ownX - other.Width - gap : ownX + own.Width + gap;
         }
         faithfulScreens.SetOffset(id, faithfulScreens.GetOffset(id) + new Vector2(x - other.X, own.Y - other.Y));

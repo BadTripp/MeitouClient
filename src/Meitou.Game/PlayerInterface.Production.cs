@@ -69,7 +69,7 @@ sealed partial class PlayerInterface
     void BindMachineScreen(string id, UiBindings b)
     {
         var m = Machine(shownMachine);
-        b.Text["Root"] = (m is { IsContainer: true } ? m.Title ?? buildHost?.ItemName(m.Record) ?? "CONTAINER" : selectedBuilding?.Name ?? "BUILDING").ToUpperInvariant();
+        b.Text["Root"] = (m is { IsContainer: true } ? buildHost?.ItemName(m.Record) ?? "CONTAINER" : selectedBuilding?.Name ?? "BUILDING").ToUpperInvariant();
         if (id == "bench")
         {
             b.Disabled.Remove("ResearchButton");
@@ -179,11 +179,6 @@ sealed partial class PlayerInterface
     void MachineDrop((string Site, int Slot, int Index, string Record, string Name, int Quantity, int Width, int Height, Vector2 Grab) d, string screen)
     {
         if (screen is not ("inventory" or "bag") || Selected().FirstOrDefault() is not { } lead) return;
-        if (Machine(d.Site) is { Body.IsNone: false })
-        {
-            Say(new Meitou.Simulation.Carrying.TakeLootItem(d.Index) { Tick = session.World.Tick });
-            return;
-        }
         Say(new TakeFromMachine(lead.Id, d.Site, d.Slot, d.Index, screen == "bag" ? "backpack_content" : "main") { Tick = session.World.Tick });
     }
 
@@ -194,7 +189,7 @@ sealed partial class PlayerInterface
         if (screen == "bench")
         {
             if (m.Storage is { } grid && DropCell(p, screen, "backpack_content", grid.Width, grid.Height, grab, item.Width, item.Height, grid.Items.Select(i => (i.X, i.Y, i.Width, i.Height)), out int x, out int y))
-                Say(m.Body.IsNone ? new PutInMachine(character, token, m.Site, -1, x, y) { Tick = session.World.Tick } : new Meitou.Simulation.Carrying.PutLootItem(character, token, x, y) { Tick = session.World.Tick });
+                Say(new PutInMachine(character, token, m.Site, -1, x, y) { Tick = session.World.Tick });
             return true;
         }
         var controls = faithfulScreens.Arrange(Width, Height, BindFaithfulScreen, AddFaithfulContent).First(f => f.Id == screen).Controls;

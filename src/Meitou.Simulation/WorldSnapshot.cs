@@ -185,6 +185,9 @@ public sealed record WorldSnapshot(long Tick, IReadOnlyList<CharacterSnapshot> C
     public IReadOnlyList<SquadView> PlayerSquads { get; init; } = [];
     /// <summary>The active squad's id (<see cref="PlayerState.Squad"/>; -1 none): the squad bar shows it.</summary>
     public int ActiveSquad { get; init; } = -1;
+    /// <summary>The downed character whose inventory window is open (<see cref="PlayerState.OpenLoot"/>; its snapshot has the <see cref="CharacterSnapshot.ItemGrid"/>), and who opened it.</summary>
+    public CharacterId OpenLoot { get; init; } = CharacterId.None;
+    public CharacterId LootOpener { get; init; } = CharacterId.None;
     /// <summary>Player-built buildings and construction sites, in creation order (docs/simulation.md "Buildings").</summary>
     public IReadOnlyList<Construction.BuildingSnapshot> Buildings { get; init; } = [];
     /// <summary>Bumped when a building is added, completed, destroyed or removed (not on progress): the host diffs <see cref="Buildings"/> by id when it changes.</summary>

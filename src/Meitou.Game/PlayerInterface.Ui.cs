@@ -55,6 +55,7 @@ sealed partial class PlayerInterface
             faithfulScreens.Register(id, layout, modal, centreRoot: id is "save" or "load" or "file");
         }
         faithfulScreens.Follow("bag", "inventory");   // the bag window is married to the inventory, opened and closed by OPEN BAG only
+        faithfulScreens.Follow("loot-bag", "loot");
         faithfulScreens.Activated += FaithfulAction;
         uiHost.Diagnostic += d => Console.Error.WriteLine($"ui        {d.Extension} {d.Operation}: {d.Error.Message}");
         uiRegistration = uiHost.Register(new PlayerUiExtension(ExecuteUiAction));
@@ -68,7 +69,7 @@ sealed partial class PlayerInterface
         ("title", "Kenshi_MainMenu", true), ("new-game", "Kenshi_NewGamePanel", true),
         ("save", "Kenshi_SaveGamePanel", true),
         ("load", "Kenshi_LoadGamePanel", true), ("message", "Kenshi_MessageBox", true),
-        ("bag", "Kenshi_InventoryGenericWindow", false), ("limbs", "Kenshi_LimbReplacementWindow", false), ("trader", "Kenshi_InventoryTraderWindow", false),
+        ("bag", "Kenshi_InventoryGenericWindow", false), ("loot", "Kenshi_InventoryCharacterWindow", false), ("loot-bag", "Kenshi_InventoryGenericWindow", false), ("limbs", "Kenshi_LimbReplacementWindow", false), ("trader", "Kenshi_InventoryTraderWindow", false),
         ("building", "Kenshi_GenericBuildingWindow", false), ("bench", "Kenshi_InventoryResearchWindow", false),
         ("build", "Kenshi_BuildWindow", false), ("editor", "Kenshi_CharacterEditor", true), ("dialogue", "Kenshi_ConversationPanel", true),
         ("file", "Kenshi_OpenSaveFileDialog", true), ("prospect", "Kenshi_ProspectingWindow", false),
@@ -184,6 +185,7 @@ sealed partial class PlayerInterface
     {
         SyncTradeScreens();
         SyncMachineScreens();
+        SyncLootScreen();
         SyncDialogueScreen();
         ValidateInventoryDrag();
         var b = BindUi();

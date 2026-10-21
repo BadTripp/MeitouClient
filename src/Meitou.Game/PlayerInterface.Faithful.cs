@@ -86,6 +86,7 @@ sealed partial class PlayerInterface
         else if (e.Screen == "prospect") ProspectScreenAction(e);
         else if (e.Screen == "overview") { MapAction(e.Widget); ResearchAction(e); CraftAction(e); AiAction(e); SquadsAction(e); }
         else if (e.Screen is "building" or "bench") MachineAction(e);
+        else if (e.Screen == "loot" && e.Widget == "OpenBagButton") lootBagOpen = !lootBagOpen;
         else if (e.Screen == "trader" && e.Widget == "ArrangeButton") Say(new Meitou.Simulation.Trading.ArrangeStock { Tick = session.World.Tick });
         else if (e.Screen is "inventory" or "bag")
         {
@@ -108,6 +109,7 @@ sealed partial class PlayerInterface
         else if (id == "prospect") BindProspectScreen(b);
         else if (id == "build") BindBuildScreen(b);
         else if (id is "building" or "bench") BindMachineScreen(id, b);
+        else if (IsLootScreen(id)) BindLootScreen(id, b);
         else if (id is "inventory" or "stats" or "bag" or "limbs")
         {
             b.Text["Root"] = id == "stats" ? lead?.Name.ToUpperInvariant() ?? "CHARACTER STATS"
@@ -151,7 +153,7 @@ sealed partial class PlayerInterface
             b.Hidden.Add("CameraMarker"); b.Hidden.Add("MovemementMarker");
             b.NativeScroll.Add("MapScrollView");   // the map pans and zooms itself (PlayerInterface.Map.cs); the canvas is not the layout's 4096 px
         }
-        if (id is "inventory" or "bag" or "limbs" or "trader") BindInventoryGeometry(id, b);
+        if (id is "inventory" or "bag" or "limbs" or "trader" or "loot" or "loot-bag") BindInventoryGeometry(id, b);
         return b;
     }
     /// <summary>
@@ -190,17 +192,19 @@ sealed partial class PlayerInterface
         if (id == "prospect") { AddProspectContent(controls); return; }
         if (id is "building" or "bench") { AddMachineContent(id, controls); return; }
         // The bag window has no caption buttons (the vanilla screenshot): OPEN BAG closes it.
-        if (id == "bag") controls.RemoveAll(c => c.Action.StartsWith("mygui:close", StringComparison.Ordinal) || c.Action.StartsWith("mygui:pin", StringComparison.Ordinal));
+        if (id is "bag" or "loot-bag") controls.RemoveAll(c => c.Action.StartsWith("mygui:close", StringComparison.Ordinal) || c.Action.StartsWith("mygui:pin", StringComparison.Ordinal));
         AddMapContent(id, controls);
         if (id == "overview") { AddResearchContent(controls); AddCraftContent(controls); AddAiContent(controls); AddSquadsContent(controls); }
         if (id == "trader") { ArrangeTraderWindow(controls); AddTraderContent(controls); return; }
-        if (id is not ("inventory" or "bag" or "limbs") || Selected().FirstOrDefault() is not { ItemGrid: { } grid } lead) return;
-        string gridSection = id == "bag" ? "backpack_content" : "main";
-        int columns = id == "bag" ? grid.BagWidth : grid.Width, rows = id == "bag" ? grid.BagHeight : grid.Height;
-        if (id == "bag") ArrangeContainerGrid(id, controls, columns, rows);
+        // The loot windows show the open loot's body as the character windows show the lead.
+        if (id is not ("inventory" or "bag" or "limbs" or "loot" or "loot-bag") || (IsLootScreen(id) ? LootBody() : Selected().FirstOrDefault()) is not { ItemGrid: { } grid } lead) return;
+        bool bagWindow = id is "bag" or "loot-bag";
+        string gridSection = bagWindow ? "backpack_content" : "main";
+        int columns = bagWindow ? grid.BagWidth : grid.Width, rows = bagWindow ? grid.BagHeight : grid.Height;
+        if (bagWindow) ArrangeContainerGrid(id, controls, columns, rows);
         else ArrangeEquipmentGrid(controls, grid);
         if (id == "inventory") AddInventorySummary(controls, lead);
-        foreach (var item in grid.Items.Where(i => id == "bag" ? i.Section == "backpack_content" : id == "limbs" ? i.Section.EndsWith("_replace", StringComparison.Ordinal) : i.Section != "backpack_content"))
+        foreach (var item in grid.Items.Where(i => bagWindow ? i.Section == "backpack_content" : id == "limbs" ? i.Section.EndsWith("_replace", StringComparison.Ordinal) : i.Section != "backpack_content"))
         {
             if (inventoryDrag is { } drag && drag.Character == lead.Id && drag.Item.Index == item.Index) continue;
             if (controls.FirstOrDefault(c => c.Name == item.Section) is not { } slot) continue;
