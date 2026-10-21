@@ -20,6 +20,19 @@ static class AtmosphereShaders
         float atmoWaterWeight(float dist, float farClip) { return 1.0 - smoothstep(0.5, 0.9, dist / max(farClip, 1.0)); }
         """;
 
+    /// <summary>
+    /// The Meitou night ambient floor (docs/render-sky.md): a texel of the ambient map with its colour raised, hue kept, to the luminance
+    /// <c>maps.z - 1</c> (<see cref="SkyRenderer.NightAmbientFloor"/>; 0 by day and in Faithful). <c>maps</c>: the <c>uAtmoMaps</c> values.
+    /// </summary>
+    internal const string AmbientFloorFunction = """
+
+        vec4 atmoAmbientFloor(vec4 am, vec4 maps)
+        {
+            float l = dot(am.rgb, vec3(0.2126, 0.7152, 0.0722));
+            return vec4(am.rgb * max(1.0, (maps.z - 1.0) / max(l, 1e-3)), am.a);
+        }
+        """;
+
     /// <summary>What every world shader includes (fragment stage, or the grass's vertex stage).</summary>
     public static readonly string Functions = $$"""
 
@@ -36,7 +49,7 @@ static class AtmosphereShaders
         uniform vec4 uAtmoHaze;       // Kenshi haze: x 1 when on, y start, z end of the atmosphere fog, w weather fog density (1 / distance)
         uniform vec4 uAtmoHazeCloud;  // Kenshi haze: horizonClouds, rgb the cloud colour (a stand-in), a how far the haze is pulled to it
         uniform vec4 uAtmoAltitude;   // viewer: x the physical haze's share (0 the game's haze, 1 the physical), y haze strength (1 the game's), z how far the eye is above the game's camera heights (0 within them, 1 high above)
-        uniform vec4 uAtmoMaps;       // x irradiance cube, y specular cube, z ambient map present; w half the world's width
+        uniform vec4 uAtmoMaps;       // x irradiance cube, y specular cube, z ambient map present (0: none, else 1 + the night ambient floor); w half the world's width
         uniform vec4 uAtmoNight;      // Meitou night air (docs/formats/sky.md "Night air"): rgb its colour at full night at the horizon, a its weight (0: Faithful, or by day)
         uniform samplerCube uAtmoIrradiance, uAtmoSpecular;
         uniform sampler2D uAtmoAmbientMap;
@@ -188,10 +201,11 @@ static class AtmosphereShaders
 
         {{ShadowShaders.Functions}}
         // ---- the deferred lighting pass (deferred.hlsl main_fs, lightingFunctions.hlsl; docs/formats/lighting.md) ----
+        {{AmbientFloorFunction}}
         vec4 atmoAmbientMapAt(vec3 world)
         {
             if (uAtmoMaps.z < 0.5) return vec4(1.0, 1.0, 1.0, 0.5);
-            return texture(uAtmoAmbientMap, (world.xz + uAtmoMaps.w) / (2.0 * uAtmoMaps.w));
+            return atmoAmbientFloor(texture(uAtmoAmbientMap, (world.xz + uAtmoMaps.w) / (2.0 * uAtmoMaps.w)), uAtmoMaps);
         }
         vec3 atmoIrradiance(vec3 n)
         {

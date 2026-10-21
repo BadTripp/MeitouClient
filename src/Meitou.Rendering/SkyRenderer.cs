@@ -483,6 +483,12 @@ public sealed unsafe partial class SkyRenderer : IDisposable
     /// </summary>
     public bool Planetshine { get; set; } = true;
 
+    /// <summary>
+    /// With <see cref="Planetshine"/>, by night (faded like <see cref="NightAmbientStrength"/>), a darker biome's ambient colour is raised, hue kept, to this
+    /// luminance: that of D6D6DB, the most common biome ambient. The swamp's 827A47 (0.47) would otherwise leave its night near black.
+    /// </summary>
+    public const float NightAmbientFloor = 0.84f;
+
     /// <summary>Presentation-only fill light on the planets from the viewer's side (the title raises it so their whole face shows); 0, the game's look, in play.</summary>
     public float PlanetFill { get; set; }
 
@@ -932,7 +938,8 @@ public sealed unsafe partial class SkyRenderer : IDisposable
             new Vector4(KenshiHaze ? 1f : 0f, hazeStart, hazeEnd, fogWeight > 0 && fogDistance > 1 ? 1f / fogDistance : 0f),
             new Vector4(cloud.X, cloud.Y, cloud.Z, pull),
             new Vector4(KenshiHaze ? AltitudeWeight : 1f, MathF.Max(HazeStrength, 0), AltitudeWeight, 0),
-            new Vector4(irradianceCube is not null ? 1f : 0f, specularCube is not null ? 1f : 0f, ambientMap is not null ? 1f : 0f, AmbientMap.HalfWorld),
+            new Vector4(irradianceCube is not null ? 1f : 0f, specularCube is not null ? 1f : 0f,
+                ambientMap is not null ? 1f + (Planetshine ? NightAmbientFloor * (1 - Math.Clamp(s.Sun.Y * 5, 0, 1)) : 0f) : 0f, AmbientMap.HalfWorld),
             s.Night);
     }
 

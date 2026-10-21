@@ -20,7 +20,7 @@ Every Graphics sub-page starts with two rows (`SettingsMenu.Presets.cs`):
   switch's side (object distance, terrain error: Draw distances; shadow distance: Shadows) are multiples of that side's
   mark, so High reads High in either look. Low also sets the costliest Meitou switches Faithful (AO, indirect light,
   light shafts, clouds, cloud shadows, water, shadows) and quarter-size particles, as `--low-end`; no preset turns a
-  switch on, and anti-aliasing and render scale are left alone. The shown preset is derived (sliders and the fifth
+  costly Meitou effect on, and anti-aliasing and render scale are left alone. The shown preset is derived (sliders and the fifth
   cascade only; Custom otherwise), not saved.
 - **All graphics features** sets every Faithful / Meitou graphics switch to one side (gameplay switches and sliders
   untouched); mixed switches show neither side. A switch that does not take (indirect light without ray queries) is ignored.
