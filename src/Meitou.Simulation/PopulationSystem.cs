@@ -65,6 +65,7 @@ public sealed partial class PopulationSystem : ITickSystem, IDisposable
         OffscreenHealing = this.settings.OffscreenHealing;
         CampaignAncestorsOnce = this.settings.CampaignAncestorsOnce;
         KeepWild = this.settings.KeepWild;
+        ResidentSchedule = this.settings.ResidentSchedule;
         live = new WorldStates(data.Db, data.Relations);
         if (!this.settings.Background) return;
         work = [];
@@ -80,6 +81,11 @@ public sealed partial class PopulationSystem : ITickSystem, IDisposable
     public bool CampaignAncestorsOnce { get; set; }
     /// <summary>The wild-squad switch (<see cref="PopulationSettings.KeepWild"/>), changed live by the host.</summary>
     public bool KeepWild { get; set; }
+    /// <summary>The residents' schedule switch (<see cref="PopulationSettings.ResidentSchedule"/>), changed live by the host.</summary>
+    public bool ResidentSchedule { get; set; }
+
+    /// <summary>Game hours a town must have been unloaded for its residents to come back where their schedule puts them (engine choice: a quick reload changes nothing).</summary>
+    public const double ScheduleAfterHours = 1;
 
     readonly WorldStates live;
     /// <summary>The world states the population's spawns and campaigns read: the data's fixed ones when it has any, else the live ones of this world (<see cref="WorldStates"/>).</summary>

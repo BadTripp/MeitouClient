@@ -299,6 +299,10 @@ public sealed class AiMind
     public int MemberIndex { get; init; }
     /// <summary>The goal being acted out (null before the first think).</summary>
     public AiGoal? Goal { get; set; }
+    /// <summary>The goal's plan (<see cref="TaskPlanner"/>), leaf first: the step carried out is the first. Planned again at every think.</summary>
+    public List<PlanStep> Plan { get; } = [];
+    /// <summary>The plan's first step (None without a plan).</summary>
+    public TaskType Step => Plan.Count > 0 ? Plan[0].Type : TaskType.None;
     public AiBehaviour Behaviour { get; set; }
     public AiStance Stance { get; set; } = AiStance.Aggressive;
     /// <summary>The <see cref="Blackboard.Version"/> the goal was chosen under.</summary>
@@ -324,6 +328,10 @@ public sealed class AiMind
     public bool SeatUnreachable { get; set; }
     /// <summary>The sitting clip of the chair it sits on (<see cref="HomeSpot.SitClip"/>), for <see cref="AnimationSystem"/>; null when not seated. Follows from the goal and seat, so not hashed.</summary>
     public string? SitClip { get; set; }
+    /// <summary>Its first think puts it where its plan's walk ends (<see cref="Squad.Resume"/>: back from its town's time unloaded); cleared by that think.</summary>
+    public bool Resume { get; set; }
+    /// <summary>Where the serial step puts it this tick (set by the think that took <see cref="Resume"/> up); null otherwise.</summary>
+    public Vector3? PlaceAt { get; set; }
     /// <summary>Whom its follow goal follows instead of the squad leader: the contract's mission target for a goal aimed at it (none: the leader).</summary>
     public CharacterId FollowTarget { get; set; } = CharacterId.None;
     /// <summary>Whether its lists hold any combat goal at all (else the stance stays the old default).</summary>
@@ -335,6 +343,7 @@ public sealed class AiMind
     internal void Hash(ref StateHasher hasher)
     {
         hasher.Add((int)(Goal?.Task.Type ?? TaskType.None));
+        hasher.Add((int)Step);
         hasher.Add((int)Behaviour);
         hasher.Add((int)Stance);
         hasher.Add(Version);
@@ -347,6 +356,8 @@ public sealed class AiMind
         hasher.Add(SeatUnreachable);
         hasher.Add(CommitUntil);
         hasher.Add(Target ?? new Vector3(float.NaN));
+        if (Resume) hasher.Add(0x52657375);
+        if (PlaceAt is { } place) hasher.Add(place);
         if (!FollowTarget.IsNone) hasher.Add(FollowTarget);
     }
 }
