@@ -281,8 +281,16 @@ no path re-running the initial resident placement was found (**Unknown** whether
   0.5 × imprisoned/dead, clamped to [0, 2] for a sector by a town) is compared with `FUN_1408f5ca0`, the sum of P × `homeless spawn
   amount` over the loaded zones of the island; while below, one sector is picked by weight max(0, P × amount + 1 − load), halved by a town,
   (w + 1) × 2 when empty, and one squad is made there (`FUN_1408f8060`) if its count is below P × amount, retrying other sectors when that
-  fails. So a loaded sector is refilled as its squads die or walk out (**Verified** by code). The squad gets a town handle: the template
-  faction's nearest town unless any town is 9216 nearer, none beyond 50000. Meitou makes a sector's squads once per load (engine choice).
+  fails. So a loaded sector is refilled as its squads die or walk out (**Verified** by code). The squad is given a town (the template
+  faction's nearest unless any town is 9216 nearer, none beyond 50000); what it is used for is **Unknown** (saved homeless platoons have
+  no `basetown`/`hometown`, [save.md](../formats/save.md)).
+- **Patrol task** (`Task_Patrol`, loaded; **Verified** by code unless marked): its start sets the platoon's patrol state (+0x1e8, made
+  once with the template's `patrol approaches towns`) to loaded mode 1 / unloaded job 2 (PATROL_SHORTRANGE), then orders a move to the
+  state's point. The point (`FUN_1408fc730`): a coin flip takes the four diagonal or the four straight neighbouring sectors of the same
+  biome group, one drawn by a weight `FUN_1408f5ad0` (**Unknown**, its decompile is broken); with `patrol approaches towns` and towns in
+  it, each player town enters at even odds with weight 1 and each other town at 1 in 4 with weight 0.2, and a drawn town is the target;
+  else a placed spot in that sector (`FUN_1408f50d0`); with no neighbour, `FUN_1408fc1a0` picks another sector of the group. Off screen a
+  new point is picked within 500 of the last (`FUN_1407ee790`); the loaded re-pick rule is **Unknown** (Meitou uses the same 500).
 - **Traders**: restocked only while active, when the clock passes the platoon's `inventory refresh time`; an unloaded one catches up at
   its first active tick.
 - **Prisoners** (**Observed**): frozen with their platoon; sentences are absolute timestamps and release is a loaded AI task.

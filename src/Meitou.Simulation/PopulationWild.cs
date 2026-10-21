@@ -20,7 +20,7 @@ public sealed record WildSite(int Index, WildKind Kind, ZoneCoordinate Zone, int
 /// The wild population (docs/game/factions-squads-towns.md 6.2, 6.3): homeless squads of the area sectors and the animals (and camps) of the nests. Runs
 /// only when <see cref="PopulationData.Biomes"/> is set.
 /// <list type="bullet">
-/// <item><b>Sectors</b> (6.2). Every zone cell is a sector of its BIOME_GROUP. When its zone activates it gets ceil(P x <c>homeless spawn amount</c>)
+/// <item><b>Sectors</b> (6.2; patrols and the area tick's refill in <c>PopulationHomeless.cs</c>). Every zone cell is a sector of its BIOME_GROUP. When its zone activates it gets ceil(P x <c>homeless spawn amount</c>)
 /// squads: what the original's area tick reaches for a sector loaded alone (it spawns while the island's population is below P x the sum of the amounts and
 /// the sector's own count below its share; with one sector that stops at the ceiling). The island-wide sum over several loaded sectors, the counters a and
 /// b and the "town nearby" halving are not modelled (engine choice). Template weights are 6.2's homeless branch,
@@ -472,7 +472,8 @@ public sealed partial class PopulationSystem
     bool TemplateUsable(string id) =>
         data.Db.Find(id) is { } r && SquadFactory.IsTemplate(r) && SquadTemplate.From(r).WorldState.All(w => IWorldStates.Passes(States, data.Db, w.Id, w.V0));
 
-    BuiltWild BuildSector(WildSite site, long loadId, ulong seed, IWalkability walk, Vector2[] players, WildHold? hold)
+    /// <summary>A sector's squads as it loads, or with <paramref name="topUp"/> ≥ 0 the one squad of the area tick's refill number <paramref name="topUp"/> (<c>PopulationHomeless.cs</c>).</summary>
+    BuiltWild BuildSector(WildSite site, long loadId, ulong seed, IWalkability walk, Vector2[] players, WildHold? hold, int topUp = -1)
     {
         var squads = new List<BuiltSquad>();
         var group = data.Biomes!.Groups[site.Group];
@@ -480,12 +481,15 @@ public sealed partial class PopulationSystem
         var centre = new Vector2((minX + maxX) / 2, (minZ + maxZ) / 2);
         // A sector whose nearest town is the player's makes nothing (6.2).
         if (NearestTown(centre, out _) is { } nearest && data.PlayerFaction >= 0 && data.SiteFactions[nearest.Index] == data.PlayerFaction)
-            return new BuiltWild(site.Index, loadId, centre, squads);
+            return new BuiltWild(site.Index, loadId, centre, squads, TopUp: topUp >= 0);
         int n = HomelessCount(group, settings.PopulationMultiplier);
         var counts = new int[group.HomelessSpawns.Count];
         // The save's homeless squads standing in this sector are of its count (and of their entry's).
         for (int i = 0; hold is not null && i < counts.Length; i++) counts[i] = hold.Templates.GetValueOrDefault(group.HomelessSpawns[i].Id);
-        for (int s = hold?.Squads ?? 0; s < n; s++)
+        int first = hold?.Squads ?? 0;
+        // A refill's key follows the load's (n of them) and the refills before it.
+        if (topUp >= 0) (first, n) = (n + topUp, n + topUp + 1);
+        for (int s = first; s < n; s++)
         {
             ulong key = Rng.Mix(SeedSalts.HomelessSquad ^ (ulong)site.Zone.X << 40 ^ (ulong)site.Zone.Y << 24 ^ (uint)s);
             var weights = HomelessWeights(group, settings.PopulationMultiplier, counts, TemplateUsable);
@@ -497,7 +501,7 @@ public sealed partial class PopulationSystem
             if (PlaceInSector(minX, minZ, maxX, maxZ, faction, seed, key, walk, players) is not { } spot) continue;
             if (BuildOne(template, faction, faction >= 0 ? data.Factions[faction] : null, key, seed, spot) is { } one) squads.Add(one);
         }
-        return new BuiltWild(site.Index, loadId, centre, squads);
+        return topUp >= 0 ? new BuiltWild(site.Index, loadId, centre, squads, Rolls: 1, TopUp: true) : new BuiltWild(site.Index, loadId, centre, squads);
     }
 
     TownSite? NearestTown(Vector2 p, out float distance)

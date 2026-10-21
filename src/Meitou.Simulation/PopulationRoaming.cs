@@ -82,6 +82,7 @@ public sealed partial class PopulationSystem
             GrowPools(world);
             FillPools(world);
             TopUpNests(world);
+            StepHomeless(world);
             if (OffscreenFights) Fights(world);
         }
     }
