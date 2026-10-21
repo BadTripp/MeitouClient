@@ -342,8 +342,14 @@ internal sealed unsafe partial class CharacterRenderer : IDisposable
         }
         budget.Update(content.Textures);
         materials = Gpu.Frame.Constants.Allocate((ulong)Math.Max(slotParts.Count, 1) * CharacterMaterialRecord.Size, 256);
+        // Each record is built in ordinary memory and copied over whole: the frame's constants are mapped GPU memory, where building a record field by
+        // field (its zeroing, the texture array's stores) cost about 14 µs a record.
+        CharacterMaterialRecord record = default;
         for (int s = 0; s < slotParts.Count; s++)
-            Write(slotParts[s].Material, ref *(CharacterMaterialRecord*)(materials.Pointer + (long)s * CharacterMaterialRecord.Size));
+        {
+            Write(slotParts[s].Material, ref record);
+            *(CharacterMaterialRecord*)(materials.Pointer + (long)s * CharacterMaterialRecord.Size) = record;
+        }
         LastUpdateMs = watch.Elapsed.TotalMilliseconds;
         updateCount++;
         updateCpu.Add(LastUpdateMs);
