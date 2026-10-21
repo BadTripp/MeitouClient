@@ -82,6 +82,8 @@ sealed partial class PlayerInterface
             {
                 bool full = m.Storage?.Items.FirstOrDefault()?.Quantity >= cap.StorageCapacity;
                 b.Text["CapacityText"] = $"Max Capacity: {cap.StorageCapacity.ToString("N0", CultureInfo.InvariantCulture)}" + (full ? " (Full)" : "");
+                // The original paints the whole line red once the stack is full (the exact red is Unknown; read off its screenshot).
+                if (full) b.Properties["CapacityText"] = new Dictionary<string, string> { ["TextColour"] = "0.91 0.25 0.25" };
             }
             else b.Hidden.Add("CapacityText");
             b.Disabled.Remove("ArrangeButton");
