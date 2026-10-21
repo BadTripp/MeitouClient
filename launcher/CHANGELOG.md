@@ -2,6 +2,11 @@
 
 Released with tags `launcher-v<version>` by `.github/workflows/launcher-release.yml`; each release needs its `## v<version>` section.
 
+## v1.0.4
+
+- macOS: Play starts the game again instead of it exiting at once because the Vulkan loader wasn't found. The launcher now
+  hands the game Homebrew's library folder and the MoltenVK setting it needs (#20).
+
 ## v1.0.3
 
 - A new launcher version shows an update button in the title bar, on every page; the status line no longer loses the notice.
