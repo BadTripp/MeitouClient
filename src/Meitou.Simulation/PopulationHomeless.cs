@@ -15,6 +15,7 @@ namespace Meitou.Simulation;
 /// <item><b>Refill</b> (area tick <c>FUN_1408f9240</c>): while the loaded sectors hold fewer squads than the sum of P × <c>homeless spawn amount</c>, one sector
 /// below its own share makes one squad. Engine choice: the loaded sectors are one island.</item>
 /// <item><b>Sectors by place</b>: a squad belongs to the sector it stands in (<see cref="Refile"/>), so one that walks out of the loaded sectors leaves the world
+/// (after a grace and away from the player, <see cref="MayRefile"/>)
 /// (kept by its new sector with <see cref="KeepWild"/>, up to that sector's count) and its old sector is refilled, while the total stays bounded.</item>
 /// </list>
 /// </summary>
@@ -39,6 +40,7 @@ public sealed partial class PopulationSystem
     {
         var table = world.Characters;
         patrolSeen.Clear();
+        sectorSeen.Clear();
         refiles.Clear();
         foreach (int i in wildLoaded)
         {
@@ -47,8 +49,9 @@ public sealed partial class PopulationSystem
             foreach (int id in wildStates[i].Squads)
             {
                 if (world.Squads.Find(id) is not { } squad || !table.TryResolveNext(squad.Leader, out int slot) || !table.IsAlive(squad.Leader)) continue;
+                sectorSeen.Add(id);
                 var zone = WorldLayout.ZoneOf(table.Previous[slot].Position.X, table.Previous[slot].Position.Z);
-                if (zone != site.Zone && SectorAt(zone) is var to and >= 0) refiles.Add((id, i, to));
+                if (zone != site.Zone && SectorAt(zone) is var to and >= 0 && MayRefile(world, id, to, zone, slot)) refiles.Add((id, i, to));
                 if (table.Cold(slot)?.Ai is not { Behaviour: AiBehaviour.Patrol } || squad.Ai?.CurrentClass is PackageClass.Patrol or PackageClass.PatrolRunning) continue;
                 patrolSeen.Add(id);
                 var at = new Vector2(table.Previous[slot].Position.X, table.Previous[slot].Position.Z);
@@ -63,9 +66,38 @@ public sealed partial class PopulationSystem
         foreach (var (id, from, to) in refiles) Refile(world, id, from, to);
         if (homelessPatrols.Count > patrolSeen.Count)
             foreach (int id in homelessPatrols.Keys.Where(k => !patrolSeen.Contains(k)).ToList()) homelessPatrols.Remove(id);
+        if (outsideSince.Count > 0)
+            foreach (int id in outsideSince.Keys.Where(k => !sectorSeen.Contains(k)).ToList()) outsideSince.Remove(id);
     }
 
+    readonly HashSet<int> sectorSeen = [];
+
     readonly List<(int Squad, int From, int To)> refiles = [];
+    /// <summary>The tick each homeless squad's leader was first seen outside the active zones, by squad id.</summary>
+    readonly Dictionary<int, long> outsideSince = [];
+
+    /// <summary>
+    /// Whether a squad standing in another sector moves to it now: at once into a loaded one; into one that is not loaded only once its leader has been outside the
+    /// active zones for <see cref="PopulationSettings.RoamUnloadGraceSeconds"/> and is <see cref="PopulationSettings.HomelessPlayerDistance"/> from every player
+    /// character (engine choice, as roaming squads leave the world, so it does not vanish in view).
+    /// </summary>
+    bool MayRefile(World world, int id, int to, ZoneCoordinate zone, int slot)
+    {
+        if (wildStates[to].Status == SiteStatus.Loaded) return true;
+        if (active.Contains(zone))
+        {
+            outsideSince.Remove(id);
+            return false;
+        }
+        if (!outsideSince.TryGetValue(id, out long since)) outsideSince[id] = since = world.Tick;
+        if (world.Tick - since < (long)Math.Ceiling(settings.RoamUnloadGraceSeconds / world.TickSeconds)) return false;
+        var p = world.Characters.Previous[slot].Position;
+        var at = new Vector2(p.X, p.Z);
+        foreach (var player in PlayerSpots(world))
+            if (Vector2.DistanceSquared(player, at) < settings.HomelessPlayerDistance * settings.HomelessPlayerDistance) return false;
+        outsideSince.Remove(id);
+        return true;
+    }
 
     /// <summary>The sector site of a zone, or -1.</summary>
     int SectorAt(ZoneCoordinate zone)
