@@ -8,8 +8,8 @@ namespace Meitou.Game;
 
 /// <summary>
 /// Mining rocks by hand (docs/simulation.md "Production", natural sites): a right click on a resource rock with characters selected has them operate it, with Shift it becomes a job
-/// (Operating machine). A left click selects it; its machine window holds the mined ore, taken out by hand. Rocks are the foliage system's (<see cref="Rocks"/>); a rock is hit as a sphere of its radius around its position (engine choice: the original picks the
-/// rock building's collision).
+/// (Operating machine). A left click selects it; its machine window holds the mined ore, taken out by hand. Rocks are the foliage system's (<see cref="Rocks"/>); a rock is hit by its mesh's triangles, as drawn (engine choice: the original picks the rock
+/// building's collision; without the mesh, a sphere of its radius).
 /// </summary>
 sealed partial class PlayerInterface
 {
@@ -31,12 +31,7 @@ sealed partial class PlayerInterface
         foreach (var rock in rocks.Near(0, ground.X, ground.Z, RockSearch))
         {
             if (rock.Record.Length == 0) continue;
-            var to = (rock.Centre ?? rock.Position) - ray.Origin;
-            float along = Vector3.Dot(to, ray.Direction);
-            float miss = to.LengthSquared() - along * along, r2 = rock.Radius * rock.Radius;
-            if (miss > r2) continue;
-            float t = along - MathF.Sqrt(r2 - miss);
-            if (t >= 0 && t < bestT) (bestT, best) = (t, rock);
+            if (rock.RayHit(ray.Origin, ray.Direction) is { } t && t < bestT) (bestT, best) = (t, rock);
         }
         return best is { } found ? (found, bestT) : null;
     }
