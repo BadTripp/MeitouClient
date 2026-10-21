@@ -79,8 +79,9 @@ which are descriptive (RTTI knows `MessageBoxManager::Box`; the constructor of a
 Root, Datapanel and TooltipPanel, with no option controls. Loading the layout alone cannot populate the options.
 **Observed** (user's original-game screenshot): the bottom panel explains the hovered option; it is not a Reset/Close button area.
 **Verified** (installed `locale/en_GB/LC_MESSAGES/main.pot`, `OriginalDescriptionsAndLabelsHaveTranslationsInEveryInstalledLanguage`):
-`kenshi/titlescreen.cpp:557..563` each identify an option label and its longer description, in hunger/death/damage/production/research/building/nests order.
-All seven labels and descriptions have entries in the eight installed non-English catalogs (de/es/fr/ja/ko/pt/ru/zh). Runtime reads the template and translates the exact message key.
+`kenshi/titlescreen.cpp:557..563` each identify a label and a longer description, and all seven have entries in the eight installed
+non-English catalogs (de/es/fr/ja/ko/pt/ru/zh). **Observed** (reading the template; no test checks it): the lines are in
+hunger/death/damage/production/research/building/nests order. Runtime reads the template and translates the exact message key.
 
 ## 4. HUD (MainBarGUI)
 

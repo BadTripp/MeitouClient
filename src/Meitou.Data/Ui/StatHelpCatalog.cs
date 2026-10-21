@@ -1,8 +1,3 @@
-using Meitou.Content;
-using System.Globalization;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using Meitou.Data.Gameplay.Bodies;
 
 namespace Meitou.Data.Ui;
@@ -16,34 +11,15 @@ public sealed class StatHelpCatalog
 
     public string TextAt(int line) => entries.Where(e => e.Lines.Contains(line)).MaxBy(e => e.EnglishLength)?.Text ?? "";
 
-    public static StatHelpCatalog Read(string? path)
+    public static StatHelpCatalog Read(string? path) => From(PotTemplate.Read(path));
+
+    public static StatHelpCatalog From(IEnumerable<PotEntry> template)
     {
         var result = new StatHelpCatalog();
-        if (path is null) return result;
-        path = GameFiles.Resolve(path);
-        if (!File.Exists(path)) return result;
-        var references = new List<int>();
-        var text = new StringBuilder();
-        bool reading = false;
-        void Finish()
-        {
-            // The structure (which paragraph answers which stat) comes from the English template; the text shown is its translation when the language has one.
-            if (references.Count > 0 && text.Length > 0) result.entries.Add(new(references.Distinct().ToArray(), Meitou.Localisation.Loc.Tr(text.ToString()), text.Length));
-            references.Clear(); text.Clear(); reading = false;
-        }
-        foreach (string raw in File.ReadLines(path))
-        {
-            string line = raw.Trim();
-            if (line.Length == 0) { Finish(); continue; }
-            if (line.StartsWith("#:", StringComparison.Ordinal))
-                foreach (Match match in Regex.Matches(line, @"kenshi/statswindow\.cpp:(\d+)"))
-                    references.Add(int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture));
-            if (line.StartsWith("msgid ", StringComparison.Ordinal))
-            { reading = true; text.Append(JsonSerializer.Deserialize<string>(line[6..])); }
-            else if (line.StartsWith("msgstr", StringComparison.Ordinal) || line.StartsWith("msgctxt", StringComparison.Ordinal)) reading = false;
-            else if (reading && line.StartsWith('"')) text.Append(JsonSerializer.Deserialize<string>(line));
-        }
-        Finish();
+        // The structure (which paragraph answers which stat) comes from the English template; the text shown is its translation when the language has one.
+        foreach (var entry in template)
+            if (entry.References.Where(r => r.File == "kenshi/statswindow.cpp").Select(r => r.Line).Distinct().ToArray() is { Length: > 0 } lines)
+                result.entries.Add(new(lines, Meitou.Localisation.Loc.Tr(entry.Id), entry.Id.Length));
         return result;
     }
 

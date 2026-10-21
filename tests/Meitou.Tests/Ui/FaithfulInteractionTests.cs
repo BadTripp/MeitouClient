@@ -103,13 +103,12 @@ public class FaithfulInteractionTests(ITestOutputHelper output)
             Assert.True(lower.Bounds.Y >= begin.Bounds.Y + begin.Bounds.Height);
             Assert.True(lower.Bounds.Y + lower.Bounds.Height <= height);
             Assert.DoesNotContain(controls, c => c.Name is "advanced-reset" or "advanced-close");
+            var help = NewGameHelpCatalog.Read(Path.Combine(GameInstall.Locate()!.Root, "locale/en_GB/LC_MESSAGES/main.pot"));
             for (int i = 0; i < 7; i++)
             {
                 foreach (string part in new[] { "label", "track", "less", "more", "value" })
                 {
                     ui.MouseMove(Centre(ui.UiFrame.Last(c => c.Name == $"advanced-{part}-{i}")));
-                    var install = GameInstall.Locate()!;
-                    var help = NewGameHelpCatalog.Read(Path.Combine(install.Root, "locale/en_GB/LC_MESSAGES/main.pot"));
                     Assert.NotEmpty(help.EnglishAt(NewGameSettings.Options[i].HelpLine));
                     Assert.Equal(help.TextAt(NewGameSettings.Options[i].HelpLine), ui.UiFrame.Last(c => c.Name == "advanced-help").Caption);
                 }

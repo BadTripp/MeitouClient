@@ -21,13 +21,16 @@ sealed partial class PlayerInterface
 
     void BindNewGamePanels(UiBindings b)
     {
-        float scale = Height / 1080f, width = Math.Min(600 * scale, Width - 24), mainHeight = Height * .49f;
-        float extra = advancedOpen ? Height * .43f : 0;
+        // The start panel keeps the layout's size, centred; expanding raises it by half the options panel.
+        var root = faithfulScreens.Layout("new-game").Roots[0];
+        var size = root.Position.RelativeTo(new(0, 0, Width, Height), root.RealPosition);
+        float scale = Height / 1080f, width = Math.Min(size.Width, Width - 24), mainHeight = Math.Min(size.Height, Height - 24);
+        float extra = advancedOpen ? Math.Max(0, Math.Min(Height * .43f, Height - 24 - mainHeight)) : 0;
         float x = (Width - width) / 2, y = (Height - mainHeight - extra) / 2;
         b.Positions["Root"] = new(x, y, width, mainHeight);
         b.Positions["advanced-Root"] = new(x, y + mainHeight, width, extra);
         if (!advancedOpen) b.Hidden.Add("advanced-Root");
-        b.Positions["advanced-Datapanel"] = new(x + 12 * scale, y + mainHeight + 42, width - 24 * scale, extra - 42 - 80 * scale);
+        b.Positions["advanced-Datapanel"] = new(x + 12 * scale, y + mainHeight + 42 * scale, width - 24 * scale, extra - 42 * scale - 80 * scale);
         b.Positions["advanced-TooltipPanel"] = new(x + 12 * scale, y + mainHeight + extra - 74 * scale, width - 24 * scale, 62 * scale);
     }
 

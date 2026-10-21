@@ -39,10 +39,10 @@ sealed partial class PlayerInterface
     {
         UiMode = mode;
         uiResolve = resolve;
-        advancedHelp = NewGameHelpCatalog.Read(resolve("locale/en_GB/LC_MESSAGES/main.pot")
-            ?? (Meitou.Content.GameInstall.Locate() is { } gameInstall ? Path.Combine(gameInstall.Root, "locale/en_GB/LC_MESSAGES/main.pot") : null));
-        statHelp = StatHelpCatalog.Read(resolve("locale/en_GB/LC_MESSAGES/main.pot")
+        var template = PotTemplate.Read(resolve("locale/en_GB/LC_MESSAGES/main.pot")
             ?? (Meitou.Content.GameInstall.Locate() is { } install ? Path.Combine(install.Root, "locale/en_GB/LC_MESSAGES/main.pot") : null));
+        advancedHelp = NewGameHelpCatalog.From(template);
+        statHelp = StatHelpCatalog.From(template);
         MyGuiColours.LoadPalette(resolve("kenshi_colours.xml"));
         uiResources = MyGuiResources.Load("kenshi_init.xml", resolve, "kenshi_fonts.xml");
         faithfulHud = MyGuiTemplates.Expand(MyGuiReader.ReadLayout(resolve("Kenshi_MainPanel.layout") ?? throw new FileNotFoundException("Kenshi_MainPanel.layout not found.")), uiResources);

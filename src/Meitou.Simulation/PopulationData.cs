@@ -103,14 +103,20 @@ public sealed class PopulationData
     /// <summary>The road network off-screen squads may travel by (null: none, they go straight).</summary>
     public RoadNetwork? Roads { get; init; }
     /// <summary>The new-game options that change the body mechanics (hunger time, chance of death...).</summary>
-    public BodyOptions BodyOptions { get; init; } = BodyOptions.Default;
-    /// <summary>A new world's body options without changing the data retained by the running world's systems.</summary>
-    public PopulationData WithBodyOptions(BodyOptions options) => new()
+    public BodyOptions BodyOptions { get => bodyOptions; init => bodyOptions = value; }
+    BodyOptions bodyOptions = BodyOptions.Default;
+    /// <summary>
+    /// A new world's body options without changing the data retained by the running world's systems: a shallow copy sharing every other member and cache,
+    /// with only the body factory built again; the same data when the options are unchanged.
+    /// </summary>
+    public PopulationData WithBodyOptions(BodyOptions options)
     {
-        Db = Db, Sites = Sites, Factions = Factions, Appearances = Appearances, States = States,
-        PlayerFaction = PlayerFaction, Relations = Relations, SiteFactions = SiteFactions,
-        Biomes = Biomes, ResourceNodes = ResourceNodes, Roads = Roads, BodyOptions = options,
-    };
+        if (options == bodyOptions) return this;
+        var copy = (PopulationData)MemberwiseClone();
+        copy.bodyOptions = options;
+        copy.bodies = null;
+        return copy;
+    }
     Dictionary<string, int>? factionIndex;
 
     readonly Dictionary<int, IReadOnlyList<TownBuilding>> turrets = [];
