@@ -54,6 +54,7 @@ sealed partial class PlayerInterface
         {
             var layout = MyGuiReader.ReadLayout(resolve(file + ".layout") ?? throw new FileNotFoundException(file));
             if (id == "new-game") layout = WithAdvancedPanel(layout, MyGuiReader.ReadLayout(resolve("Kenshi_AdvancedOptionsWindow.layout") ?? throw new FileNotFoundException("Kenshi_AdvancedOptionsWindow.layout")));
+            if (id == "editor") (editorLayout, editorRowsShape) = (layout, "");
             faithfulScreens.Register(id, layout, modal, centreRoot: id is "save" or "load" or "file");
         }
         faithfulScreens.Follow("bag", "inventory");   // the bag window is married to the inventory, opened and closed by OPEN BAG only

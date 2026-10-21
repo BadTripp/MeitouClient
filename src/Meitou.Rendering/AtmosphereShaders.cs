@@ -206,6 +206,31 @@ static class AtmosphereShaders
             float a0 = t.x * min(t.y, exp2(-9.28 * nv)) + t.z;
             return clamp(a0 + 0.04 * (t.w - a0), 0.0, 1.0);
         }
+        // The character editor's stage (a fog distance of -2): the game's rtt.hlsl (docs/characters.md "Character editor"): one punctual light of colour 0.6 (CalcPunctualLight: diffuse
+        // pi * N.L * (1 - 0.04), GGX specular for roughness 1 - 0.99 * gloss, specular colour 0.04) plus the environment light of the irradiance and specular cubes
+        // (CalcEnvironmentLight), times the exposure 0.5, stored as it is in an 8-bit target (UNORM, as the icons). l: towards the light, v: towards the eye.
+        vec3 stageLight(vec3 albedo, vec3 n, vec3 v, vec3 l, float gloss)
+        {
+            const float PI = 3.14159265;
+            vec3 hv = normalize(v + l);
+            float nl = clamp(dot(n, l), 0.0, 1.0), lh = clamp(dot(l, hv), 0.0, 1.0), nh = clamp(dot(n, hv), 0.0, 1.0), nv = clamp(dot(n, v), 0.0, 1.0);
+            float rough = 1.0 - gloss * 0.99, alpha = rough * rough, alphaSqr = alpha * alpha;
+            float denom = max(1e-6, nh * nh * (alphaSqr - 1.0) + 1.0);
+            float D = alphaSqr / (PI * denom * denom);
+            float fresnel = exp2((-5.55473 * lh - 6.98316) * lh);
+            float k = alpha * 0.5, k2 = k * k, vis = 1.0 / (lh * lh * (1.0 - k2) + k2);
+            float sunSpecular = 0.6 * nl * D * (0.04 + 0.96 * fresnel) * vis / PI;
+            float sunDiffuse = PI * nl * 0.6 * 0.96;
+            vec3 envDiffuse = atmoIrradiance(n) * 0.96;
+            vec3 envSpecular = vec3(0.0);
+            if (uAtmoMaps.y > 0.5)
+            {
+                vec3 dominant = mix(n, reflect(-v, n), gloss * (sqrt(gloss) + rough));
+                vec4 r = textureLod(uAtmoSpecular, dominant, (1.0 - gloss) * 7.0);
+                envSpecular = kenshiEnvBrdf(gloss, nv) * r.rgb * r.a * 10.0;
+            }
+            return clamp((albedo * (sunDiffuse + envDiffuse) + sunSpecular + envSpecular) * 0.5, 0.0, 1.0);
+        }
         // What a lit fragment writes to the GI resolve's surface target (GiResolveShaders.WithAlbedo; RGBA16UI, 0: no probes here), set by kenshiLight:
         // x, y the shading normal's octahedral position (16 bits each), z sqrt(albedo) red | green << 8, w blue | 1 << 8 | interior << 9.
         uvec4 giAlbedoOut = uvec4(0u);

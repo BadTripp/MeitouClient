@@ -47,7 +47,7 @@ Engine choices that remain; the original is **Unknown** for each:
 - Message box captions (YES / CANCEL), window titles ("INVENTORY - name"; "Prospecting Results" is the exe's text, shown upper-cased like the other titles), confirmation texts other than "Are you sure you want to exit?".
 - Overview faction name shows "Player"; the original shows the player faction's name.
 - Tooltips: the HUD's texts show in a Fixed tooltip on the `TooltipPanel` rectangle; the Floating and Inventory ones use the metrics of [Tooltips](game/ui-screens.md#tooltips).
-- Medical rows: the parts are ordered head, torso, arms, legs (left first) by their names, matching the original for people; an animal's parts keep that grouping.
+- Medical rows: the parts in the original's part array order ([part order](game/character-stats.md#part-order)).
 - Save list rows carry a `[Meitou]` / `[Kenshi]` source tag; the title's version text reads "Meitou - Faithful UI" (the original's is "Kenshi 1.0.68 - x64 (Newland)"), on purpose.
 - The sandbox keeps Z X C Y P G; with `--sandbox` the faithful C (stats) and Y (craft) shortcuts give way to it.
 
@@ -69,7 +69,7 @@ found the front end, inventory, bag and limb windows sharing one set of bindings
 | Orders/AI policy | Medic/rescue/stop, Block, Passive, Hold, Sneak, Ranged, Taunt and the move speed act ([Order toggles](simulation.md#order-toggles)); Chase is stored only; editable jobs need commands |
 | Inventory mutations | Validated pocket/bag/equipment moves and arrangement, paused interface commands, worn appearance/combat refresh; stack/split, swaps, race constraints, prosthetics and character transfers remain |
 | Advanced new-game options | Seven numeric options wired to new worlds: hunger, death, damage, production, research, building and nests. Expand below the raised start panel; toggle/Esc collapses it. The bottom panel explains the hovered row (label, slider, arrows or value). Bandit looting and easy prospecting switches remain unsupported. [Persistence](simulation.md#new-game-difficulty) |
-| Character creation | `Kenshi_CharacterEditor` after a new game (all start characters, `force race`) and at plastic surgeons (context menu stand-in for the dialogue line); validated `EditCharacter` commands ([characters](characters.md#character-editor)); the hit-points stats line remains |
+| Character creation | `Kenshi_CharacterEditor` after a new game (all start characters, `force race`) and at plastic surgeons (context menu stand-in for the dialogue line); validated `EditCharacter` commands; rows from the original templates, catalog captions, stats panel, platform and stage lighting ([characters](characters.md#character-editor)) |
 | Import/reset squad positions | Save loading exists; import/reset rules need a separate backend |
 
 ## Validation

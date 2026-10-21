@@ -222,6 +222,15 @@ Stomach, two arms, two legs, two forelegs):
 | Left / Right Leg | 1 LEG | yes | no | yes | 32 / 16 | 0 | 0 | 0.5 |
 | Left / Right Foreleg | 2 ARM | no | no | yes | 4 / 2 | 0 | 0.25 / 1 | 0.5 |
 
+#### Part order
+
+**Verified** (decompilation, `MedicalSystem` setup `FUN_14064e410`): the parts are gathered from a map keyed by their LOCATIONAL_DAMAGE record, each with a
+byte key = table[`body part type`] (`0x1416fc42c`: torso 10, leg 30, arm 20, head 0) + 1 when `collapse part` is 2 or 0x10 (right), sorted ascending
+(`FUN_14065d8e0`) into the part array. That array is the medical panel's row order, `parts[0]` the editor's "Hit Points", and the order saves write: head, torso,
+left then right arm (forelegs too), left then right leg. Parts with one key (chest, stomach) keep the map's order, which is keyed by pointer (**Unknown**;
+vanilla shows stomach first). Meitou: `MedicalState.Create` and `ReadSave` sort the parts by `BodyPartTemplate.MedicalOrder`, ties in `combat anatomy` (or saved) order, so
+the stomach comes first; the panel, splinting's "first part", the hit table and saves all use that list.
+
 ### Per-part state (`MedicalSystem::HealthPartStatus`)
 
 **Observed**, from `FUN_14064d0e0` (constructor), `FUN_14064f5c0` (update), `FUN_14064f300` / `FUN_140644a70`

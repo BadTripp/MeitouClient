@@ -85,7 +85,8 @@ public sealed partial class MedicalState
 
     /// <summary>
     /// Reads what <see cref="WriteSave"/> wrote. <paramref name="resolve"/> finds a LOCATIONAL_DAMAGE template by string id; the base HP of each part comes from the race's anatomy
-    /// (100 when the race does not list the part). The parts come back in the saved order. The limbs are applied after (<see cref="ApplySavedLimbs"/>).
+    /// (100 when the race does not list the part). The parts come back in the original's part order (<see cref="BodyPartTemplate.MedicalOrder"/>; a vanilla save already
+    /// has it, an older Meitou save may not), ties in the saved order. The limbs are applied after (<see cref="ApplySavedLimbs"/>).
     /// </summary>
     public static MedicalState ReadSave(RaceData race, IReadOnlyDictionary<string, float> floats, IReadOnlyDictionary<string, bool> bools,
         IReadOnlyDictionary<string, string> strings, Func<string, BodyPartTemplate?> resolve)
@@ -103,7 +104,7 @@ public sealed partial class MedicalState
                 SelfHealing = race.SelfHealing,
             });
         }
-        var state = new MedicalState(parts)
+        var state = new MedicalState(parts.OrderBy(p => p.Template.MedicalOrder))
         {
             Blood = floats.GetValueOrDefault("blood"),
             Hunger = floats.GetValueOrDefault("hung", MaxHunger),

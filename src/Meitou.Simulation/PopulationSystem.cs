@@ -172,7 +172,8 @@ public sealed partial class PopulationSystem : ITickSystem, IDisposable
     /// </summary>
     void Discover(World world)
     {
-        if (!world.Player.Exists) return;
+        // Not during the new game's character creation: the original's "Discovered" messages come after CONFIRM (its world waits for the editor).
+        if (!world.Player.Exists || world.Player.InCreation) return;
         var prev = world.Characters.Previous;
         var player = world.Player;
         for (int i = 0; i < prev.Length; i++)

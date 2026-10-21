@@ -284,7 +284,9 @@ public sealed partial class UiPainter : IDisposable
                 ?? "Kenshi_StandardFont_Medium";
             var font = fontName == "Meitou_TitleFont" ? titleFont ?? paintedFont ?? overlay :
                 fontName.Contains("Painted", StringComparison.Ordinal) || fontName.Contains("Banner", StringComparison.Ordinal) ? paintedFont ?? standardFont ?? overlay : standardFont ?? overlay;
-            var textColour = MyGuiColours.Text(resources, c, widgetState, c.Enabled ? DebugOverlay.TextColour : new(0.45f, 0.43f, 0.38f, 1));
+            // A toggled button's caption takes the skin's *_checked colour too (the editor's selected tab is brighter).
+            string textState = c.Properties.GetValueOrDefault("Checked") == "true" ? widgetState + "_checked" : widgetState;
+            var textColour = MyGuiColours.Text(resources, c, textState, c.Enabled ? DebugOverlay.TextColour : new(0.45f, 0.43f, 0.38f, 1));
             textColour.W *= Alpha(c.Properties);
             font.Target = overlay.Target;
             float scale = c.TextScale ?? (c.Skin.Length > 0 ? Math.Clamp(height / 1080f, 0.5f, 1.5f) : 1);

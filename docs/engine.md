@@ -51,8 +51,9 @@ one point after its last reader, never while anything keeps it; a buffer that is
 `ArrayPool<byte>.Shared` rounds up to a power of two (a 4.2 MB file rents 8 MB) and trims idle arrays on gen2; textures in flight bound what it holds.
 **Observed** (swamp, 1920x1080, 3000-frame flight, 4 alternating pairs, 2026-10-21): allocated 6.2 GB to 4.8 GB (2.1 to 1.6 MB a frame), gen0+gen1
 45 to 35 in total, gen2 count unchanged; frame percentiles unchanged within noise.
-Not pooled, kept by their owners: `HeightWindow` arrays (read through `HeightSnapshot` on workers), impostor atlas levels (`ImpostorTextures`
-holds the atlas), grass blade arrays (kept as `PendingBlades`). How to rank allocation sites: docs/bench.md.
+Not pooled, kept by their owners: `HeightWindow` arrays (read through `HeightSnapshot` on workers), impostor atlas levels (until uploaded;
+`ImpostorTextures` then keeps only the atlas's shape), grass blade arrays (kept as `PendingBlades`), particle texture decodes (preloads not drawn
+within 30 s are dropped). How to rank allocation sites: docs/bench.md.
 Cancel on window close. Helpers/services dispose/join with their owning scene/session.
 After warm-up, loading panels ease off the left/right edges over 0.7s while the loading image fades to the live scene and UI.
 Input remains blocked through this reveal. A new game ends warm-up as soon as the squad's characters are drawable, skips the sky arrival and opens the

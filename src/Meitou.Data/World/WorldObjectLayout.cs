@@ -93,6 +93,21 @@ public static class WorldObjectLayout
         return new PlacedMesh(mesh, InstanceTransform(worldPosition, rotation, Vector3.One), item, item, placementId, PlacedKind.Item);
     }
 
+    /// <summary>The BUILDING_PART the character editor's stage stands the characters on (<c>FUN_1405f03c0</c>; base data: "character_editor_platform_part").</summary>
+    public const string EditorPlatform = "5370-platform_otto.mod";
+
+    /// <summary>
+    /// The character editor's platform (docs/characters.md "Character editor", Preview): <see cref="EditorPlatform"/>'s <c>phs or mesh</c> with its first <c>material</c> (a resolved
+    /// collection; none: the mesh's own), at <paramref name="transform"/>, the characters' feet. Null when the merged data has no such part or it names no mesh.
+    /// </summary>
+    public static PlacedMesh? EditorPlatformMesh(GameDatabase db, Matrix4x4 transform)
+    {
+        if (db.Find(EditorPlatform) is not { } part || part.GetPath("phs or mesh") is not { } mesh || !mesh.Contains(".mesh", StringComparison.Ordinal)) return null;
+        var refs = part.GetReferences("material");
+        var material = refs.Count > 0 && db.Find(refs[0].TargetStringId) is { Type: FcsRecordType.MATERIAL_SPEC } own ? ResolveCollection(db, own, EditorPlatform) : null;
+        return new PlacedMesh(mesh, transform, part, part, "meitou:editor-platform", PlacedKind.BuildingPart) { Material = material };
+    }
+
     /// <summary>The mesh a loose item is drawn with: its <c>ground mesh</c>, else its <c>mesh</c>; "" for none.</summary>
     public static string ItemMesh(GameRecord item) => item.GetPath("ground mesh") is { Length: > 0 } ground ? ground : item.GetPath("mesh");
 

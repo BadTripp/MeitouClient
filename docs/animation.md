@@ -47,6 +47,18 @@ of definitions and gives each a weight; zero-weight ones are dropped:
 - Finally the weights are **normalised per layer** (each layer's weights divided by that layer's sum,
   `@ 14051cde0`).
 
+### Idle stance
+
+Verified (decompilation). A human's animation object keeps its own idle: the `idle stance` of its appearance looked up by record name
+(`@ 1405bd240` at creation, `@ 1405b9880` after an appearance change). Its idle pick (`AnimationClassHuman` slot 25, `@ 14051f230`;
+animals' slot 25 is the plain draw) returns that stance when the character's category is normal (0), the record's `is combat mode`
+and `stealth mode` are EITHER or equal to the character's, and the arm check `@ 14051d240` passes (it always does for a record
+whose layer is not upper or overlay); otherwise it draws from the idle list (`@ 14051ec80`, `@ 140523450`). The standing update
+`@ 14051d3b0` re-picks when the timer (`idle time` seconds) runs out, so a fitting stance is held. Weapon kinds are not tested.
+Base data (**Verified** by probe): the 8 stances are layer `all`, combat and stealth mode 0, `play speed` 0 (`squat` 0.01), clips 0.033 s:
+characters stand still in their stance out of combat and not sneaking. Meitou: `AnimationDefinition.FitsAsStance`,
+`AnimationSystem.OwnStance`; a clip that never advances starts at its first frame (engine choice; the original's start time is **Unknown**).
+
 ## Shape notation and factors
 
 **Verified formula body** from14052e6c0; stat-field identity matching remains **Observed**.

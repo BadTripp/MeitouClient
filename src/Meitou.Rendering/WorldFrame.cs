@@ -92,6 +92,8 @@ sealed class WorldOptions
     public bool Impostors = true;
     /// <summary>The Meitou <c>lod</c> switch: generated mesh levels for TERRAIN-mode foliage meshes (<see cref="FoliageRenderer.Lod"/>).</summary>
     public bool FoliageLod = true;
+    /// <summary>Characters' generated LOD levels (the <c>charlod</c> switch's Meitou side); false: the mesh files' own levels (<c>CharacterRenderer.GeneratedLod</c>).</summary>
+    public bool CharacterLod = true;
     public float? ImpostorDistance, LargeImpostorDistance;
     public double? ImpostorBudgetMb;
     public float HazeStrength = Enhancements.MeitouHazeStrength; // the Meitou haze switch (default); 1 = the game's haze
@@ -267,7 +269,8 @@ sealed class WorldOptions
         () => o.MeitouStars, v => o.MeitouStars = v,
         () => o.MeitouClouds, v => o.MeitouClouds = v,
         () => o.CloudShadows, v => o.CloudShadows = v,
-        () => o.InteriorGi, v => o.InteriorGi = v);
+        () => o.InteriorGi, v => o.InteriorGi = v,
+        () => o.CharacterLod, v => o.CharacterLod = v);
 
     public static WorldOptions? Parse(string[] args)
     {
@@ -861,6 +864,7 @@ static class WorldFrame
         gpu.Shadow.SetTerrain(scene.Coarse, scene.CoarseSize);   // the Meitou shadows' terrain shadow beyond the range
         Console.WriteLine($"shadows   {gpu.Shadow.Settings.MapSize}² atlas, {gpu.Shadow.CascadeCount} cascades of {gpu.Shadow.Settings.TileSize}² ({(gpu.Shadow.Meitou ? "Meitou: a layer each" : "Faithful: tiles of one layer")}), range {gpu.Shadow.Settings.Range:0}");
         if (o.Crowd > 0 && scene.Database is not null) gpu.Characters = Characters.CrowdHarness.Create(context, install, scene, assets, o, interactive);
+        if (gpu.Characters is { } crowd) crowd.GeneratedLod = o.CharacterLod;
         gpu.DebugShadows = o.DebugShadows;
         step?.Invoke("gi");
         if (o.GiDebug > 0 || o.Gi)
@@ -955,7 +959,8 @@ static class WorldFrame
             () => gpu()?.Sky.MeitouStars ?? o.MeitouStars, v => { o.MeitouStars = v; if (gpu() is { } stars) stars.Sky.MeitouStars = v; },
             () => gpu()?.Sky.LitClouds ?? o.MeitouClouds, v => { o.MeitouClouds = v; if (gpu() is { } g) g.Sky.LitClouds = v; },
             () => gpu()?.Sky.CloudShadows ?? o.CloudShadows, v => { o.CloudShadows = v; if (gpu() is { } g) g.Sky.CloudShadows = v; },
-            () => gpu()?.Probes?.InteriorEnabled ?? o.InteriorGi, v => { o.InteriorGi = v; if (gpu()?.Probes is { } p) p.InteriorEnabled = v; });
+            () => gpu()?.Probes?.InteriorEnabled ?? o.InteriorGi, v => { o.InteriorGi = v; if (gpu()?.Probes is { } p) p.InteriorEnabled = v; },
+            () => gpu()?.Characters?.GeneratedLod ?? o.CharacterLod, v => { o.CharacterLod = v; if (gpu()?.Characters is { } c) c.GeneratedLod = v; });
 
     public static SettingsPanel CreateSettingsPanel(DebugOverlay ui, Gpu g, WorldRenderOptions r, Func<float>? getHour = null, Action<float>? setHour = null,
         Func<bool>? getVSync = null, Action<bool>? setVSync = null, IReadOnlyList<Enhancement>? switches = null,
@@ -1577,7 +1582,9 @@ static class WorldFrame
             if (render.Objects && gpu.Objects is { } o) { o.DrawDepth(worldToClip, lodEye, planes, render, gpu.Terrain, coarse); objects += o.DrawnInstances; (oi, oc) = (o.DrawnInstances, o.DrawCalls); }
             StageClock.Sub("objects");
             // Characters take the far cascades' floor in both shadow modes: their levels are Meitou's own, and every character is in every cascade that holds the crowd.
-            gpu.Characters?.DrawDepth(worldToClip, lodEye, planes, ShadowLod.ObjectLodFloor(ShadowLod.Applies(cascade.Index) ? (float)cascade.Texel : 0, render.TerrainPixelScale));
+            // In Meitou's coarse cascades a part under a texel across casts nothing (ShadowPass.MinCharacterCasterTexels).
+            gpu.Characters?.DrawDepth(worldToClip, lodEye, planes, ShadowLod.ObjectLodFloor(ShadowLod.Applies(cascade.Index) ? (float)cascade.Texel : 0, render.TerrainPixelScale),
+                ShadowPass.CharacterCasterCull ? coarse * ShadowPass.MinCharacterCasterTexels * 0.5f : 0);
             long t2 = Stopwatch.GetTimestamp();
             if (gpu.Foliage is { } f) { f.DrawDepth(worldToClip, lodEye, planes, render, gpu.Terrain, maxRange: shadow.EffectiveRange * 1.2f, minSize: shadow.MinFoliageCaster(cascade), texel: (float)cascade.Texel, coarse: coarse > 0); foliage += f.DrawnInstances; (fi, fc) = (f.DrawnInstances, f.DrawCalls); }
             StageClock.Phase(CascadeLabels[cascade.Index]);
