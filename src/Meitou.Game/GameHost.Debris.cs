@@ -13,11 +13,11 @@ namespace Meitou.Game;
 /// </summary>
 sealed partial class GameHost
 {
-    /// <summary>The nest bones' meshes (<c>data/items/nests</c>; only <c>bone1</c> has an item record).</summary>
+    /// <summary>The nest bones' meshes (<c>data/items/nests</c>; only <c>bone1</c> has an item record, whose material all of them take).</summary>
     static readonly string[] BoneMeshes = [.. Enumerable.Range(1, 14).Select(i => $"bone{i}.mesh")];
 
     const int BonesPerBurst = 12, MaxPieces = 400, BurstSplashes = 24;
-    const float Gravity = 98, BurstHeight = 10, Bounce = 0.35f, Grip = 0.6f, BurstReach = 60, BoneLength = 2.5f;
+    const float Gravity = 98, BurstHeight = 10, Bounce = 0.35f, Grip = 0.6f, BurstReach = 60, BoneScale = 0.12f;
 
     sealed class Piece
     {
@@ -61,9 +61,10 @@ sealed partial class GameHost
         for (int i = 0; i < meshes.Count; i++)
         {
             string mesh = meshes[i];
-            if (debris.Extent(mesh) is not { } size) continue;
-            // The nest bones are a beast's (up to 3.4 m long): each made a human bone's length, BoneLength.
-            float scale = i < limbs.Length ? 1 : BoneLength * (0.5f + bloodRandom.NextSingle()) / MathF.Max(size.X, MathF.Max(size.Y, size.Z));
+            bool limb = i < limbs.Length;
+            if (debris.Extent(mesh, limb ? null : BoneMeshes[0]) is not { } size) continue;
+            // The nest bones are a beast's (up to 3.5 m long): all shrunk alike by BoneScale (±15%), so a vertebra stays smaller than a thigh bone.
+            float scale = limb ? 1 : BoneScale * (0.85f + bloodRandom.NextSingle() * 0.3f);
             var extent = size * scale;
             var d = Vector2.Normalize(RandomDirection() + blow * 0.6f);
             float speed = 30 + bloodRandom.NextSingle() * 60;

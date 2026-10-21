@@ -23,7 +23,8 @@ hit bursts. No original behaviour; every rule here is an engine choice. Implemen
 - Blood (with the `Blood` setting on, terrain only, not above 20 units over it): a pool of size 1.5
   at the spot and 24 splashes (size 0.3–0.5) up to 60 units away, biased along the blow.
 - Pieces: the race's `severed limbs` items' meshes (`ground mesh`, else `mesh`) at their own size and
-  12 nest bones (`bone1..14.mesh`, beast-sized up to 3.4 m, scaled to 25–75 cm). Thrown from 10 units
+  12 nest bones (`bone1..14.mesh`, beast-sized 0.5–3.5 m, all scaled by 0.12 ±15% so they keep their relative sizes; textured with
+  `bone1`'s item material, **Verified** gamedata.base: the others have no record and all name only `StaticObject`). Thrown from 10 units
   up at 30–90 units/s outwards (biased along the blow) and 30–80 up, spinning; gravity 98 units/s²
   (taking 1 unit = 1 dm, [terrain.md](../formats/terrain.md)). On the ground they bounce (vertical 0.35, horizontal and spin 0.6), leave a small
   splash on the first contact, and settle on their thinnest side once slow. Above the terrain (an
