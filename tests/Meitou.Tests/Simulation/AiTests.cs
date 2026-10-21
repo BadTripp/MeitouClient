@@ -311,4 +311,33 @@ public class AiTests(ITestOutputHelper output)
         }
         finally { if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true); }
     }
+
+    [Fact]
+    public void A_dialogue_contract_and_change_AI_are_saved_and_loaded()
+    {
+        using var world = Town(1, out var data);
+        world.RunTicks(50);
+        var squad = world.Squads.All.First(s => s.Ai is not null);
+        world.Commands.Enqueue(new ChangeAi(squad.Id, "113-t") { Tick = world.Tick });
+        world.Commands.Enqueue(new StartContract(squad.Id, "115-t", 8) { Tick = world.Tick });
+        world.RunTicks(2);
+        double end = squad.Ai!.ContractEnd;
+        var save = Meitou.Simulation.Saving.SaveCapture.Capture(world, data, new Meitou.Simulation.Saving.SaveClock(1, 13, 0), null);
+        var record = save.Platoons.Single(p => p.Record.Strings.GetValueOrDefault("contractjob") is { Length: > 0 }).Record;
+        Assert.Equal(("115-t", "113-t"), (record.Strings["contractjob"], record.Strings["replacementAI"]));
+        Assert.Equal((float)end, record.Floats["jobhr"]);
+
+        string folder = Path.Combine(Path.GetTempPath(), "meitou-ai-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            save.Write(folder);
+            using var b = Town(1, out _, data, null);
+            Meitou.Simulation.Saving.SaveLoader.Load(b, Meitou.Data.Save.SaveGame.Load(folder), data);
+            b.RunTicks(50);
+            var board = Assert.Single(b.Squads.All, s => s.Ai?.Contract is not null).Ai!;
+            Assert.Equal(("115-t", "113-t"), (board.Contract!.Id, board.Replacement?.Id));
+            Assert.Equal((float)end, (float)board.ContractEnd);
+        }
+        finally { if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true); }
+    }
 }

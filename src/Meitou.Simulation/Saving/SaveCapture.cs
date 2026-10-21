@@ -422,6 +422,7 @@ public static partial class SaveCapture
             if (squad is not null && table.TryResolveNext(squad.Leader, out int leaderSlot)) platoon.Position = table.Previous[leaderSlot].Position;
             if (p is not null) platoon.Money = (int)Math.Clamp(squad?.Money ?? p.Money, int.MinValue, int.MaxValue);
             ShopSave.Write(platoon.Record, squad is not null ? squad.Shop : sp.Shop, world);
+            AiSave.Write(platoon.Record, squad is not null ? AiSave.Of(squad.Ai) ?? squad.SavedAi : sp.Ai);
             foreach (var m in sp.Members)
             {
                 var sc = platoon.Characters.FirstOrDefault(c => c.Handle.I == m.Slot);
@@ -489,7 +490,7 @@ public static partial class SaveCapture
             if (t.Instance.Length > 0 && !t.Handle.IsNull) townHands.TryAdd(t.Instance, t.Handle);
 
         SavePlatoon Write(int town, int factionIndex, string templateId, long money, bool roaming, TownBuilding? homeBuilding, string? package,
-            List<(CharacterCold Cold, Vector3 Position, float Yaw, CharacterId Id, bool Leader)> members, Trading.Shop? shop, Vector3 at = default)
+            List<(CharacterCold Cold, Vector3 Position, float Yaw, CharacterId Id, bool Leader)> members, Trading.Shop? shop, Vector3 at = default, AiSave? ai = null)
         {
             var faction = data.Factions[factionIndex];
             factions.TryGetValue(faction.Id, out var state);
@@ -516,6 +517,7 @@ public static partial class SaveCapture
                 || PopulationSystem.ResidentEntries(site.Town, siteFaction >= 0 ? data.Factions[siteFaction] : null).Any(e => e.Id == templateId));
             if (package is not null) record.Strings["currentPackage"] = package;
             ShopSave.Write(record, shop, world);
+            AiSave.Write(record, ai);
             // Its town and home building by handle, as the original names them (docs/formats/save.md "NPC platoons").
             if (townHands.TryGetValue(site.InstanceId, out var townHand)) townHand.Write(record, "hometown");
             if (homeBuilding is { } home && HomeHandle(game, home) is { } homeHand) homeHand.Write(record, "homebuilding");
@@ -545,7 +547,7 @@ public static partial class SaveCapture
             if (alive.Count == 0) continue;
             var leader = alive.Contains(squad.Leader) ? squad.Leader : alive[0];
             var members = alive.Select(id => (table.Cold(id.Slot)!, table.Previous[id.Slot].Position, table.Previous[id.Slot].Yaw, id, id == leader)).ToList();
-            var sp = Write(squad.Town, squad.Faction, squad.TemplateId, squad.Money, roamer is { Pinned: false }, squad.HomeBuilding, roamer?.Package ?? squad.Ai?.Current?.Id, members, squad.Shop);
+            var sp = Write(squad.Town, squad.Faction, squad.TemplateId, squad.Money, roamer is { Pinned: false }, squad.HomeBuilding, roamer?.Package ?? squad.Ai?.Current?.Id, members, squad.Shop, ai: AiSave.Of(squad.Ai) ?? squad.SavedAi);
             if (roamer is not null) written[roamer.Id] = sp;
         }
         // Squads stored since they left the world: a town's since its town unloaded, a roaming one (Meitou) since it first left.
@@ -553,7 +555,7 @@ public static partial class SaveCapture
         {
             if (p is not { State: PlatoonState.Unloaded, Stored: { Members.Count: > 0 } stored } || !Writable(p.Origin, p.Faction)) continue;
             var members = stored.Members.Select(m => (m.Cold, m.Position, m.Yaw, CharacterId.None, m.Leader)).ToList();
-            written[p.Id] = Write(p.Origin, p.Faction, p.TemplateId, p.Money, !stored.Pinned, stored.HomeBuilding, p.Package ?? stored.Package, members, stored.Shop);
+            written[p.Id] = Write(p.Origin, p.Faction, p.TemplateId, p.Money, !stored.Pinned, stored.HomeBuilding, p.Package ?? stored.Package, members, stored.Shop, ai: stored.Ai);
         }
         // A campaign's stand-ins that never had their characters (not a save's: those are in it already).
         foreach (var p in world.Platoons.All)

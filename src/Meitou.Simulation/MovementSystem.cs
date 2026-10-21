@@ -248,7 +248,8 @@ public sealed class MovementSystem(PathService paths) : ITickSystem, IDisposable
             if (task == CharacterTask.Follow)
             {
                 var squad = cold.SquadId >= 0 ? world.Squads.Find(cold.SquadId) : null;
-                var leader = squad?.Leader ?? CharacterId.None;
+                // A contract's follow goal follows its mission target (Ai.AiMind.FollowTarget) instead of the leader.
+                var leader = cold.Ai is { FollowTarget.IsNone: false } follows ? follows.FollowTarget : squad?.Leader ?? CharacterId.None;
                 if (leader.IsNone || leader.Slot == i || !table.IsAlive(leader))
                 {
                     n.Task = (byte)CharacterTask.Wander;

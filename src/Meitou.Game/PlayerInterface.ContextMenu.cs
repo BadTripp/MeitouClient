@@ -33,16 +33,12 @@ sealed partial class PlayerInterface
         bool down = target.Body is { } b && (b.Dead || b.Unconscious);
         var carriers = Selected().Where(c => c.Carrying == id).Select(c => c.Id).ToArray();
         if (carriers.Length > 0) verbs.Add(("Put Down", () => Say(new Meitou.Simulation.Carrying.PutDownOrder(carriers) { Tick = session.World.Tick })));
-        // Meitou stand-ins for the original's cage use and its bounty desk dialogue (docs/simulation.md "Arrest and jail"): carry the body to the nearest free cage; pay a prisoner's bail.
+        // Meitou stand-in for the original's cage use (docs/simulation.md "Arrest and jail"): carry the body to the nearest free cage.
         if (carriers.Length > 0) verbs.Add(("Put in Cage", () => Say(new Meitou.Simulation.Crime.PutInCageOrder(carriers) { Tick = session.World.Tick })));
-        if (target.Prison is { Bail: { } bail } && target.Body is not { Dead: true })
-            verbs.Add(($"Pay bail (c.{bail.ToString("N0", CultureInfo.InvariantCulture)})", () => Say(new Meitou.Simulation.Crime.PayBailOrder(id) { Tick = session.World.Tick })));
         if (!down && !target.IsPlayer)
         {
             if (session.World.CanTalk(id, selection[0])) verbs.Add(("Talk", () => Say(new Meitou.Simulation.Dialogue.TalkOrder(selection[0], id) { Tick = session.World.Tick })));
             if (target.IsTrader) verbs.Add(("Trade", () => Say(new Meitou.Simulation.Trading.OpenTrade(selection[0], id) { Tick = session.World.Tick })));
-            // Meitou's stand-in for a plastic surgeon's dialogue line (DA_CHARACTER_EDITOR, docs/characters.md "Plastic surgeons"): the editor on the first selected character.
-            if (target.SurgeryCost is { } cost) verbs.Add((cost > 0 ? $"Plastic Surgery (c.{cost.ToString("N0", CultureInfo.InvariantCulture)})" : "Plastic Surgery", () => AskSurgery(selection[0], target, cost)));
             verbs.Add(("Attack Target", () => Say(new Meitou.Simulation.Combat.AttackOrder(selection, id) { Tick = session.World.Tick })));
             // The original's "Stealth KO" (order 228), offered while a selected character sneaks; the chance is in the caption (the original shows it at the pointer).
             if (target.StealthKoChance is { } chance)

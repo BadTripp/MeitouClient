@@ -265,17 +265,6 @@ sealed partial class PlayerInterface
     }
 
 
-    /// <summary>
-    /// The surgeon verb: like the dialogue, it needs the patient beside the surgeon and more money than the price (DC_PLAYERMONEY &gt; cost); then the editor opens on the
-    /// patient in surgery mode. Payment happens when the editor is confirmed (<see cref="EditCharacter"/>).
-    /// </summary>
-    void AskSurgery(CharacterId patient, CharacterSnapshot surgeon, int cost)
-    {
-        if (session.CurrentSnapshot.Characters.FirstOrDefault(c => c.Id == patient) is not { } p) return;
-        if (Vector3.Distance(p.Position, surgeon.Position) > CharacterEditing.SurgeonReach) { Notice($"{p.Name} has to walk up to {surgeon.Name} first.", true); return; }
-        if (cost > 0 && session.World.Player.Money <= cost) { Notice($"Surgery costs c.{cost.ToString("N0", CultureInfo.InvariantCulture)}: not enough money.", true); return; }
-        OpenEditor(EditKind.Surgery, [patient], surgeon.Id);
-    }
     static int IndexOf(IReadOnlyList<EditorRaceGroup> groups, GameRecord race)
     {
         for (int i = 0; i < groups.Count; i++)

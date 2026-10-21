@@ -176,11 +176,17 @@ Implemented (`PopulationRoaming.cs`):
     same after save and load.
   - **Nests**: the pool starts at 0.7 × `nest resident population` (or the save's `pop2`); a load fills it to `floor(pop2)` members; every 2 s
     a loaded nest with room makes one squad (rolls keyed after the load's), unless a player character is within 1250, then it only weighs.
-    A roll that finds no entry (all weights 0 or none fits the free budget) with no squad of the nest left alive sets `ded` for good, `tod`,
+    An entry must fit the free budget, except while the pool is empty with more than 4 free (the Fog Deathyard's `Fog hive nest`, expected
+    size 1 + (12 + 24) / 2 = 19, against a budget of floor(0.7 × 25) = 17). A roll that finds no entry (all weights 0 or none fits the free budget) with no squad of the nest left alive sets `ded` for good, `tod`,
     and posts "<nest> has been wiped out" (engine choice: "intact" = someone alive); so does a pool spent below one member with no one alive. A squad that lost someone takes its living out of `pop2`
     when the nest unloads. Dead squads lying there still count against the template weights. **Observed** (headless): a swamp raptor nest
     (N 20, pool 14) refills an 8-duck squad after its two squads die; drained to 1 with all dead it is wiped out and saved with `ded`, `tod`,
     `pop2` 1.008, `popd2` 20.
+  - **Homeless squads** (`PopulationHomeless.cs`; [original rules](game/factions-squads-towns.md#off-screen-world)): every 2 s a squad whose
+    leader patrols (a PATROL goal outside a patrol-class package) walks to its patrol point (its home centre, homeless radius) and picks the
+    next within 500. A squad belongs to the sector it stands in: one that walks into an unloaded sector leaves the world, kept there with
+    `KeepWild` up to that sector's count, else dropped. The area tick refills the loaded sectors, all taken as one island (engine choice).
+    **Observed** (headless, Fog Islands, one zone loaded): a fogman squad walks a sector a few minutes; leaving, a fresh one is made.
 
 Implemented (`PopulationCampaigns.cs`; [original rules](game/factions-squads-towns.md#campaigns),
 [save](formats/save.md#war_savestate-type-9-faction-campaigns)). Almost all campaigns aim at player towns (outposts), so nothing rolls until
@@ -473,10 +479,15 @@ Arrests, the recognition meter and the marker are hashed only while set. What a 
   bounty with its faction reaches its class threshold spots it, at once while `RecentlyWanted` > 0 (250 game seconds after
   a booking or a witnessed crime; engine: the countdown), else after 45 s of being seen (engine: one meter per target,
   rate not decoded); only the nearest free police-like looker acts. MILITARY threshold: engine 2000 (original 4000 or 2000);
-  the police-like NPCs of the five towns `CrimeInstallTests` loads are MILITARY (**Observed**), so there a fine comes only from a booking.
-  A police-like NPC in its own town arrests an escaped prisoner (`CharacterCold.Escaped`) it sees. `AggroSystem` no longer
+  the police-like NPCs of the five towns `CrimeInstallTests` loads are MILITARY (**Observed**).
+  A police-like NPC in its own town acts on an escaped prisoner (`CharacterCold.Escaped`) it sees. `AggroSystem` no longer
   attacks wanted characters.
-- **Fine or arrest** (engine stands in for the dialogue): outside his town (engine: farther than 2 x his resident squad's
+- **Spotting talks** (`ArrestSystem.Talk`, the dialogue system, while its event lines are on): the looker fires event 44 (escapee: 45) at the target
+  (`DialogueSystem.FireEvent`, a bubble now) and the data decides ([economy 11.7](game/economy.md#117-arrest)): DA 29 arrests (`ArrestFromDialogue`,
+  below), "Small bounty" sends the leader to talk (DA 2) and its interrupt opens the fine window (DA 8 + 49 pay and clear; the rest DA 29), others
+  say nothing more. The target is then left alone for 60 game s (`SpotRetrySeconds`, engine), longer while the guard still talks or walks up; paying ends it.
+- **Fine or arrest** (engine fallback, only without dialogue events, e.g. headless tests; with them a booking witness is left to its witness
+  event unless it is already fighting, then it arrests at once): outside his town (engine: farther than 2 x his resident squad's
   home radius from its centre) the guard and his free squad mates attack. In it, 1..1049 is fined (`FineFor`; 300 up to 250
   is engine, the data's line being unreachable): he walks up
   (`Engaged`, so the AI leaves him alone), and within 40 takes the fine when the player's money is above it, erasing his
@@ -502,10 +513,11 @@ Arrests, the recognition meter and the marker are hashed only while set. What a 
   locked; an unserved sentence books a pending Escaping Prison and sets `Escaped`, as does any cage of a lawless owner).
   `Imprison`/`Release` clear `Escaped`.
 - **HUD**: `CharacterSnapshot.Prison`; the State line shows the status panel's prison text.
-- **Bail** (`PayBailOrder`, verb "Pay bail (c.N)" on a caged character; engine stands in for the bounty desk dialogue): offered
-  while the cage's owner is neither the player's faction nor lawless; price `BailFor` (11.5); paid when a free, awake player
-  character is within 500 of the cage and the money suffices (a zero bail frees at once): erases the jail's entry, `Release`
-  (no escape). Works for NPC prisoners too (only freed, not recruited).
+- **Bail** (DA 43, [economy 11.5](game/economy.md#115-bail-and-sentence); only the Shek bounty desk and the Inquisitor offer it): the conversation
+  closes and the window reopens as the bail list (engine stand-in for the trading window): "Pay Bounty", one choice "Name (c.N)" per prisoner of
+  `ArrestSystem.BailOffers` (cages within the speaker's town extent, as `InOwnTown`; player-faction or not hostile to the speaker; `BailFor` not
+  null: the cage's owner neither the player's faction nor lawless), `[Leave]`. A click pays (`PayBail(prisoner, payer)`): erases the jail's entry,
+  `Release` (no escape). NPC prisoners are only freed, not recruited. `PayBailOrder` (no UI) is the same bail paid by a player character within 500 of the cage.
 - **Put in Cage / claim** (`PutInCageOrder`, verb on a body a selected character carries; engine): the carrier walks to the
   best free cage within 1500 (`FindCage`; others' cages reserved), `LetGo` + `Imprison` as an arrest does, then `Claim`
   (11.4 caging tests; the slaver exception never applies): the cage owner's unclaimed entry, halved for a dead captive, is
@@ -882,8 +894,12 @@ to the next tick. A hostile target is attacked instead.
 
 - **Effects built**: locks, interrupts, `change relations`, trade, relations, the three attacks, take and give money, the surgeon's editor
   (paid by the line, `EditCharacter.Paid`), assign and clear bounty, lock this dialogue, DA 37 / 38 (a campaign's phase), `trigger campaign` (`PopulationSystem.TriggerFromDialogue`: the rules in
-  [campaigns](game/factions-squads-towns.md#campaigns); `world state` conditions read the live states), recruiting (DA 3 / 18, `DialogueSystem.Recruit`); the rest is
-  listed in [dialogue](game/dialogue.md#meitou-design).
+  [campaigns](game/factions-squads-towns.md#campaigns); `world state` conditions read the live states), recruiting (DA 3 / 18, `DialogueSystem.Recruit`), crowd
+  triggers, `give item`, `change AI` and `AI contract` (`Ai.ChangeAi`, `Ai.StartContract` with the target: `Blackboard.MissionTarget`, followed by goals aimed at the
+  squad mission through `AiMind.FollowTarget`; on its end the leader's `contract end talk passive`), DA 25 / 53 (`FixtureRegistry.TagEscaped` / `FreeSlave`) and DA 29
+  (`ArrestSystem.ArrestFromDialogue`), DA 43 (the bail list, [Arrest and jail](#arrest-and-jail)); the rest is listed in [dialogue](game/dialogue.md#meitou-design).
+- **Events from other systems**: `DialogueEvent` (deferred to the next tick) fires an event at an NPC as bubbles, or a given DIALOGUE (the contract end talk);
+  first aid, shackles and the release rounds send them. The police's spotting fires 44 / 45 at once (`FireEvent`, which says whether a line was said).
 - **Recruiting** ([facts](game/dialogue.md#recruiting)): at the `max faction size` cap the line "It looks like your squad is a little full." is
   posted and the conversation ends; otherwise the speaker leaves its squad (its leader passes to the first member left) and joins the player's
   active squad (the first selected player character's, else `Player.Squad`, else the talker's), or a new "blank squad" squad when that one has
@@ -924,6 +940,10 @@ whose first step is neither the goal nor a step the engine carries out (`AiSyste
 - States (`PlanContext.Holds`): location, distance, bed, sitting, home (within 20 of the home), home town, town, weapon drawn and
   carrying are evaluated; moving, getting up, arms, power, buildings, doors, gates, accessibility, machine slots and readiness are
   held true (movement and the lock-up round deal with doors); every other state is false.
+
+Combat stances (`AiStance`, the most aggressive combat goal in its hours; none at all attacks on sight): PROTECT_OWN_SQUAD joins only
+fights of its own squad, against a mate's target or a mate's attacker (as the original's finder, [ai-tasks](game/ai-tasks.md#combat-goals));
+the other PROTECT goals still join any fighting enemy (engine).
 
 Scoring follows the original (`TaskProfiles`: desire, commitment, crowding per goal type); a desire
 the original computes in a function of its own counts as 1. Town goals ([ai-tasks.md](game/ai-tasks.md#town-goals)):
@@ -1031,4 +1051,3 @@ Original-game unknowns are maintained in each linked subsystem reference; do not
 - `CharacterHot.Animation`/`AnimationTime` (the old movement layers) and the name length are still hashed; removing them moves every hash.
 - `HoursPerTick` is a constant of its own, not derived from `WorldSettings.TickSeconds`.
 - Navmesh: the cache key does not see a changed collision file; a running build is not stopped on unload (it finishes into the cache).
-- Long routes: the coarse grid knows the level data's buildings, not the player's (it is built once).

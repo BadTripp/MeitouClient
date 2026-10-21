@@ -65,6 +65,10 @@ public sealed class SavedPlatoon
     public int WildSite { get; set; } = -1;
     /// <summary>Its squad's shop when its characters last left the world (<see cref="ShopSave"/>); null: none, or never in the world (the save's is read when it is made).</summary>
     public Trading.Shop? Shop { get; set; }
+    /// <summary>Its contract and <c>change AI</c>: the save's until its squad first leaves the world, then the squad's.</summary>
+    public AiSave? Ai { get => aiSet ? ai : AiSave.Read(Source.Record); set { ai = value; aiSet = true; } }
+    AiSave? ai;
+    bool aiSet;
 }
 
 /// <summary>
@@ -368,6 +372,7 @@ internal static class SavedCharacters
         }
         // Its shop as it was when it left the world, else the save's (a fresh fill when the save has none).
         squad.Shop = sp.Shop ?? ShopSave.Read(world, squad, sp.Source.Record, data);
+        squad.SavedAi = sp.Ai;
         world.Squads.Add(squad);
         sp.Touched = true;
         context.Log($"{sp.Name} ({name}, {(sp.Pinned ? "town" : sp.Wild is { } wild ? (wild == WildKind.Nest ? "nest" : "homeless") : "roaming")}): {squad.Members.Count} saved character(s) at {lead.X:0}, {lead.Z:0}");
@@ -378,7 +383,7 @@ internal static class SavedCharacters
     public static void Store(World world, SavedPlatoon sp, Vector2 anchor)
     {
         var table = world.Characters;
-        if (sp.PlatoonId >= 0 && world.Platoons.Find(sp.PlatoonId) is { } platoon && world.Squads.Find(platoon.SquadId) is { } squad) sp.Shop = squad.Shop;
+        if (sp.PlatoonId >= 0 && world.Platoons.Find(sp.PlatoonId) is { } platoon && world.Squads.Find(platoon.SquadId) is { } squad) { sp.Shop = squad.Shop; sp.Ai = AiSave.Of(squad.Ai) ?? squad.SavedAi; }
         foreach (var m in sp.Members)
         {
             if (m.Live.IsNone) continue;

@@ -32,8 +32,14 @@ public sealed class AiSettings
     public float RouteArrive { get; init; } = 40;
 }
 
-/// <summary>Starts a contract package on a squad for some game hours (docs/game/ai.md "Dialogue and AI": dialogue's <c>AI contract</c>; the dialogue itself is not built).</summary>
-public sealed record StartContract(int SquadId, string PackageId, float Hours) : SimCommand;
+/// <summary>
+/// Starts a contract package on a squad for some game hours, aimed at <see cref="Target"/> (docs/game/ai.md "Dialogue and AI": dialogue's <c>AI contract</c>, the target the
+/// conversation's partner).
+/// </summary>
+public sealed record StartContract(int SquadId, string PackageId, float Hours, CharacterId? Target = null) : SimCommand;
+
+/// <summary>Replaces a squad's packages with one (dialogue's <c>change AI</c>).</summary>
+public sealed record ChangeAi(int SquadId, string PackageId) : SimCommand;
 
 /// <summary>
 /// The AI (docs/simulation.md "AI"; the original's in docs/game/ai.md). Squads whose template lists <c>AI packages</c> get a <see cref="Blackboard"/> that picks
@@ -161,7 +167,7 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
             {
                 if (g.Task.Priority != tier || !g.InWindow(hour)) return;
                 var profile = TaskProfiles.Of(g.Task.Type);
-                float desire = Desire(world, TaskBehaviours.Of(g.Task.Type), g.Task.Type, profile, squad, board, mind, id);
+                float desire = Desire(world, TaskBehaviours.Of(g.Task.Type), g.Task.Type, profile, squad, board, mind, id, g.Task.Target);
                 if (desire <= 0) return;
                 int crowd = board.Crowd.GetValueOrDefault(g.Task.Type) - (mind.Goal?.Task.Type == g.Task.Type ? 1 : 0);
                 float score = desire * g.Weight * (crowd > 0 ? MathF.Pow(profile.Crowd, crowd) : 1);
@@ -196,7 +202,7 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
     /// finder found (docs/game/ai-tasks.md "Town goals", Observed: 0 when it found nothing). Going home is 0.5 while away from the home town and 0 in it
     /// (docs/game/perception.md 7.2, Observed); a goal the engine cannot act out is 0.
     /// </summary>
-    float Desire(World world, AiBehaviour behaviour, TaskType type, TaskProfile profile, Squad squad, Blackboard board, AiMind mind, CharacterId self)
+    float Desire(World world, AiBehaviour behaviour, TaskType type, TaskProfile profile, Squad squad, Blackboard board, AiMind mind, CharacterId self, TaskTargetType targeting)
     {
         if (behaviour == AiBehaviour.None) return 0;
         float desire = profile.Desire switch
@@ -207,6 +213,8 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
         };
         return desire * behaviour switch
         {
+            // A goal aimed at the squad's mission follows the contract's target (a bodyguard its employer), wanted only while there is one alive.
+            AiBehaviour.Follow when targeting == TaskTargetType.SquadMission => board.MissionTarget.IsNone || board.MissionTarget == self || !world.Characters.IsAlive(board.MissionTarget) ? 0 : 1,
             AiBehaviour.Follow => squad.Leader.IsNone || squad.Leader == self || !world.Characters.IsAlive(squad.Leader) ? 0 : 1,
             AiBehaviour.GoHome => AtHomeTown(world, squad, board, self) ? 0 : 0.5f,
             // A turret is only wanted by a member its squad gave one (the nearest free one in <see cref="ClaimTurrets"/>).
@@ -369,6 +377,7 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
         mind.Version = board.Version;
         mind.WanderRadius = 0;
         mind.SitClip = null;   // set again below while it stays on its chair
+        mind.FollowTarget = CharacterId.None;   // set again below for a follow goal aimed at the squad's mission
         ref var n = ref table.Next[slot];
         bool leader = mind.Squad.Leader == table.IdOf(slot);
         // Steps of the plan before the goal's own act-out: getting out of bed, sheathing (one think each); the walk and the rest are the goal's.
@@ -415,6 +424,7 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
                 Become(table, slot, CharacterTask.Wander);
                 break;
             case AiBehaviour.Follow:
+                mind.FollowTarget = goal.Task.Target == TaskTargetType.SquadMission ? board.MissionTarget : CharacterId.None;
                 Become(table, slot, CharacterTask.Follow);
                 break;
             case AiBehaviour.Patrol:
@@ -644,14 +654,16 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
     {
         foreach (var command in commands)
         {
-            if (command is not StartContract c || world.Squads.Find(c.SquadId) is not { } squad || data.Ai.Package(c.PackageId) is not { } package) continue;
+            var (squadId, packageId) = command switch { StartContract s => (s.SquadId, s.PackageId), ChangeAi a => (a.SquadId, a.PackageId), _ => (-1, "") };
+            if (world.Squads.Find(squadId) is not { } squad || data.Ai.Package(packageId) is not { } package) continue;
             if (squad.Ai is null)
             {
                 if (IsPlayers(world, squad)) continue;
                 Attach(world, squad);
             }
             rules.Bind(this, world, squad);
-            squad.Ai!.StartContract(package, world.GameHours, c.Hours, rules);
+            if (command is StartContract c) squad.Ai!.StartContract(package, world.GameHours, c.Hours, rules, c.Target);
+            else squad.Ai!.Replace(package, rules);
         }
     }
 
@@ -675,6 +687,9 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
             board.Intact = IsIntact(world, squad, board);
             rules.Bind(this, world, squad);
             board.Update(rules, world.GameHours);
+            // A contract that ended: its leader says the package's contract end talk to the employer (event 30, FUN_14026a110).
+            if (board.TakeEnded() is { Package.ContractEndTalk: { } talk, Target: var employer } && !squad.Leader.IsNone)
+                world.Defer(new Dialogue.DialogueEvent(squad.Leader, employer, Dialogue.DialogueSystem.ContractJobEnded, talk) { Tick = world.Tick + 1 });
             AdvanceRoute(world, squad, board);
             board.Crowd.Clear();
             for (int k = 0; k < squad.Members.Count; k++)
@@ -804,6 +819,12 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
             Town = squad.Town, Size = squad.Members.Count, OwnHome = home, Home = home,
             NextPatrol = world.GameHours + Rng.Float(roll) * Settings.FirstPatrolHours,
         };
+        if (squad.SavedAi is { } saved)
+        {
+            rules.Bind(this, world, squad);
+            saved.Apply(squad.Ai, data.Ai, rules);
+            squad.SavedAi = null;
+        }
     }
 
     /// <summary>The AI runs a squad that is not the player's, not a roaming platoon's active half (a town's own saved squad, pinned, is run like the town's), and whose template lists AI packages.</summary>

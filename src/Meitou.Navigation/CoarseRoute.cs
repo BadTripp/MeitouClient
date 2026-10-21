@@ -6,7 +6,7 @@ namespace Meitou.Navigation;
 /// <summary>
 /// Long trips across zones whose navmesh is not loaded (a move order on the map): A* over a coarse grid of the whole world built from the terrain
 /// alone. A step between two cells is barred where the terrain between them is steeper than <see cref="MaxSlopeDegrees"/>; cells under the water
-/// cost the agent's water factor. A step that crosses a building's footprint (the level data's walls and buildings, not the player's) costs
+/// cost the agent's water factor. A step that crosses a building's footprint (the level data's walls and buildings, and the player's: <see cref="SetPlayerObstacles"/>) costs
 /// <see cref="BuildingCost"/> times as much, so routes go round towns and walls where open ground allows and still through them where not (a coarse cell
 /// is wider than a gate). Foliage is not in it: the navmesh path near the walker refines the route as its zones load (<see cref="NavmeshWalkability"/>).
 /// Engine choice, not the original's (which routes over its pre-built navmesh tiles, docs/game/pathfinding.md).
@@ -25,8 +25,8 @@ public sealed class CoarseRoute
     public const float HeuristicWeight = 1.2f;
     /// <summary>Cells expanded at most per search.</summary>
     public const int MaxExpanded = 3_000_000;
-    /// <summary>The cost factor of a step across a building's footprint (engine choice: a detour of a few cells round a wall is cheaper).</summary>
-    public const float BuildingCost = 8;
+    /// <summary>The cost factor of a step across a building's footprint (engine choice: a 5.5k-unit wall is walked round, not crossed; finite, so a walled town is still reached).</summary>
+    public const float BuildingCost = 40;
 
     // Direction k: (dx, dz). Bits 0..7 of a cell: the step in direction k is barred. Bit 8: under the water.
     static readonly (int Dx, int Dz)[] Directions = [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)];
@@ -36,8 +36,13 @@ public sealed class CoarseRoute
     Func<Func<float, float, float>>? slopeTerrain;
     Func<IReadOnlyList<Vector2[]>>? obstacles;
     readonly Lazy<ushort[]> cells;
-    // Bit k of a cell: the step in direction k crosses a building's footprint (filled with the grid).
+    // Bit k of a cell: the step in direction k crosses a building's footprint (filled with the grid). The player's buildings have their own layer,
+    // replaced whole when they change (empty: none).
     byte[] crossings = [];
+    volatile byte[] playerCrossings = [];
+
+    /// <summary>Sets the player's buildings (footprints as for the constructor's obstacles), replacing the last set; the next search sees them.</summary>
+    public void SetPlayerObstacles(IReadOnlyList<Vector2[]> hulls) => playerCrossings = hulls.Count == 0 ? [] : Crossings(hulls);
     readonly object searchLock = new();
     float[]? g;
     int[]? parent, stamp;
@@ -111,8 +116,8 @@ public sealed class CoarseRoute
             var min = new Vector2(float.MaxValue);
             var max = new Vector2(float.MinValue);
             foreach (var p in hull) { min = Vector2.Min(min, p); max = Vector2.Max(max, p); }
-            // Every step with an end within a cell of the hull's box (a step reaches one cell out).
-            int x0 = Math.Max(0, CellOf(min.X) - 1), x1 = CellOf(max.X), z0 = Math.Max(0, CellOf(min.Y) - 1), z1 = CellOf(max.Y);
+            // Every step with an end within a cell of the hull's box (a step reaches one cell out, the (-1, 1) one from the column to the right).
+            int x0 = Math.Max(0, CellOf(min.X) - 1), x1 = Math.Min(Side - 1, CellOf(max.X) + 1), z0 = Math.Max(0, CellOf(min.Y) - 1), z1 = CellOf(max.Y);
             for (int z = z0; z <= z1; z++)
                 for (int x = x0; x <= x1; x++)
                     for (int k = 0; k < 4; k++)
@@ -127,12 +132,26 @@ public sealed class CoarseRoute
         return result;
     }
 
+    // The level data's crossings with the player's layer on top (a copy only while the player has buildings), cached per pair of arrays.
+    sealed record Layers(byte[] Static, byte[] Player, byte[] Both);
+    volatile Layers? combined;
+    byte[] Combined(byte[] level, byte[] player)
+    {
+        if (player.Length == 0) return level;
+        if (combined is { } c && ReferenceEquals(c.Static, level) && ReferenceEquals(c.Player, player)) return c.Both;
+        var both = level.Length == 0 ? new byte[Side * Side] : (byte[])level.Clone();
+        for (int i = 0; i < both.Length; i++) both[i] |= player[i];
+        combined = new Layers(level, player, both);
+        return both;
+    }
+
     /// <summary>Whether the segment a-b meets the convex polygon (either winding).</summary>
     static bool Meets(Vector2 a, Vector2 b, Vector2[] hull)
     {
         // Clip the segment's parameter range against each edge's half-plane.
         float area = 0;
-        for (int i = 0; i < hull.Length; i++) area += Cross(hull[i], hull[(i + 1) % hull.Length]);
+        // Relative to a vertex: in world units the products are ~1e8 and the sum cancels in floats.
+        for (int i = 1; i + 1 < hull.Length; i++) area += Cross(hull[i] - hull[0], hull[i + 1] - hull[0]);
         float sign = area >= 0 ? 1 : -1;
         float t0 = 0, t1 = 1;
         var d = b - a;
@@ -181,7 +200,7 @@ public sealed class CoarseRoute
     List<Vector3> Find(Vector3 from, Vector3 to, float waterFactor, bool slopes)
     {
         var map = cells.Value;
-        var crossing = crossings;
+        var crossing = Combined(crossings, playerCrossings);
         int sx = CellOf(from.X), sz = CellOf(from.Z), gx = CellOf(to.X), gz = CellOf(to.Z);
         int start = sz * Side + sx, goal = gz * Side + gx;
         float waterCost = MathF.Max(1, waterFactor);

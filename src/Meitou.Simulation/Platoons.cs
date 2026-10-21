@@ -93,6 +93,8 @@ public sealed class StoredSquad
     public long NextHomeFillTick { get; set; }
     /// <summary>The AI package it ran (saved as <c>currentPackage</c>; null: none).</summary>
     public string? Package { get; set; }
+    /// <summary>Its contract and <c>change AI</c> (<see cref="Saving.AiSave"/>; null: none).</summary>
+    public Saving.AiSave? Ai { get; set; }
     /// <summary>The platoon position the members' places belong to (a stand-in that travelled since takes them along), and the tick they were stored at.</summary>
     public Vector2 Anchor { get; set; }
     public long StoredTick { get; set; }

@@ -67,8 +67,6 @@ public sealed record CharacterSnapshot(CharacterId Id, CharacterAppearance? Appe
     public bool IsPlayer { get; init; }
     /// <summary>A member of a squad with a shop (right click trades).</summary>
     public bool IsTrader { get; init; }
-    /// <summary>What this NPC's plastic surgery costs (its dialogue's character editor line, <see cref="Meitou.Data.Characters.SurgeonDialogues"/>); null: not a surgeon.</summary>
-    public int? SurgeryCost { get; init; }
     public bool Selected { get; init; }
     /// <summary>Another faction's character the HUD shows (<see cref="InspectCommand"/>): it carries the same HUD details as a selected one but is not selected.</summary>
     public bool Inspected { get; init; }
@@ -151,9 +149,9 @@ public sealed record CharacterSnapshot(CharacterId Id, CharacterAppearance? Appe
 
 /// <summary>
 /// A prisoner's cage and sentence (docs/game/economy.md 11.5): <see cref="Locked"/> the cage is effectively locked; <see cref="Sentence"/> its length in game hours (0: none, so it waits
-/// to be released), <see cref="HoursLeft"/> what remains of it; <see cref="Bail"/> the bail offered for it (<see cref="Crime.ArrestSystem.BailFor"/>; null: none).
+/// to be released), <see cref="HoursLeft"/> what remains of it.
 /// </summary>
-public readonly record struct PrisonView(bool Locked, float Sentence, double HoursLeft, int? Bail = null);
+public readonly record struct PrisonView(bool Locked, float Sentence, double HoursLeft);
 
 /// <summary>A turret building being manned (<see cref="CharacterSnapshot.Turret"/>): its <see cref="Meitou.Data.World.TownBuilding"/> key and BUILDING record, where it stands and faces (0 along +Z, turning towards +X) and its GUN_DATA record.</summary>
 public sealed record MannedTurret(string Key, string BuildingId, Vector3 Position, float Yaw, string GunId);

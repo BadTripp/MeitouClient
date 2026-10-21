@@ -142,8 +142,9 @@ heights snap to walkable collision (`NavSurfaces`, also its edge within `EdgeRea
 ground 22..28 under the Storm House floor, Observed, showed through furniture holes and walkers fell to it); with no layer in range, a
 polygon within `EdgeTolerance` counts. A character already off every layer near its height still steps down.
 **Long routes** (engine choice): goals in unloaded zones use `CoarseRoute` (192-unit terrain grid, slope and
-water costs; a step whose centre line crosses a level-data building's footprint hull costs `BuildingCost` 8×, so routes go round
-walls and towns where open ground allows; IGNORE `path mode`, gateways, destroyed buildings and WALKABLE ones that are features or
+water costs; a step whose centre line crosses a building's footprint hull costs `BuildingCost` 40×, so routes go round
+walls and towns where open ground allows (a 5.5k-unit wall is walked round; 8× crossed it); the player's buildings are a second layer,
+redrawn on the pool when one is added or removed; IGNORE `path mode`, gateways, destroyed buildings and WALKABLE ones that are features or
 under the agent height, i.e. bridges, walkboards, pontoons, platforms, are left out; WALKABLE covers walls and houses too, **Verified**
 against the placed records); the navmesh part ends inside loaded zones, the rest is provisional and
 re-asked; its zones within `Lookahead` load early. A goal in a loaded zone with no navmesh path is a long route too when its zone is

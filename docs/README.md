@@ -15,6 +15,7 @@ diaries, asset dumps or decompiled output. Current choices: [DECISIONS](../DECIS
 - [characters](characters.md)
 - [impostors](impostors.md)
 - [launcher](launcher.md): game release installer, mod list and presets
+- [macos-port](macos-port.md): running on MoltenVK, its constraints and fixes
 - [meitou-ui](meitou-ui.md): UI kit for the Meitou UI mode
 - [native-ui](native-ui.md)
 - [render-clouds](render-clouds.md)
