@@ -128,6 +128,45 @@ public sealed partial class DialogueSystem
         }
     }
 
+    // The characters that were down at the last look (the get-up events); hashed.
+    readonly SortedSet<CharacterId> down = new(Comparer<CharacterId>.Create(CompareIds));
+
+    /// <summary>EV_GET_UP_PEACE, EV_GET_UP_FIGHT.</summary>
+    const int GetUpPeace = 23, GetUpFight = 24;
+
+    /// <summary>
+    /// Getting up (<c>Task_GetUp</c>, <c>FUN_14033ca10</c>): a character that was down at the last look and is awake now fires event 24 with no target when enemies are about,
+    /// else 23. The original counts enemies on the character (its counters are not decoded): engine reading, fighting or a hostile awake character within sight. Its
+    /// event 25 branch (an unnecessary fight) is not built.
+    /// </summary>
+    void SeeGettingUp(World world)
+    {
+        var table = world.Characters;
+        for (int i = 0; i < table.HighWater; i++)
+        {
+            if (!table.Next[i].Alive || table.Cold(i) is not { Medical: { } medical } c) continue;
+            var id = table.IdOf(i);
+            if (medical.Dead) { down.Remove(id); continue; }
+            if (medical.Incapacitated) { down.Add(id); continue; }
+            if (!down.Remove(id)) continue;
+            Fire(world, id, CharacterId.None, c.InCombat || EnemyNear(world, i, c) ? GetUpFight : GetUpPeace);
+        }
+        down.RemoveWhere(id => !table.TryResolveNext(id, out _));
+    }
+
+    bool EnemyNear(World world, int slot, CharacterCold c)
+    {
+        var table = world.Characters;
+        if (!data.Relations.Contains(c.Faction)) return false;
+        float r = AggroSystem.RangeOf(c, AggroSystem.OutdoorSight);
+        for (int i = 0; i < table.HighWater; i++)
+        {
+            if (i == slot || !table.Next[i].Alive || table.Cold(i) is not { Medical.Incapacitated: false } o || !data.Relations.Contains(o.Faction)) continue;
+            if (data.Relations.IsHostile(c.Faction, o.Faction) && Vector3.DistanceSquared(table.Next[i].Position, table.Next[slot].Position) <= r * r) return true;
+        }
+        return false;
+    }
+
     bool Recent(World world, int squad, CharacterId target) => ambientAt.TryGetValue((squad, target), out double at) && world.GameHours - at < Settings.AmbientRepeatHours;
 
     /// <summary>Whether talking to <paramref name="npc"/> opens a pending <c>interrupt</c> dialogue (a campaign's negotiation).</summary>

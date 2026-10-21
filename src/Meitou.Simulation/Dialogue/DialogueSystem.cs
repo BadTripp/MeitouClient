@@ -153,7 +153,8 @@ public sealed partial class DialogueSystem : ITickSystem, IStateHashed, IDialogu
     {
         ExpireSpeech(world);
         if (bubbles.Count > 0) StepBubbles(world);
-        if (Settings.AmbientEvents && world.Tick % Settings.AmbientEveryTicks == 0) SeeOthers(world);
+        if (Settings.AmbientEvents && world.Tick % Settings.AmbientEveryTicks == 0) { SeeOthers(world); SeeGettingUp(world); }
+        if (approaches.Count > 0) StepApproaches(world);
         if (!talker.IsNone && open is null)
         {
             var table = world.Characters;
@@ -212,7 +213,7 @@ public sealed partial class DialogueSystem : ITickSystem, IStateHashed, IDialogu
     }
 
     /// <summary>Fires <paramref name="ev"/> at <paramref name="npc"/> with <paramref name="player"/> as its target and opens the conversation (docs/game/dialogue.md "Player conversation").</summary>
-    void Start(World world, CharacterId npc, CharacterId player, int ev)
+    void Start(World world, CharacterId npc, CharacterId player, int ev, bool quiet = false)
     {
         var table = world.Characters;
         if (!table.TryResolveNext(npc, out int n) || table.Cold(n) is not { } nc) return;
@@ -221,7 +222,7 @@ public sealed partial class DialogueSystem : ITickSystem, IStateHashed, IDialogu
         var picked = Pick(world, c, roots);
         if (picked is not { } p)
         {
-            world.Post($"{nc.Name} has nothing to say.");
+            if (!quiet) world.Post($"{nc.Name} has nothing to say.");
             return;
         }
         open = c;
@@ -369,7 +370,7 @@ public sealed partial class DialogueSystem : ITickSystem, IStateHashed, IDialogu
 
     public void Hash(ref StateHasher hasher)
     {
-        if (lastUse.Count == 0 && permanent.Count == 0 && counters.Count == 0 && met.Count == 0 && interrupts.Count == 0 && bubbles.Count == 0 && ambientAt.Count == 0 && open is null && talker.IsNone) return;
+        if (lastUse.Count == 0 && permanent.Count == 0 && counters.Count == 0 && met.Count == 0 && interrupts.Count == 0 && bubbles.Count == 0 && ambientAt.Count == 0 && approaches.Count == 0 && down.Count == 0 && open is null && talker.IsNone) return;
         hasher.Add(0x44696167);
         hasher.Add(rolls);
         foreach (var (line, hours) in lastUse) { hasher.Add(Rng.StableHash(line)); hasher.Add(hours); }
@@ -379,6 +380,8 @@ public sealed partial class DialogueSystem : ITickSystem, IStateHashed, IDialogu
         foreach (var (who, line) in interrupts) { hasher.Add(who); hasher.Add(Rng.StableHash(line)); }
         foreach (var b in bubbles) { hasher.Add(b.C.Npc); hasher.Add(Rng.StableHash(b.Line.StringId)); hasher.Add(b.DueTick); }
         foreach (var ((squad, whom), hours) in ambientAt) { hasher.Add(squad); hasher.Add(whom); hasher.Add(hours); }
+        HashApproaches(ref hasher);
+        foreach (var id in down) hasher.Add(id);
         hasher.Add(talker);
         hasher.Add(target);
         if (open is { } c)

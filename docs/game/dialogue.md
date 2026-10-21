@@ -142,11 +142,18 @@ is pending. Every other event starts an [ambient conversation](#ambient-conversa
 Sources (call sites): 1 the player's Talk order (task 12, after reaching the NPC; also tasks 102/159/161 when the package's event is
 0); 3, 27, 34, 59, 66, 67 perception (`FUN_140859680`); 10 `FUN_1408d0d90`; 11 torture; 15 `CharacterAnimal::vfunc_62`; 18-21 first
 aid (start: the medic 18 at the patient, the patient 19 back unless down; finish: 20 / 21 likewise; none when treating oneself);
-22 empty kit (`Task_FirstAidRig`, the medic at the patient); 23-25 getting up (`Task_GetUp`, no target: 24, or 23 when a count on the
-character is below 1); 26 harassment; 30 contract end (target = employer); 32/33 AI looting; 37 recapture; 47 almost
+22 empty kit (`Task_FirstAidRig`, the medic at the patient); 23-25 getting up (`Task_GetUp`, no target: 24, or 23 when the character's two
+enemy counters (+0x94, +0x98) sum below 1; a variant `FUN_1408c6780` fires 25 on further counters, **Unknown** which); 26 harassment; 30 contract end (target = employer); 32/33 AI looting; 37 recapture; 47 almost
 woke; 49 entering a town (no target); 50 squad broken; 51 slave bought; 52 eating a prisoner; 53 worship; 60 giving up a chase
 (move, follow, attack, talk tasks); 61-63 acid; 66 also from DA 56; 68 illegal player building; 73 town taken over; others from
-lock picking, prison and witness code with a variable event.
+lock and prison code: 13 from `Task_PickLock`, `Task_CutShackles` and `Task_BruteForceShackles` (the freed character at the
+worker, when they differ); 31 `Contract_HiredAlly::vfunc_8` (betrayal); 36 the witness function and perception; 44 `FUN_140856f00`;
+70 / 71 losing a leg (limb slots 2, 3) / an arm (`FUN_14064edc0`, no target).
+
+**Witnesses** (`FUN_140854d10`, **Observed**): a witness reacting to a crime fires an event at the criminal by the crime code
+(economy.md 11.2): Burglary 2 and Terrorism 7 → 43; Theft 3, Looting 10, Fencing 13 → 42, or 8 when the victim is in the witness's
+platoon; Trespassing 11 → 17; Crop theft 14 → 57; Enslaving 1, Kidnapping 15 → 58; Uniform theft 16 → 34; the rest 41. Each case has
+further tests that return without firing (partly read).
 
 ### Choosing a line
 
@@ -236,7 +243,8 @@ stored, the squad blackboard notified for player conversations.
 
 **AI tasks 102/159/161** (`Task_TalktoPlayer`): fire the AI package's event (0 means 1) at the target; event 9 repeats every update
 (17 while the target is in my building); gives up after 25 game minutes unreachable with event 60; done when the Dialogue is free.
-The `isDialogDelivered` evaluator (world-state ids 109/110, `FUN_140610250`) is **Unknown**.
+DA 2 gives the squad leader task 102 with event 1 (`+0x264`) for a player-faction target. **Verified** (probe, 124 AI_TASK records):
+no base-data task uses the enums 102, 159 or 161. The `isDialogDelivered` evaluator (world-state ids 109/110, `FUN_140610250`) is **Unknown**.
 
 ### Tokens
 
@@ -382,8 +390,8 @@ squad simply takes the speaker in, unless a target flag at +0x1d0 is set):
 | 23 MAKE_TARGET_RUN_FASTER | the target runs |
 | 25 TAG_ESCAPED_SLAVE | the target's slave state 2, its AI reset (9 uses) |
 | 53 REMOVE_SLAVE_STATUS | a target in shackles or slave state: "Free!" floated in green over it and `Character_Unlock_Success`; slave state 0, AI reset, worn shackles unlocked (2 uses) |
-| 24 GIVE_TARGET_MY_SLAVES | the characters of a list on the speaker's town join the target's squad (5 uses) |
-| 47 SURRENDER_NON_HUMANS | members of the target's faction within 100 of the speaker that fail a race test (`FUN_14042ecd0` against a list of the speaker's) are handed to the speaker (`FUN_14032e590`) and remembered by its squad; the tests are only partly read (8 uses, Holy Nation) |
+| 24 GIVE_TARGET_MY_SLAVES | the characters on the speaker platoon's slave list are let out of their cages (if imprisoned) and join the target's platoon (`FUN_14032e430`) (5 uses) |
+| 47 SURRENDER_NON_HUMANS | members of the target's faction within 100 of the speaker whose race is not the speaker's (`FUN_14042ecd0`: the race or one of its sub-races, race +0x40 / +0x120) become slaves (`FUN_14032e590`: slave state 1, the owner handle stored) and remembered by its squad; the tests are only partly read (8 uses, Holy Nation) |
 | 40 ENSLAVE_TARGETS_CARRIED_PERSON | slavery ([carry-loot](carry-loot.md)) |
 | 28 SEPARATE_TO_MY_OWN_SQUAD | the speaker (or a player-speaker's target) leaves for a new squad |
 | 32 ASSIGN_BOUNTY | bounty += val0 for the speaker's faction, or books a pending crime |
@@ -423,4 +431,4 @@ lists, 58's field; the speech timer's unit.
 
 As built: [simulation](../simulation.md#dialogue). Speech bubbles (`DialogueSystem.Ambient`, `PlayerInterface.Speech`): ambient lines are said as bubbles over the speaker's head, 2 + 0.12 x length seconds apart, the chain passing between speakers as in the original (the target's lines said by the target, interjectors by interjectors; a non-monologue root stops after one line). Started by the campaign announcement (event 2), crowd triggers (event 74), a contract's end talk (event 30), `DialogueEvent` commands from other systems, and a sight stand-in (`DialogueSettings.AmbientEvents`, on in the game, which also gates the commands' event lines): every 30 ticks an awake, free NPC within 600 units of a player character says event 66 (its faction hostile to the player's), 67 (ally) or 3 (else) to that player character, or, when it reacted to it in the last half game hour, event 3 to the nearest NPC of another squad within 260 (DC 16's talking range); at most 2 per look, once per squad and target per half game hour (engine choices: the original's perception tests are only partly read, and NPCs talk only near a player character, where they can be heard).
 
-Engine choices: a crowd trigger leaves out the owner and the speaker and rolls its val0 % per member; items that do not fit are dropped at the target's feet; contracts and `change AI` start on the next tick, and a contract's goals aimed at the squad mission follow the employer as squadmates follow a leader; DA 29 is an arrest without a fine in the speaker's town and an attack elsewhere (`ArrestSystem`); DA 53's "Free!" is a bark, not a green float. Events fired from other systems: 18-22 (first aid), 13 (a player character frees an NPC's shackles), 46 (a jailer's release round). Not built: DA 24 and 47 (need slave squads and the race tests), events 23-25 (getting up), 60 (giving up a chase) and the remaining witness, lock and prison events, the AI tasks 102/159/161, and moving the surgeon verb, Pay bail and `ArrestSystem`'s fine/arrest stand-ins onto dialogue. Contracts and `change AI` are not saved (`contractjob` and `replacementAI` are written empty).
+Engine choices: a crowd trigger leaves out the owner and the speaker and rolls its val0 % per member; items that do not fit are dropped at the target's feet; contracts and `change AI` start on the next tick, and a contract's goals aimed at the squad mission follow the employer as squadmates follow a leader; DA 29 is an arrest without a fine in the speaker's town and an attack elsewhere (`ArrestSystem`); DA 53's "Free!" is a bark, not a green float. Events fired from other systems: 18-22 (first aid), 13 (shackles freed, a cage's lock picked), 41-43, 8, 17, 34, 57, 58 (the first witness of a pending crime, `CrimeSystem`), 70 / 71 (a severed limb), 23 / 24 (seen on the ambient cadence: a character down at the last look and up now; 24 when fighting or a hostile awake character is within sight), 60 (an NPC's leash gives up a chase, at its target), 46 (a jailer's release round), 44 / 45 (the police's spotting; the fine, the bail list and the surgeon's editor are the data's lines, [simulation](../simulation.md#arrest-and-jail)); DA 33 CRIME_ALARM does nothing yet. DA 2: the leader walks up (`DialogueSystem.Approach`) and opens the event-1 conversation within talk range, quietly when it has nothing to say; after 25 game minutes it gives up with event 60. DA 47 compares RACE records only (sub-races not read). DA 24's slave list is the speaker squad's members in slave state; they keep it, owned by the target's faction. Contracts and `change AI` are saved on the PLATOON (`AiSave`, [save](../formats/save.md#npc-platoons-meitou-mapping)); a wild platoon's are not. Not built: event 25, 31 (betrayal), 36 from the witness function, the witness cases' extra tests.

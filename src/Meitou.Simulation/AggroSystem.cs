@@ -490,6 +490,9 @@ public sealed class AggroSystem(FactionRelations relations, AggroSettings? setti
                 {
                     world.Defer(new StopCommand([table.IdOf(i)]) { Tick = world.Tick + 1 });
                     s.CalmUntil = world.Tick + calm;
+                    // Giving up the chase says so to the target (EV_GIVE_UP_CHASE, as the original's move and follow tasks do, docs/game/dialogue.md "Firing an event").
+                    if (Combat?.StateOf(table.IdOf(i)) is { TargetSlot: >= 0 } st && st.TargetSlot < table.HighWater && next[st.TargetSlot].Generation == st.TargetGeneration)
+                        world.Defer(new Dialogue.DialogueEvent(table.IdOf(i), table.IdOf(st.TargetSlot), 60) { Tick = world.Tick + 1 });
                 }
                 continue;
             }

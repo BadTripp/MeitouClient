@@ -84,6 +84,15 @@ public sealed partial class DialogueSystem
                 case DialogueActions.EnslaveTargetsCarriedPerson when tc is { Carrying.IsNone: false }:
                     takeOver = enslave = true;
                     break;
+                case DialogueActions.GiveTargetMySlaves when tc is not null && mc is not null:
+                    GiveSlaves(world, me, mc, tc);
+                    break;
+                case DialogueActions.SurrenderNonHumans when tc is not null && mc is not null:
+                    SurrenderNonHumans(world, me, mc, tc);
+                    break;
+                case DialogueActions.TalkToLeader when tc is not null && mc is not null:
+                    TalkToLeader(world, c, mc, target, tc);
+                    break;
                 case DialogueActions.ArrestTarget when tc is not null:
                     Arrests?.ArrestFromDialogue(world, me, target);
                     break;
@@ -135,6 +144,26 @@ public sealed partial class DialogueSystem
             string name = item.Name;
             if (tc.Inventory?.Add(item) != true && Position(world, target) is { } at) world.GroundItems.Drop(item, at, 0);
             world.Post($"{Loc.Tr("Received")} {name}");
+        }
+    }
+
+    /// <summary>
+    /// <c>DA_SURRENDER_NON_HUMANS</c> (47, <c>FUN_140680560</c>): the target faction's characters within 100 of the speaker, not animals, whose race is not the speaker's
+    /// (<c>FUN_14042ecd0</c>: its race or one of its sub-races; engine reading: the same RACE record) become slaves owned by the speaker's faction (<c>FUN_14032e590</c>), and its
+    /// squad remembers them. Their squads are left as they are (what follows is not read).
+    /// </summary>
+    void SurrenderNonHumans(World world, CharacterId me, CharacterCold mc, CharacterCold tc)
+    {
+        var table = world.Characters;
+        if (!table.TryResolveNext(me, out int s) || mc.Race is not { } race) return;
+        var at = table.Next[s].Position;
+        for (int i = 0; i < table.HighWater; i++)
+        {
+            if (!table.Next[i].Alive || table.Cold(i) is not { Medical.Dead: false } c || c.Faction != tc.Faction || c.SlaveState != 0) continue;
+            if (c.Fighter?.IsAnimal == true || c.Appearance?.Animal is not null || c.Race is null || c.Race.StringId == race.StringId) continue;
+            if (Vector3.DistanceSquared(table.Next[i].Position, at) > 100 * 100) continue;
+            Locks.FixtureRegistry.Enslave(world, c, mc.Faction);
+            if (mc.SquadId >= 0) met[(mc.SquadId, table.IdOf(i))] = world.GameHours;
         }
     }
 

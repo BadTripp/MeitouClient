@@ -185,6 +185,58 @@ public class DialogueTests
             string.Join(" | ", all));
     }
 
+    /// <summary>A guard's line with DA_TALK_TO_LEADER sends his squad's leader, 200 away, to the hero; within reach the leader opens the conversation window (event 1).</summary>
+    [Fact]
+    public void Talk_to_leader_sends_the_leader_to_open_a_conversation()
+    {
+        var data = PopulationData.Create(Db([
+            Rec("p-d", FcsRecordType.FACTION, r => r.Name = "Nameless"),
+            Rec("f-d", FcsRecordType.FACTION, r => r.Name = "Villagers"),
+            Rec("guard-c", FcsRecordType.CHARACTER, r => { r.Name = "Guard"; r.References["dialogue"] = [Ref("ask-d")]; }),
+            Rec("boss-c", FcsRecordType.CHARACTER, r => { r.Name = "Boss"; r.References["dialogue"] = [Ref("boss-d")]; }),
+            Rec("leader-da", FcsRecordType.DIALOG_ACTION, r => r.Ints["action name"] = DialogueActions.TalkToLeader),
+            Rec("ask-d", FcsRecordType.DIALOGUE, r => r.References["lines"] = [Ref("ask-l")]),
+            Rec("ask-l", FcsRecordType.DIALOGUE_LINE, r => { r.Strings["text0"] = "Talk to the boss."; r.References["effects"] = [Ref("leader-da")]; }),
+            Rec("boss-d", FcsRecordType.DIALOGUE, r => r.References["lines"] = [Ref("boss-l")]),
+            Rec("boss-l", FcsRecordType.DIALOGUE_LINE, r => r.Strings["text0"] = "What do you want?"),
+        ]), []);
+        var dialogue = new DialogueSystem(data);
+        var ground = new OpenGroundWalkability((_, _) => 150);
+        using var world = new SimWorld(new WorldSettings { Seed = 5, PublishSnapshots = false }, ground, [new MovementSystem(new PathService(ground, true)), dialogue]);
+        world.Player.Faction = data.PlayerFaction;
+        int villagers = data.FactionIndex("f-d");
+        Squad? last = null;
+        CharacterId Spawn(string name, float x, int faction, bool player, string record, bool join = false)
+        {
+            if (!join)
+            {
+                last = new Squad { Id = world.Squads.NextId(), TemplateId = "t", Faction = faction };
+                world.Squads.Add(last);
+            }
+            var cold = new Meitou.Tests.Combat.Combatant { Name = name }.MakeCold();
+            (cold.Faction, cold.IsPlayer, cold.RecordId, cold.Inventory, cold.SquadId) = (faction, player, record, new Inventory(), last!.Id);
+            var id = world.Characters.Spawn(new CharacterHot { Position = new Vector3(x, 150, 0), Health = 100, MaxSpeed = 60, WalkSpeed = 15, Task = (byte)CharacterTask.Idle }, cold, 0);
+            last.Members.Add(id);
+            if (!join) last.Leader = id;
+            return id;
+        }
+        var hero = Spawn("hero", 0, data.PlayerFaction, true, "");
+        var boss = Spawn("Boss", 220, villagers, false, "boss-c");
+        var guard = Spawn("Guard", 20, villagers, false, "guard-c", join: true);
+
+        world.Commands.Enqueue(new TalkOrder(hero, guard) { Tick = world.Tick });
+        world.RunTicks(2);
+        Assert.Equal(("Talk to the boss.", "[Leave]"), (dialogue.PublishConversation()!.Text, dialogue.PublishConversation()!.Choices.Single()));
+        world.Commands.Enqueue(new DialogueChoice(0) { Tick = world.Tick });
+        world.RunTicks(1);
+        Assert.Null(dialogue.PublishConversation());
+
+        for (int i = 0; i < 600 && dialogue.PublishConversation() is null; i++) world.RunTicks(1);
+        var talk = dialogue.PublishConversation();
+        Assert.NotNull(talk);
+        Assert.Equal((boss, "What do you want?"), (talk.Npc, talk.Text));
+    }
+
     /// <summary>The hero walks 300 up to the villager and talks twice (rich, buying; then plain), pinned in <see cref="GoldenHashTests"/>.</summary>
     internal static List<ulong> Scripted(int threads)
     {

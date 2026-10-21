@@ -311,6 +311,7 @@ public sealed partial class PopulationSystem
             if (p.Stored is { } stored)
             {
                 stored.Shop = squad.Shop;
+                stored.Ai = Saving.AiSave.Of(squad.Ai) ?? squad.SavedAi;
                 stored.NextHomeFillTick = squad.NextHomeFillTick;
                 stored.Package = p.Package = squad.Ai?.Current?.Id ?? stored.Package;
                 p.Position = Store(world, squad, stored);

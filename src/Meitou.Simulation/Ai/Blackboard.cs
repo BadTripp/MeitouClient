@@ -215,6 +215,18 @@ public sealed class Blackboard
         Start(package, -1, rules);
     }
 
+    /// <summary>A saved contract (<see cref="Saving.AiSave"/>) running again until <paramref name="end"/>, with no target.</summary>
+    public void ResumeContract(AiPackage package, double end, IPackageRules? rules = null)
+    {
+        Contract = package;
+        ContractEnd = end;
+        MissionTarget = CharacterId.None;
+        Start(package, -1, rules);
+    }
+
+    /// <summary>The package <c>change AI</c> put in place of the template's (saved as <c>replacementAI</c>); null: the template's.</summary>
+    public AiPackage? Replacement { get; private set; }
+
     /// <summary>The squad's mission target: whom its running contract is aimed at (none without one).</summary>
     public CharacterId MissionTarget { get; private set; } = CharacterId.None;
 
@@ -235,6 +247,7 @@ public sealed class Blackboard
     /// </summary>
     public void Replace(AiPackage package, IPackageRules? rules = null)
     {
+        Replacement = package;
         slots.Clear();
         slots[0] = [package];
         if (Contract is null) Start(package, 0, rules);
@@ -249,6 +262,7 @@ public sealed class Blackboard
         hasher.Add(Contract is not null);
         hasher.Add(ContractEnd);
         if (!MissionTarget.IsNone) hasher.Add(MissionTarget);
+        if (Replacement is not null) hasher.Add(Rng.StableHash(Replacement.Id));
         hasher.Add(Intact);
         hasher.Add(Route.Length);
         foreach (var p in Route) hasher.Add(p);

@@ -745,6 +745,12 @@ public sealed class AiSystem(PopulationData data, AiSettings? settings = null) :
             Town = squad.Town, Size = squad.Members.Count, OwnHome = home, Home = home,
             NextPatrol = world.GameHours + Rng.Float(roll) * Settings.FirstPatrolHours,
         };
+        if (squad.SavedAi is { } saved)
+        {
+            rules.Bind(this, world, squad);
+            saved.Apply(squad.Ai, data.Ai, rules);
+            squad.SavedAi = null;
+        }
     }
 
     /// <summary>The AI runs a squad that is not the player's, not a roaming platoon's active half (a town's own saved squad, pinned, is run like the town's), and whose template lists AI packages.</summary>
