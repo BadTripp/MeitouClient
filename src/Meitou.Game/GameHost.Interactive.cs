@@ -475,7 +475,7 @@ sealed partial class GameHost
             bool Held(SilkKey a, SilkKey b) => silkInput.Keyboards.Any(k => k.IsKeyPressed(a) || k.IsKeyPressed(b));
             player.CtrlHeld = Held(SilkKey.ControlLeft, SilkKey.ControlRight);
             player.AltHeld = Held(SilkKey.AltLeft, SilkKey.AltRight);
-            // The Highlight key (Alt) lights up the signs and outlines the NPCs near the focus.
+            // The Highlight key (Alt) lights up the signs and outlines the characters near the focus.
             bool highlighting = highlightHeld && windowFocused && !Covered && !session.Camera.IsFree &&
                 panel?.Visible != true && !interfaceHidden && !cinema.Clean && !cinemaHolds && !cinema.EditorVisible;
             if (gpu.Objects is { } signObjects) signObjects.HighlightSigns = highlighting;

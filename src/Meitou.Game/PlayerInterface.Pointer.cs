@@ -39,7 +39,7 @@ sealed partial class PlayerInterface
     public const float HighlightRadius = 500;
 
     /// <summary>
-    /// The characters the held Highlight key (Alt) outlines (docs/game/ui-input.md "Hover outline"): every other faction's character, people and animals, within <paramref name="radius"/>
+    /// The characters the held Highlight key (Alt) outlines (docs/game/ui-input.md "Hover outline"): every character, the squad's, people and animals, within <paramref name="radius"/>
     /// of <paramref name="centre"/>, each in the colour hovering it would give (the quick order's rules applied to it alone), and the hovered one as <see cref="HoverTarget"/>.
     /// </summary>
     public List<(CharacterId Id, Vector4 Colour)> HighlightTargets(Vector3 centre, float radius)
@@ -49,14 +49,15 @@ sealed partial class PlayerInterface
         if (hover is { } h) list.Add(h);
         var selection = SelectedIds();
         foreach (var c in session.CurrentSnapshot.Characters)
-            if (!c.IsPlayer && c.Id != hover?.Id && Vector3.DistanceSquared(c.Position, centre) <= radius * radius)
+            if (c.Id != hover?.Id && Vector3.DistanceSquared(c.Position, centre) <= radius * radius)
                 list.Add((c.Id, PointerColour(selection.Count == 0 ? "arrow" : QuickPointer(c, selection[0]))));
         return list;
     }
 
-    /// <summary><see cref="QuickOrder"/>'s pointer for another faction's character <paramref name="c"/>, as if it alone were under the cursor.</summary>
+    /// <summary><see cref="QuickOrder"/>'s pointer for <paramref name="c"/>, as if it alone were under the cursor.</summary>
     string QuickPointer(CharacterSnapshot c, CharacterId selected)
     {
+        if (c.IsPlayer) return c.Body is { Dead: false, NeedsAid: true } ? "med" : !c.CarriedBy.IsNone ? "search" : c.Body is { Dead: true } or { Unconscious: true } ? "lift" : "arrow";
         if (c.Body is { Dead: true } or { Unconscious: true } || !c.CarriedBy.IsNone) return "search";
         if (c.IsTrader) return "talk";
         if (Hostile(c)) return "attk";
