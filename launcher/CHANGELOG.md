@@ -6,6 +6,9 @@ Released with tags `launcher-v<version>` by `.github/workflows/launcher-release.
 
 - macOS: Play starts the game again instead of it exiting at once because the Vulkan loader wasn't found. The launcher now
   hands the game Homebrew's library folder and the MoltenVK setting it needs (#20).
+- macOS: without the Vulkan loader installed, Play says how to install it instead of starting a game that closes at once.
+- When the game stops with an error, the status line says so and where its log is.
+- While the game is running, Play says so instead of starting a second copy that would overwrite its settings and mod list.
 
 ## v1.0.3
 

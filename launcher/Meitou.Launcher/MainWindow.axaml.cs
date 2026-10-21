@@ -824,6 +824,8 @@ public sealed partial class MainWindow : Window
         if (install is null) { Status("Set the Kenshi folder first (Settings)."); return; }
         if (PlayVersion is not { } version) { Status("Install a version first (Versions)."); return; }
         if (Releases.FindGame(Releases.VersionDirectory(version)) is not { } exe) { Status($"Meitou {version} is not installed any more."); return; }
+        // A second game would share meitou.user.json and the mod list with the first; whichever closes last overwrites the other's.
+        if (running is { HasExited: false }) { Status("Meitou is already running: close it before starting it again."); return; }
         if (!SaveMods()) return;
         if (graphicsSave?.IsEnabled == true) SaveGame();
         var start = new ProcessStartInfo(exe)
@@ -832,12 +834,26 @@ public sealed partial class MainWindow : Window
             UseShellExecute = false,
         };
         start.Environment[GameInstall.EnvironmentVariable] = install.Root;
-        if (OperatingSystem.IsMacOS()) AddMacVulkanEnvironment(start.Environment);
+        if (OperatingSystem.IsMacOS() && !AddMacVulkanEnvironment(start.Environment))
+        {
+            Status("The Vulkan loader is not installed: run 'brew install molten-vk vulkan-loader' in a terminal, then Play again.");
+            return;
+        }
         foreach (var arg in SplitArguments(config.LaunchArguments)) start.ArgumentList.Add(arg);
         try
         {
-            running = Process.Start(start);
+            var game = Process.Start(start);
+            running = game;
             Status($"Meitou {version} started.");
+            if (game is null) return;
+            // The game's window is all a player sees of it, so a crash (above all one before the window opens) is reported here.
+            var log = Path.Combine(Path.GetDirectoryName(exe)!, "log.txt");
+            game.EnableRaisingEvents = true;
+            game.Exited += (_, _) =>
+            {
+                int code = game.ExitCode;
+                if (code != 0) Dispatcher.UIThread.Post(() => Status($"Meitou {version} stopped with an error (exit code {code}); its log is {log}"));
+            };
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException)
         {
@@ -847,7 +863,8 @@ public sealed partial class MainWindow : Window
 
     // dlopen's default path lacks Homebrew's lib dir, and a launcher started from Finder has no DYLD_LIBRARY_PATH, so the game
     // would not find the Vulkan loader (#20); MoltenVK also needs argument buffers (docs/macos-port.md). Values already set win.
-    static void AddMacVulkanEnvironment(IDictionary<string, string?> environment)
+    // False when no folder on the resulting path holds the loader.
+    static bool AddMacVulkanEnvironment(IDictionary<string, string?> environment)
     {
         environment.TryGetValue("DYLD_LIBRARY_PATH", out var existing);
         var dirs = (existing ?? "").Split(':', StringSplitOptions.RemoveEmptyEntries).ToList();
@@ -856,6 +873,7 @@ public sealed partial class MainWindow : Window
         if (dirs.Count > 0) environment["DYLD_LIBRARY_PATH"] = string.Join(':', dirs);
         if (!environment.TryGetValue("MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS", out var mvk) || string.IsNullOrEmpty(mvk))
             environment["MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS"] = "1";
+        return dirs.Any(d => File.Exists(Path.Combine(d, "libvulkan.1.dylib")));
     }
 
     // Space-separated, with double quotes around arguments that contain spaces.

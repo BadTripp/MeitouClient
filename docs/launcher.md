@@ -76,7 +76,8 @@ Native dependencies off Windows:
 - macOS: no Vulkan loader or MoltenVK is bundled (no `Silk.NET.MoltenVK.Native` reference); the user installs them
   (Homebrew or the LunarG SDK). Runs on Apple Silicon, see [macos-port](macos-port.md). Browser downloads get
   Gatekeeper's quarantine flag (no Apple signing or notarisation).
-- Kenshi's Steam folder is found only on Windows (`GameInstall`); elsewhere it comes from `KENSHI_PATH` or the console prompt.
+- Kenshi's Steam folder is found on Windows and Linux (native, `~/.steam/steam` and Flatpak Steam; `GameInstall`); on macOS it comes
+  from `KENSHI_PATH` or the console prompt.
 
 ## Files
 
@@ -84,7 +85,10 @@ The launcher's data folder (its program, once installed, is Velopack's, e.g. `%L
 folder as the game's caches (shader cache, LODs, navmesh). Beside them it holds
 `launcher.json` (Kenshi folder, install folder, channel, chosen version, launch arguments, presets) and is the game's working directory.
 The game runs from that folder, so its `meitou.user.json` (and anything else it writes to the working directory) is shared by all
-versions. The game gets the Kenshi folder through `KENSHI_PATH`.
+versions. The game gets the Kenshi folder through `KENSHI_PATH`; on macOS also `DYLD_LIBRARY_PATH` and the MoltenVK setting
+([macos-port](macos-port.md#running)), and Play refuses with a `brew install` hint when no Homebrew folder holds the Vulkan loader.
+Play refuses while the game it started still runs. A game that exits with a non-zero code is reported in the status line with its
+`log.txt` path.
 
 `versions/` and `downloads/` live in the install folder, by default the data folder. On first start (until `FoldersConfirmed`
 is saved) an overlay on the main window asks for the install folder and the Kenshi folder, prefilled with the current and the detected ones. Changing
