@@ -60,7 +60,7 @@ public sealed partial class MainWindow : Window
         UseKenshi(found);
         if (!config.FoldersConfirmed) ShowSetup();
         Closing += (_, _) => { if (graphicsSave?.IsEnabled == true) SaveGame(); };
-        Opened += async (_, _) => await Task.WhenAll(LoadNewsAsync(), RefreshReleasesAsync());
+        Opened += async (_, _) => await Task.WhenAll(LoadNewsAsync(), RefreshReleasesAsync(updateLauncher: true));
     }
 
     void Status(string text) => SetText(StatusText, text);
@@ -547,7 +547,8 @@ public sealed partial class MainWindow : Window
         SelectVersionButton.IsEnabled = installed && row?.Played != true;
     }
 
-    async Task RefreshReleasesAsync()
+    // At startup (updateLauncher) an installed launcher also applies its own update and restarts into it.
+    async Task RefreshReleasesAsync(bool updateLauncher = false)
     {
         Status("Checking GitHub for releases...");
         var (list, problem) = await releases.FetchAsync();
@@ -555,6 +556,7 @@ public sealed partial class MainWindow : Window
         ShowReleases();
         Status(problem ?? "");
         await ShowLauncherUpdateAsync();   // after: its "Launcher … is available" line must not be cleared
+        if (updateLauncher && updater.IsInstalled && LauncherUpdateButton.IsVisible) await UpdateLauncherAsync();
     }
 
     void ShowReleases()
@@ -759,6 +761,11 @@ public sealed partial class MainWindow : Window
     async void LauncherUpdate_Click(object? sender, RoutedEventArgs e)
     {
         if (LauncherUpdateButton.Tag is string url) { await this.Launcher.LaunchUriAsync(new Uri(url)); return; }
+        await UpdateLauncherAsync();
+    }
+
+    async Task UpdateLauncherAsync()
+    {
         LauncherUpdateButton.IsEnabled = TitleLauncherUpdateButton.IsEnabled = false;
         try
         {

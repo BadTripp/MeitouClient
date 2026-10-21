@@ -54,9 +54,10 @@ items); the launcher never downloads or hosts mods.
   whose `GetReleases` returns only `launcher-v*` releases from the launcher's own cached list. Velopack's stock listing reads just
   the newest 10 releases (`per_page=10`, page 1; **Verified** in its source 2026-10-19), which game releases would crowd out;
   its `GitBase` merges the feed of every release given and skips releases without one.
-- Checked each time the release list loads (startup). Installed by Setup or AppImage (`UpdateManager.IsInstalled`): the title bar
-  and Settings offer "Update launcher to <v>" / "Update to <v>", which download, apply and restart. Run from anywhere else (a build,
-  a copied folder): the same buttons open the newest `launcher-v*` release page.
+- Checked each time the release list loads. Installed by Setup or AppImage (`UpdateManager.IsInstalled`): at startup the launcher
+  downloads and applies a newer version and restarts into it; if that fails, the title bar and Settings offer "Update launcher to
+  <v>" / "Update to <v>" to retry. Launchers up to 1.0.4 only offer the buttons. Run from anywhere else (a build, a copied folder):
+  the same buttons open the newest `launcher-v*` release page.
 - **Unknown**: the update path end to end (1.0.1 → 1.0.2 is the first real one).
 
 ## Game zips per runtime
