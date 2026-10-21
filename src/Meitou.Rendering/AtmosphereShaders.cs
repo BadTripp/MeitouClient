@@ -56,9 +56,40 @@ static class AtmosphereShaders
         uniform vec4 uAtmoCloud;      // x strength, y legacy density offset or volume coverage, z base height, w 1 volume transmission map
         uniform vec4 uAtmoCloudWind;  // legacy: xy wind shift; volume: xy map origin, z map span
         uniform sampler2D uAtmoClouds, uAtmoCloudsTile;
+        // The placed fog volumes in view (FogVolumes; FogVolumeShaders reads them, the cloud shadows' fog cover here).
+        uniform vec4 uFogVolumeEye;        // xyz the eye (for the sky pass), w the blocks' light: max(0.08, sunColour.w * 1.6 * saturate(3 sunY + 0.2))
+        uniform vec4 uFogVolumeInfo;       // x the vec4s in use, y sunColour.w (the spheres' and beams' light)
+        uniform vec4 uFogVolumeData[512];  // the volumes in view, farthest first (FogVolumeShaders: block 10, sphere 3, beam 4 vec4s)
+        // How far a world point lies within the fog blocks (0..1; docs/render-clouds.md "Temporal, fog and shadows"): each block's soft edges at the point
+        // times its density over {{F(FogVolumes.CloudShadowFogLength)}} units, so dense ground fog (the swamp) covers fully and a thin haze barely.
+        float atmoFogCover(vec3 world)
+        {
+            float clear = 1.0;
+            int used = int(uFogVolumeInfo.x);
+            int o = 0;
+            while (o < used)
+            {
+                vec4 head = uFogVolumeData[o];
+                if (head.w > 1.5) { o += head.w < 2.5 ? 3 : 4; continue; }   // spheres and beams: the weather's moving fog
+                vec4 boxMaxEdge = uFogVolumeData[o + 1];
+                if (all(greaterThanEqual(world, head.xyz)) && all(lessThanEqual(world, boxMaxEdge.xyz)))
+                {
+                    float inside = clamp(uFogVolumeData[o + 2].a * {{F(FogVolumes.CloudShadowFogLength)}}, 0.0, 1.0);
+                    for (int i = 0; i < 7 && inside > 0.0; i++)
+                    {
+                        vec4 p = uFogVolumeData[o + 3 + i];
+                        inside *= clamp((p.w - dot(p.xyz, world)) * boxMaxEdge.w, 0.0, 1.0);
+                    }
+                    clear *= 1.0 - inside;
+                }
+                o += 10;
+            }
+            return 1.0 - clear;
+        }
         // The sun light that gets past the cloud layer to a world point: the sun's ray from the point hits the world-anchored plane, where the sky pass's
-        // overhead alpha (the game's second lookup and tile, the horizon band at 1, no fake volume) is read. textureLod only: the grass's vertex stage includes this.
-        float atmoCloudShadow(vec3 world)
+        // overhead alpha (the game's second lookup and tile, the horizon band at 1, no fake volume) is read. Inside fog blocks the shadow fades out
+        // (atmoFogCover). textureLod only: the grass's vertex stage includes this.
+        float atmoCloudShade(vec3 world)
         {
             if (uAtmoCloud.x <= 0.0) return 1.0;
             if (uAtmoCloud.w > 0.5)
@@ -83,6 +114,11 @@ static class AtmosphereShaders
             float density = (cloud + o) * {{F(CloudLayer.DensityMultiplier)}} + tile * {{F(CloudLayer.TileWeight)}} + 1.0;
             float alpha = clamp(density * clamp(1.0 - tile + o, 0.0, 1.0), 0.0, 1.0);
             return 1.0 - uAtmoCloud.x * alpha;
+        }
+        float atmoCloudShadow(vec3 world)
+        {
+            float s = atmoCloudShade(world);
+            return s < 1.0 ? mix(s, 1.0, atmoFogCover(world)) : s;
         }
         uniform vec4 uWeatherWet;     // the weather's shared surface values (WeatherSurfaces): x wetness, y rainAmount = saturate(rain / 50), z gameTime (hours)
         uniform vec4 uWeatherDust;    // xyz: dustAmount (current, inside, slope; docs/formats/weather.md "Dust")
