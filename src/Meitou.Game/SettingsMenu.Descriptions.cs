@@ -78,6 +78,7 @@ sealed partial class SettingsMenu
         "Night grading" => "Shift dark scenes toward the blue of night vision.",
         "Clouds" => "Render clouds with volume and depth.",
         "Cloud shadows" => "Let clouds cast shadows across land and water.",
+        "Cloud shadows in fog" => "Fade cloud shadows near and inside fog. Without it, places like the swamp or the Deadlands get too dark.",
         "Shadow cascade 5 (Meitou)" => "Add a fifth shadow cascade for distant scenery.",
         _ => $"Enable {Label(label).ToLowerInvariant()}.",
     };

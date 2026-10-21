@@ -103,6 +103,7 @@ sealed class WorldOptions
     public bool MeitouStars = true;   // the Meitou stars switch (default): the procedural night sky (SkyRenderer.MeitouStars); false: the game's starfield texture
     public bool MeitouClouds = true;  // the Meitou clouds switch (default): the cloud layer lit by the sun through its depth (SkyRenderer.LitClouds); false: the game's flat colour
     public bool CloudShadows = true;  // the Meitou cloudshadows switch (default): the cloud layer shades the sun on the land and water (SkyRenderer.CloudShadows); false: none, as the game
+    public bool CloudFog = true;      // the Meitou cloudfog switch (default): the cloud shadows fade near and inside placed fog volumes (SkyRenderer.CloudFog); false: full strength
     /// <summary><c>--weather</c>: a WEATHER record's name forces that weather at the camera; null or "auto" lets the scheduler (docs/formats/weather.md) run.</summary>
     public string? Weather;
     /// <summary><c>--day</c> (null: day 0 in the viewer, the game's clock start in the game).</summary>
@@ -222,7 +223,7 @@ sealed class WorldOptions
           --no-vsync               start with vsync off (uncapped; Tab slider)
           --grass-density <x>      grass blades x this (0.1-2, default 1; Tab slider)
           --camera-code <hex>      start at a camera code (Ctrl+C in the viewer copies one), the world loaded round it
-          --faithful <all|ao,dither,haze,aa,shadows,range,impostors,reach,water,particles,lod,gi,tonemap,shafts,heathaze,night,planetshine,stars,nightgrade,clouds,cloudshadows,interiorgi>   the game's look instead of Meitou's enhancements (default: all Meitou; --meitou <...> turns them back on; these ids also name the --ab switches)
+          --faithful <all|ao,dither,haze,aa,shadows,range,impostors,reach,water,particles,lod,gi,tonemap,shafts,heathaze,night,planetshine,stars,nightgrade,clouds,cloudshadows,cloudfog,interiorgi>   the game's look instead of Meitou's enhancements (default: all Meitou; --meitou <...> turns them back on; these ids also name the --ab switches)
           --show-keys              start with the key list overlay open (toggle with F10)
           --play-shots             start flying the saved camera keys (the F2 timeline) on a loop
           --log-spikes             print a line for every frame whose GPU time is over 1.5 x the median: stage times (GPU, render thread) and what it uploaded or rebuilt
@@ -269,6 +270,7 @@ sealed class WorldOptions
         () => o.MeitouStars, v => o.MeitouStars = v,
         () => o.MeitouClouds, v => o.MeitouClouds = v,
         () => o.CloudShadows, v => o.CloudShadows = v,
+        () => o.CloudFog, v => o.CloudFog = v,
         () => o.InteriorGi, v => o.InteriorGi = v,
         () => o.CharacterLod, v => o.CharacterLod = v);
 
@@ -773,6 +775,7 @@ static class WorldFrame
         gpu.Sky.MeitouStars = o.MeitouStars;
         gpu.Sky.LitClouds = o.MeitouClouds;
         gpu.Sky.CloudShadows = o.CloudShadows;
+        gpu.Sky.CloudFog = o.CloudFog;
         step?.Invoke("weather");
         if (scene.Database is { } skyDb)
         {
@@ -959,6 +962,7 @@ static class WorldFrame
             () => gpu()?.Sky.MeitouStars ?? o.MeitouStars, v => { o.MeitouStars = v; if (gpu() is { } stars) stars.Sky.MeitouStars = v; },
             () => gpu()?.Sky.LitClouds ?? o.MeitouClouds, v => { o.MeitouClouds = v; if (gpu() is { } g) g.Sky.LitClouds = v; },
             () => gpu()?.Sky.CloudShadows ?? o.CloudShadows, v => { o.CloudShadows = v; if (gpu() is { } g) g.Sky.CloudShadows = v; },
+            () => gpu()?.Sky.CloudFog ?? o.CloudFog, v => { o.CloudFog = v; if (gpu() is { } g) g.Sky.CloudFog = v; },
             () => gpu()?.Probes?.InteriorEnabled ?? o.InteriorGi, v => { o.InteriorGi = v; if (gpu()?.Probes is { } p) p.InteriorEnabled = v; },
             () => gpu()?.Characters?.GeneratedLod ?? o.CharacterLod, v => { o.CharacterLod = v; if (gpu()?.Characters is { } c) c.GeneratedLod = v; });
 

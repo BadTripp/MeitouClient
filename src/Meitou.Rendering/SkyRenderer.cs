@@ -591,16 +591,19 @@ public sealed unsafe partial class SkyRenderer : IDisposable
     /// <summary>The eye in world units, for the Meitou clouds' parallax (the sky pass's matrix is a rotation only); the frame sets it.</summary>
     public Vector3 Eye { get; set; }
 
+    /// <summary>The Meitou <c>cloudfog</c> switch: the cloud shadows fade near and inside placed fog blocks (<see cref="CloudShadowScale"/>), which they would otherwise darken too much (the swamp, the Deadlands).</summary>
+    public bool CloudFog { get; set; } = true;
     /// <summary>The cloud shadows' strength factor near placed fog blocks (<see cref="FogVolumes.CloudShadowScale"/>; the frame sets it): 0 inside one.</summary>
     public float CloudShadowScale { get; set; } = 1;
+    float FogScale => CloudFog ? CloudShadowScale : 1;
 
     /// <summary>Cloud shadows: strength, density offset (legacy) or coverage (volume), base height, and mode (0 legacy / 1 volume).</summary>
     Vector4 CloudShadowUniform()
     {
         if (VolumeShadows)
-            return new Vector4(MeitouClouds.ShadowAt(state.Sun.Y) * CloudShadowScale, CloudDensity, VolumetricClouds.Bottom, 1);
+            return new Vector4(MeitouClouds.ShadowAt(state.Sun.Y) * FogScale, CloudDensity, VolumetricClouds.Bottom, 1);
         bool on = CloudShadows && Physical && cloudsSmooth is not null && cloudsTileSmooth is not null && CloudDensity > 0;
-        float strength = on ? MeitouClouds.ShadowAt(state.Sun.Y) * CloudShadowScale : 0;
+        float strength = on ? MeitouClouds.ShadowAt(state.Sun.Y) * FogScale : 0;
         return new Vector4(strength, CloudLayer.DensityOffset(CloudDensity), MeitouClouds.PlaneHeight, 0);
     }
 
