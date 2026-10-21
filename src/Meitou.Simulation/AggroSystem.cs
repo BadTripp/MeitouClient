@@ -518,6 +518,8 @@ public sealed class AggroSystem(FactionRelations relations, AggroSettings? setti
             int n = Relations.Count;
             for (int a = 0; a < n; a++)
                 for (int b = 0; b < n; b++) hasher.Add(Relations.Get(a, b));
+            for (int a = 0; a < n; a++)
+                if (Relations.Rank(a) is var rank and not 0) { hasher.Add(a); hasher.Add(rank); }
         }
         hasher.Add(size);
         for (int i = 0; i < size; i++)
