@@ -109,11 +109,11 @@ sealed partial class PlayerInterface
     }
 
     /// <summary>
-    /// The medical header's word (the original's list is longer; Meitou shows the states it models): Dead, Unconscious, Starving below 1 hunger, then by the worst
+    /// The medical header's word (the original's list is longer; Meitou shows the states it models): Dead, Unconscious (N) with N the KO timer as (int) while it runs, Starving below 1 hunger, then by the worst
     /// part h: Wounded below 0.7, Hungry below 2 hunger, Slightly Injured below 0.9, else Normal.
     /// </summary>
     internal static (string Text, string? Colour) HealthWord(BodyStatus body) =>
-        body.Dead ? (Loc.Tr("Dead"), (string?)BadColour) : body.Unconscious ? (Loc.Tr("Unconscious"), BadColour) : body.Hunger < 1 ? (Loc.Tr("Starving"), BadColour)
+        body.Dead ? (Loc.Tr("Dead"), (string?)BadColour) : body.Unconscious ? (body.KoTimer > 0 ? $"{Loc.Tr("Unconscious")} ({(int)body.KoTimer})" : Loc.Tr("Unconscious"), BadColour) : body.Hunger < 1 ? (Loc.Tr("Starving"), BadColour)
         : body.WorstPart < 0.7f ? (Loc.Tr("Wounded"), BadColour) : body.Hunger < 2 ? (Loc.Tr("Hungry"), BadColour) : body.WorstPart < 0.9f ? (Loc.Tr("Slightly Injured"), BadColour) : (Loc.Tr("Normal"), null);
 
     /// <summary>The row of a body part in the medical panel: the head, the torso, the left then right arm, the left then right leg (the original's order for people,

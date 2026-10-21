@@ -179,7 +179,8 @@ to Jobs, independent of the saved `chase mode` flag whose relationship is **Unkn
     Dexterity, Toughness and (not in ranged mode) Dodge. A value is the effective number, then its change in brackets: `{1} ({2})` all Bad when lower,
     `{1} (+{2})` all Good when higher, plain when equal. The code passes the labels in mixed case ("Martial Arts:"); the original shows them upper case in
     a light colour (**Observed**, screenshot), from a source **Unknown**.
-  - `HealthText` words in priority: Dead, BEING EATEN ALIVE!!, Dying, Unconscious (N), Recovery coma, Playing dead..., Blood loss KO, Bleeding out,
+  - `HealthText` words in priority: Dead, BEING EATEN ALIVE!!, Dying, Unconscious (N) (N = (int) of the medical float `+0xa0`, the KO timer, taken
+    only while it is &gt; 0; "Rebooting" for skeletons; `FUN_14088a8f0`), Recovery coma, Playing dead..., Blood loss KO, Bleeding out,
     Crippled, Crippled arm, Critical, Limb trauma, Staying low, Starving (hunger &lt; 1), Bleeding, disguise words; else by the overall health h:
     Hungry (h ≥ 0.7 and hunger &lt; 2), Wounded (h &lt; 0.7), Slightly Injured (h &lt; 0.9), Normal. What h is exactly is **Unknown**; the worst part's
     fraction matches a screenshot (a leg at 77 % and "Slightly Injured", **Observed**).
