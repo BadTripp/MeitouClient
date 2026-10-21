@@ -29,6 +29,9 @@ sealed partial class PlayerInterface
 
     MachineSnapshot? Machine(string? site) => site is null ? null : session.CurrentSnapshot.Machines.FirstOrDefault(m => m.Site == site);
 
+    /// <summary>The storage window's layout pixels above its grid (caption and item heading) and in all around it, with the two-line Max Capacity text below (measured on the original's window).</summary>
+    const float StorageAbove = 86, StorageChrome = 150;
+
     static string MachineScreen(MachineSnapshot m) => m.Storage is null || m.Inputs.Count > 0 || m.Output is not null ? "building" : m.IsStorage && !m.IsContainer && m.TechLevel == 0 ? "storage" : "bench";
 
     /// <summary>Opens the selected machine's window and closes it when the selection moves on.</summary>
@@ -84,7 +87,7 @@ sealed partial class PlayerInterface
             b.Disabled.Remove("ArrangeButton");
             b.Hidden.Add("ArrangeButton");
             if (m?.Storage is { } sg)
-                b.Positions["Root"] = new(0, 0, sg.Width * InventoryCell + 40 * InventoryScale, Math.Min(Height * 0.8f, sg.Height * InventoryCell + 108 * InventoryScale));
+                b.Positions["Root"] = new(0, 0, sg.Width * InventoryCell + 40 * InventoryScale, Math.Min(Height * 0.8f, sg.Height * InventoryCell + StorageChrome * InventoryScale));
             b.TemplateScale = InventoryScale;
             return;
         }
@@ -138,7 +141,8 @@ sealed partial class PlayerInterface
         if (id is "bench" or "storage")
         {
             if (m.Storage is not { } grid) return;
-            ArrangeContainerGrid(id, controls, grid.Width, grid.Height);
+            if (id == "storage") ArrangeContainerGrid(id, controls, grid.Width, grid.Height, StorageAbove, StorageChrome - StorageAbove - 6);
+            else ArrangeContainerGrid(id, controls, grid.Width, grid.Height);
             if (controls.FirstOrDefault(c => c.Name == "backpack_content") is not { } slot) return;
             var area = slot.Bounds;
             foreach (var item in grid.Items)
