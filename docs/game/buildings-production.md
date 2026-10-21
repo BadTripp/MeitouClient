@@ -496,7 +496,11 @@ and `power capacity` (battery store, "in seconds" per fcs.def), plus research ([
   Capacity / Advanced +60 each.
 
 **Storage** (**Verified**, 603 buildings): 87 have `has inventory`; default 18 x 18, `itemtype limit` 4; `stackable bonus
-mult` 1 to 100000; `limit inventory` restricts the items. Locks and containers: [locks](locks.md).
+mult` 1 to 100000; `limit inventory` restricts the items. Grid (**Observed**, the building loader): a building whose `limit inventory`
+names exactly one item is that item's `inventory footprint` (Iron Plates 4 x 3, Building Materials 6 x 3, steel bars 6 x 1), else
+`storage size`, for built and town-placed storages alike (`MachineData.StorageGrid`). Its window (**Observed**, screenshots) is
+`Kenshi_InventoryGenericWindow`: caption STORAGE, the one limited item's name as heading, `Max Capacity: N` with N the `stackable bonus
+mult`, the line red with "(Full)" once the first stack reaches it (exact red **Unknown**). Locks and containers: [locks](locks.md).
 Water Tower takes only Water and `Storage: Ore` only Raw Iron, both with mult 100 and functionality `Resource
 storage` (function 2); Large Barrels also hold Water.
 

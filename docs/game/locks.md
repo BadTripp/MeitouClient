@@ -181,7 +181,7 @@ Same targets as picking; Task_CutLock / Task_BruteForceLock share the shackle ta
 
 ## Containers (Meitou)
 
-Interior items with `has inventory` (storage size from the record, 18 x 18 by default) are container fixtures with their own grid, locked or not (`has lock`).
+Interior items with `has inventory` (grid as for a [storage](buildings-production.md), 18 x 18 by default) are container fixtures with their own grid, locked or not (`has lock`).
 A resident squad with `vendors` has its home's stock containers filled and unlocked by the building filler, trader or not ([building shops](economy.md#building-shops-observed-decompile));
 the others start empty (what else the original stocks them with is **Unknown**). **Engine choices**, not Verified against the original: a right click with a selection walks the nearest
 character to one (`OpenContainerOrder`, reach 20) and opens a storage window beside the inventory, staying open until the player closes it (asking for the same container again reopens it, also while paused); the character's inventory opens beside it for an order-driven container and not when a storage or rock is merely selected (the original has no walk-away test; an opener who is down or gone closes it); a locked one refuses
