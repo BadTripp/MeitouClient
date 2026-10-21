@@ -175,12 +175,12 @@ public static class TownBuildings
                         if (function?.GetInt("function") is TableFunction or CorpseDisposalFunction or RefineryFunction) (faced ??= []).Add(at);
                         else if (FunctionOf(db, item.Building, functions)?.GetInt("function") is var itemFn && (itemFn == CageFunction || item.Building.GetBool("has lock") || item.Building.GetBool("has inventory")))
                         {
-                            bool stores = item.Building.GetBool("has inventory");
+                            var (storageWidth, storageHeight) = item.Building.GetBool("has inventory") ? MachineData.StorageGrid(db, item.Building) : (0, 0);
                             (fixtures ??= []).Add(new TownFixture($"{b.Key}/{index}", item.Building.StringId, itemFn == CageFunction, at, YawOf(rotation))
                             {
                                 Function = itemFn ?? -1,
-                                StorageWidth = stores ? MachineData.StorageGrid(db, item.Building).Width : 0,
-                                StorageHeight = stores ? MachineData.StorageGrid(db, item.Building).Height : 0,
+                                StorageWidth = storageWidth,
+                                StorageHeight = storageHeight,
                             });
                         }
                         index++;
