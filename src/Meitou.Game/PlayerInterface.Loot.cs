@@ -70,7 +70,7 @@ sealed partial class PlayerInterface
     /// <summary>The loot's item let go over the looter's inventory or bag: taken into the slot or cell under it (else wherever it fits, by the sim).</summary>
     void TakeLootDrop(Vector2 p, string screen, InventoryItemView item, InventoryItemToken token, Vector2 grab)
     {
-        if (screen is not ("inventory" or "bag") || Selected().FirstOrDefault() is not { ItemGrid: { } own } lead) return;
+        if (screen is not ("inventory" or "bag") || InventoryOwner() is not { ItemGrid: { } own } lead) return;
         string? section = null;
         int x = 0, y = 0;
         if (lead.Id == session.CurrentSnapshot.LootOpener && DropPlace(p, screen, own, item, grab, -1, out string place, out int px, out int py)) (section, x, y) = (place, px, py);

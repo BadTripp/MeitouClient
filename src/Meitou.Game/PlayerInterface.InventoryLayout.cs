@@ -20,7 +20,7 @@ sealed partial class PlayerInterface
     void BindInventoryGeometry(string id, UiBindings b)
     {
         b.TemplateScale = InventoryScale;
-        if (id is "bag" or "loot-bag" && (id == "bag" ? Selected().FirstOrDefault() : LootBody())?.ItemGrid is { } bag)
+        if (id is "bag" or "loot-bag" && (id == "bag" ? InventoryOwner() : LootBody())?.ItemGrid is { } bag)
             b.Positions["Root"] = new(0, 0, bag.BagWidth * InventoryCell + 40 * InventoryScale,
                 Math.Min(Height * 0.8f, bag.BagHeight * InventoryCell + 108 * InventoryScale));
         if (id == "trader") BindTraderGeometry(b);

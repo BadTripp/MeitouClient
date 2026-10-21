@@ -42,6 +42,8 @@ public sealed partial class MyGuiScreenHost(MyGuiResources resources)
     public void Replace(string id, MyGuiLayout layout) => screens[id].Layout = MyGuiTemplates.Expand(layout, resources);
     public MyGuiLayout Layout(string id) => screens[id].Layout;
     public bool IsOpen(string id) => open.Contains(id);
+    /// <summary>Whether the open window's pin button is down (closing the window lets it go).</summary>
+    public bool IsPinned(string id) => open.Contains(id) && screens[id].Pinned;
     public void Open(string id)
     {
         if (!screens.ContainsKey(id)) throw new KeyNotFoundException(id);
@@ -60,6 +62,7 @@ public sealed partial class MyGuiScreenHost(MyGuiResources resources)
     {
         foreach (var (follower, leader) in leaders.ToArray()) if (leader == id && open.Contains(follower)) Close(follower);
         open.Remove(id);
+        screens[id].Pinned = false;
         if (focus?.Screen == id) { focus = null; edit = null; }
         if (keyButton?.Screen == id) keyButton = null;
         if (drag?.Screen == id) drag = null;

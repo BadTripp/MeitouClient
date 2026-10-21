@@ -30,6 +30,8 @@ sealed partial class PlayerInterface
             if (faithfulScreens.IsOpen("message")) HandleFrontendAction(new("message", CancelButton, CancelButton));
             // While looting, one Esc closes the looter's and the body's windows together (their bags follow); the loot closes with its window.
             else if (faithfulScreens.IsOpen("loot") && faithfulScreens.OpenScreens[^1] is "inventory" or "bag" or "loot" or "loot-bag") { faithfulScreens.Close("loot"); faithfulScreens.Close("inventory"); }
+            // So does trading: one Esc closes the trader with the customer's windows, whichever of them was clicked last (closing the trader ends the trade).
+            else if (faithfulScreens.IsOpen("trader") && faithfulScreens.OpenScreens[^1] is "inventory" or "bag" or "limbs" or "trader") { faithfulScreens.Close("trader"); faithfulScreens.Close("inventory"); }
             else if (!faithfulScreens.Escape()) faithfulScreens.Open("menu");
             UpdateMenuPause();
             return true;
@@ -95,14 +97,14 @@ sealed partial class PlayerInterface
         {
             if (e.Widget == "OpenBagButton") ToggleBag();
             else if (e.Widget == "LimbsButton") faithfulScreens.Open("limbs");
-            else if (e.Widget == "ArrangeButton" && Selected().FirstOrDefault() is { } lead) Say(new Meitou.Simulation.Items.ArrangeInventory(lead.Id) { Tick = session.World.Tick });
+            else if (e.Widget == "ArrangeButton" && InventoryOwner() is { } lead) Say(new Meitou.Simulation.Items.ArrangeInventory(lead.Id) { Tick = session.World.Tick });
         }
     }
     UiBindings BindFaithfulScreen(string id)
     {
         var b = new UiBindings();
         var layout = faithfulScreens.Layout(id);
-        var lead = Selected().FirstOrDefault();
+        var lead = id is "inventory" or "bag" or "limbs" ? InventoryOwner() : Selected().FirstOrDefault();
         foreach (var button in layout.Widgets.Where(w => w.Type == "Button" && !w.Properties.ContainsKey("TemplateEvent"))) b.Disabled.Add(button.Name);
         if (BindFrontend(id, b)) return b;
         if (id == "editor") { BindEditor(b); return b; }
@@ -200,7 +202,7 @@ sealed partial class PlayerInterface
         if (id == "overview") { AddResearchContent(controls); AddCraftContent(controls); AddAiContent(controls); AddSquadsContent(controls); }
         if (id == "trader") { ArrangeTraderWindow(controls); AddTraderContent(controls); return; }
         // The loot windows show the open loot's body as the character windows show the lead.
-        if (id is not ("inventory" or "bag" or "limbs" or "loot" or "loot-bag") || (IsLootScreen(id) ? LootBody() : Selected().FirstOrDefault()) is not { ItemGrid: { } grid } lead) return;
+        if (id is not ("inventory" or "bag" or "limbs" or "loot" or "loot-bag") || (IsLootScreen(id) ? LootBody() : InventoryOwner()) is not { ItemGrid: { } grid } lead) return;
         bool bagWindow = id is "bag" or "loot-bag";
         string gridSection = bagWindow ? "backpack_content" : "main";
         int columns = bagWindow ? grid.BagWidth : grid.Width, rows = bagWindow ? grid.BagHeight : grid.Height;

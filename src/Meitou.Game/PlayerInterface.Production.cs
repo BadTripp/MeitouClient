@@ -208,7 +208,7 @@ sealed partial class PlayerInterface
     /// <summary>A machine item let go over the selected character's inventory or bag: taken into it.</summary>
     void MachineDrop((string Site, int Slot, int Index, string Record, string Name, int Quantity, int Width, int Height, Vector2 Grab) d, string screen)
     {
-        if (screen is not ("inventory" or "bag") || Selected().FirstOrDefault() is not { } lead) return;
+        if (screen is not ("inventory" or "bag") || InventoryOwner() is not { } lead) return;
         Say(new TakeFromMachine(lead.Id, d.Site, d.Slot, d.Index, screen == "bag" ? "backpack_content" : "main") { Tick = session.World.Tick });
     }
 

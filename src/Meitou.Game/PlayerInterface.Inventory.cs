@@ -13,6 +13,21 @@ sealed partial class PlayerInterface
     (CharacterId Character, InventoryItemView Item, Vector2 Grab, bool Loot)? inventoryDrag;
     /// <summary>A stock item of the open trade being dragged out of the trader window (dropped on the character's grid it is bought).</summary>
     (TradeItemView Item, Vector2 Grab)? tradeDrag;
+    /// <summary>The character the inventory window was pinned on (its caption's pin button), none while it is not pinned.</summary>
+    CharacterId inventoryPin = CharacterId.None;
+
+    /// <summary>
+    /// The character the inventory window (and its bag and limbs) shows: the lead, or while the window is pinned the one it was pinned on, whoever is selected
+    /// (docs/game/ui-screens.md section 6). A pinned character who is gone falls back to the lead.
+    /// </summary>
+    CharacterSnapshot? InventoryOwner()
+    {
+        if (!faithfulScreens.IsPinned("inventory")) inventoryPin = CharacterId.None;
+        else if (inventoryPin.IsNone) inventoryPin = Selected().FirstOrDefault()?.Id ?? CharacterId.None;
+        else if (session.CurrentSnapshot.Characters.FirstOrDefault(c => c.Id == inventoryPin) is { } pinned) return pinned;
+        return Selected().FirstOrDefault();
+    }
+    CharacterSnapshot? InventoryOwner(CharacterId id) => InventoryOwner() is { } owner && owner.Id == id ? owner : null;
 
     bool InventoryPointerDown(Vector2 p)
     {
@@ -28,7 +43,7 @@ sealed partial class PlayerInterface
         }
         if (MachinePointerDown(picked.Control, Grab())) return true;
         bool loot = IsLootScreen(picked.Screen);
-        if (!picked.Control.Properties.TryGetValue("InventoryItem", out var index) || (loot ? LootBody() : Selected().FirstOrDefault()) is not { ItemGrid: { } grid } owner) return false;
+        if (!picked.Control.Properties.TryGetValue("InventoryItem", out var index) || (loot ? LootBody() : InventoryOwner()) is not { ItemGrid: { } grid } owner) return false;
         var item = grid.Items.FirstOrDefault(i => i.Index == int.Parse(index, CultureInfo.InvariantCulture));
         if (item is null || !(InventoryCommands.IsMovableSection(item.Section) || InventoryCommands.IsLimbSection(item.Section))) return false;
         inventoryDrag = (owner.Id, item, Grab(), loot);
@@ -63,7 +78,7 @@ sealed partial class PlayerInterface
         if (buying is { } b)
         {
             // Stock dropped on the customer's pocket or bag grid: a purchase into the cell under the drop.
-            if (trade is null || hit.Screen is not ("inventory" or "bag") || Selected().FirstOrDefault(c => c.Id == trade.Customer)?.ItemGrid is not { } grid) return;
+            if (trade is null || hit.Screen is not ("inventory" or "bag") || InventoryOwner(trade.Customer)?.ItemGrid is not { } grid) return;
             string section = hit.Screen == "bag" ? "backpack_content" : "main";
             int columns = section == "main" ? grid.Width : grid.BagWidth, rows = section == "main" ? grid.Height : grid.BagHeight;
             if (!DropCell(p, hit.Screen, section, columns, rows, b.Grab, b.Item.Width, b.Item.Height, Footprints(grid.Items, section, -1), out int x, out int y)) return;
@@ -97,7 +112,7 @@ sealed partial class PlayerInterface
                 Say(new MoveInventoryItem(drag.Character, token, slot.Name, 0, 0) { Tick = session.World.Tick });
             return;
         }
-        if (hit.Screen is not ("inventory" or "bag") || Selected().FirstOrDefault(c => c.Id == drag.Character)?.ItemGrid is not { } own) return;
+        if (hit.Screen is not ("inventory" or "bag") || InventoryOwner(drag.Character)?.ItemGrid is not { } own) return;
         if (DropPlace(p, hit.Screen, own, item, drag.Grab, item.Index, out string target, out int tx, out int ty))
             Say(new MoveInventoryItem(drag.Character, token, target, tx, ty) { Tick = session.World.Tick });
     }
@@ -196,7 +211,7 @@ sealed partial class PlayerInterface
     /// <summary>OPEN BAG: opens or closes the lead character's bag and remembers it for that character.</summary>
     void ToggleBag()
     {
-        if (Selected().FirstOrDefault() is not { } lead) return;
+        if (InventoryOwner() is not { } lead) return;
         if (!bagOpen.Remove(lead.Id)) bagOpen.Add(lead.Id);
         SyncBagScreen();
     }
@@ -204,7 +219,7 @@ sealed partial class PlayerInterface
     /// <summary>Once a frame: the bag window is open while the inventory is, the lead character wears a bag and left it open (<see cref="bagOpen"/>).</summary>
     void SyncBagScreen()
     {
-        var lead = Selected().FirstOrDefault();
+        var lead = InventoryOwner();
         bool want = faithfulScreens.IsOpen("inventory") && lead is { ItemGrid: { BagWidth: > 0, BagHeight: > 0 } } && bagOpen.Contains(lead.Id);
         if (want == faithfulScreens.IsOpen("bag")) return;
         if (!want) { faithfulScreens.Close("bag"); return; }
@@ -218,7 +233,7 @@ sealed partial class PlayerInterface
         SyncBagScreen();
         if (inventoryDrag is { } drag)
         {
-            var owner = drag.Loot ? LootBody() : Selected().FirstOrDefault();
+            var owner = drag.Loot ? LootBody() : InventoryOwner();
             string window = drag.Item.Section == "backpack_content" ? drag.Loot ? "loot-bag" : "bag" : drag.Loot ? "loot" : "inventory";
             if (!faithfulScreens.IsOpen(window) || owner?.Id != drag.Character || owner.ItemGrid?.Items.FirstOrDefault(i => i.Index == drag.Item.Index) != drag.Item) inventoryDrag = null;
         }

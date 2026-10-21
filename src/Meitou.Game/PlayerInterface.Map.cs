@@ -268,7 +268,7 @@ sealed partial class PlayerInterface
             return true;
         }
         if (trade is null && WindowRightClick(picked.Screen, picked.Control, shift)) return true;
-        if (IsLootScreen(picked.Screen) || !picked.Control.Properties.TryGetValue("InventoryItem", out var index) || Selected().FirstOrDefault() is not { ItemGrid: { } grid } lead) return false;
+        if (IsLootScreen(picked.Screen) || !picked.Control.Properties.TryGetValue("InventoryItem", out var index) || InventoryOwner() is not { ItemGrid: { } grid } lead) return false;
         var item = grid.Items.FirstOrDefault(i => i.Index == int.Parse(index, CultureInfo.InvariantCulture));
         if (item is null) return false;
         var token = new InventoryItemToken(item.Index, item.Record, item.Section, item.X, item.Y, item.Quantity, item.Quality);
@@ -290,7 +290,7 @@ sealed partial class PlayerInterface
     bool WindowRightClick(string screen, UiControl control, bool shift)
     {
         int count = shift ? 0 : 1;
-        if (!faithfulScreens.IsOpen("inventory") || Selected().FirstOrDefault() is not { ItemGrid: { } grid } lead) return false;
+        if (!faithfulScreens.IsOpen("inventory") || InventoryOwner() is not { ItemGrid: { } grid } lead) return false;
         var machine = Machine(shownMachine) is { } shown && faithfulScreens.IsOpen(MachineScreen(shown)) ? shown : null;
         bool loot = faithfulScreens.IsOpen("loot") && lead.Id == session.CurrentSnapshot.LootOpener;
         if (machine is not null && control.Properties.TryGetValue("MachineItem", out var raw))
