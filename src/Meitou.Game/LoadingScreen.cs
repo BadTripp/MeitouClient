@@ -97,21 +97,28 @@ sealed class LoadingScreen : IDisposable
     const string ImageSet = "Kenshi_LoadingScreen";
 
     /// <summary>
-    /// The non-empty lines of a tips file: UTF-8 when it is valid UTF-8, else Windows-1252 (the French, German and Spanish files are; engine choice: how the
-    /// original's MyGUI strings show those bytes is Unknown).
+    /// The non-empty lines of a tips file: by its byte order mark when it has one, else UTF-8 when it is valid UTF-8, else Windows-1252 (the French, German and
+    /// Spanish files are; engine choice: how the original's MyGUI strings show those bytes is Unknown).
     /// </summary>
     static string[] ReadTips(string file)
     {
         byte[] bytes = File.ReadAllBytes(file);
         string text;
-        try { text = new System.Text.UTF8Encoding(false, true).GetString(bytes); }
-        catch (System.Text.DecoderFallbackException)
+        try
         {
-            System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-            text = System.Text.Encoding.GetEncoding(1252).GetString(bytes);
+            using var reader = new StreamReader(new MemoryStream(bytes), new System.Text.UTF8Encoding(false, true), detectEncodingFromByteOrderMarks: true);
+            text = reader.ReadToEnd();
         }
-        return [.. text.TrimStart('\uFEFF').Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0)];
+        catch (System.Text.DecoderFallbackException) { text = Windows1252.Value.GetString(bytes); }
+        return [.. text.Split(['\r', '\n']).Select(l => l.Trim()).Where(l => l.Length > 0)];
     }
+
+    /// <summary>Windows-1252, its code page provider registered once.</summary>
+    static readonly Lazy<System.Text.Encoding> Windows1252 = new(() =>
+    {
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+        return System.Text.Encoding.GetEncoding(1252);
+    });
 
     /// <summary>A step starts: its name, the bar's share it covers (<paramref name="start"/> to <paramref name="end"/>, 0..1) and about how long it takes.</summary>
     public void Step(string name, double start, double end, double seconds)
@@ -144,7 +151,8 @@ sealed class LoadingScreen : IDisposable
         drawn = true;
         if (Faithful && painter is not null && layout is not null && resources is not null)
         {
-            DrawFaithful(width, height, background);
+            // Hidden at once when done, also when the mode was switched to Faithful during the Meitou slide-out.
+            if (exitStart is null) DrawFaithful(width, height, background);
             return;
         }
         if (painter is not null) painter.Mode = UiMode.Meitou;

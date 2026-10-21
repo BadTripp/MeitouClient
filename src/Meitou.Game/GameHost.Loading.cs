@@ -96,7 +96,7 @@ sealed partial class GameHost
         if (loadingDisplay.BeginFrame(size.X, size.Y))
         {
             loadingOverlay.Target = loadingDisplay.Backbuffer;
-            loadBar.Update(PendingLoads());
+            loadBar.Update(loading.Faithful ? PendingLoads() : 0);
             loading.LoadBar = loadBar;
             loading.Draw(size.X, size.Y);
             loadingDisplay.Present();

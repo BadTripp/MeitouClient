@@ -63,10 +63,20 @@ internal sealed unsafe partial class CharacterRenderer : IDisposable
     public double LastPoseMs { get; private set; }
     public double LastDrawCpuMs { get; private set; }
     public int Assets => assets.Count(a => a.Value is not null);
-    /// <summary>Current appearances still being prepared/uploaded, or textures still being loaded. Failed assets count as finished.</summary>
     /// <summary>Loads waiting: the looks drawn this frame whose meshes are not built yet and the character textures still to stream in.</summary>
-    public int PendingLoads => Draws.Items.Select(c => c.Appearance).Distinct<CharacterAppearance>(ReferenceEqualityComparer.Instance).Count(a => !assets.ContainsKey(a))
-        + content.Textures.PendingCount + content.Textures.UnresidentUsedCount;
+    public int PendingLoads
+    {
+        get
+        {
+            // A reused set: the background-loading bar asks every frame.
+            pendingLooks.Clear();
+            foreach (var c in Draws.Items)
+                if (!assets.ContainsKey(c.Appearance)) pendingLooks.Add(c.Appearance);
+            return pendingLooks.Count + content.Textures.PendingCount + content.Textures.UnresidentUsedCount;
+        }
+    }
+    readonly HashSet<CharacterAppearance> pendingLooks = new(ReferenceEqualityComparer.Instance);
+    /// <summary>Current appearances still being prepared/uploaded, or textures still being loaded. Failed assets count as finished.</summary>
     public bool ContentPending => Draws.Items.Any(c => !assets.ContainsKey(c.Appearance)) || content.Textures.PendingCount > 0 || content.Textures.UnresidentUsedCount > 0;
     /// <summary>The appearance was uploaded or failed with a diagnostic; either completes its loading request.</summary>
     public bool IsPrepared(CharacterAppearance appearance) => assets.ContainsKey(appearance);
