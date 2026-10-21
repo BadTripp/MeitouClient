@@ -11,6 +11,12 @@ public sealed record OperateOrder(IReadOnlyList<CharacterId> Characters, string 
 /// </summary>
 public sealed record AddJob(IReadOnlyList<CharacterId> Characters, Meitou.Data.Gameplay.Ai.TaskType Type, string Site) : SimCommand;
 
+/// <summary>
+/// The original's order 146 USE_TURRET on a complete turret of the player's (function 12): the nearest of the characters (the selection when empty) that can act walks to its gunner spot
+/// (<see cref="Ai.AiSystem.TurretSpot"/>). Turrets do not fire yet (docs/simulation.md "Production").
+/// </summary>
+public sealed record UseTurretOrder(IReadOnlyList<CharacterId> Characters, string Site) : SimCommand;
+
 /// <summary>Takes the job at <paramref name="Index"/> off a character's job list (the list's X button).</summary>
 public sealed record RemoveJob(CharacterId Character, int Index) : SimCommand;
 

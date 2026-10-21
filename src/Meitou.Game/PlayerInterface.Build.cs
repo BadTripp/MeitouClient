@@ -592,10 +592,12 @@ sealed partial class PlayerInterface
         }
         if (!pending.Site.Complete) Say(new BuildOrder(SelectedIds(), pending.Site.Id) { Tick = session.World.Tick });
         else if (Machine(pending.Site.Id) is { Operable: true }) Say(new Meitou.Simulation.Production.OperateOrder(SelectedIds(), pending.Site.Id) { Tick = session.World.Tick });
-        else if (Machine(pending.Site.Id) is { IsStorage: true })
+        else if (Machine(pending.Site.Id) is { Function: Meitou.Data.World.ObjectRanges.TurretFunction })
+            Say(new Meitou.Simulation.Production.UseTurretOrder(SelectedIds(), pending.Site.Id) { Tick = session.World.Tick });   // the original's order 146 USE_TURRET
+        else if (Machine(pending.Site.Id) is { IsStorage: true } or { Function: MachineData.ItemFurnaceFunction })
         {
-            // A finished storage of the player's: the selection walks to it, and on arrival its storage window opens with the character's inventory beside it (the original's order 26,
-            // LOOT_TARGET, pointer search). A left click on it shows its window alone.
+            // A finished storage or furnace of the player's: the selection walks to it, and on arrival its window opens with the character's inventory beside it (the original's order 26,
+            // LOOT_TARGET, pointer search). A left click on a storage shows its window alone.
             Move(pending.Site.Position, false);
             storageOpening = (pending.Site, System.Diagnostics.Stopwatch.GetTimestamp());
         }
@@ -643,19 +645,24 @@ sealed partial class PlayerInterface
         if (verbs.Count > 0) contextMenu = new(SiteName(site), pending.At, verbs);
     }
 
-    /// <summary>The pointer over a site with characters selected: <c>build</c> (the original's pointer mode 0xb).</summary>
     /// <summary>
-    /// Whether a site is an object to act on, not a plain building: an unfinished one, or a finished machine or storage. The original's pointer is the hammer (<c>build</c>) only for an
-    /// unfinished building; a finished plain building is the arrow, and its quick order is a move (docs/game/ui-input.md "Building hover and click").
+    /// Whether a site is an object to act on, not a plain building: an unfinished one, or a finished machine, storage, furnace or turret. The original's pointer is the hammer (<c>build</c>)
+    /// only for an unfinished building; a finished plain building is the arrow, and its quick order is a move (docs/game/ui-input.md "Building hover and click").
     /// </summary>
-    bool SiteIsObject(BuildingSnapshot site) => !site.Complete || Machine(site.Id) is { Operable: true } or { IsStorage: true };
+    bool SiteIsObject(BuildingSnapshot site) =>
+        !site.Complete || Machine(site.Id) is { Operable: true } or { IsStorage: true } or { Function: MachineData.ItemFurnaceFunction or Meitou.Data.World.ObjectRanges.TurretFunction };
 
+    /// <summary>
+    /// The pointer over a site with characters selected: <c>build</c> while unfinished (the original's pointer mode 0xb), <c>search</c> over a storage, else the class's slot 130 pointer
+    /// (docs/game/ui-input.md, its table): <c>mine</c> over a machine of function 1 or 27, <c>use</c> over other machines, a furnace or a turret; none over a plain building.
+    /// </summary>
     string? SitePointer(Vector2 p)
     {
         if (SelectedIds().Count == 0 || PickSite(p) is not { } site) return null;
         if (!site.Complete) return "build";
-        if (Machine(site.Id) is { IsStorage: true }) return "search";   // a finished storage: the original's pointer for opening it
-        return SiteIsObject(site) && SiteVerbs(site).Count > 0 ? "build" : null;
+        if (Machine(site.Id) is not { } m || !SiteIsObject(site)) return null;
+        if (m.IsStorage) return "search";   // a finished storage: the original's pointer for opening it
+        return m.Function is MachineData.MineFunction or MachineData.NaturalMineFunction ? "mine" : "use";
     }
 
     /// <summary>Something more specific than a building lies under the pixel: a character, an item on the ground, a container, a door or a resource rock. A plain building gives way to it.</summary>

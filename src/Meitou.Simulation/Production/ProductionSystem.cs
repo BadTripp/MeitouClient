@@ -186,6 +186,7 @@ public sealed partial class ProductionSystem : ITickSystem
                     }
                     break;
                 }
+                case UseTurretOrder turret: UseTurret(world, turret); break;
                 case ProspectOrder prospect: ProspectBegin(world, prospect); break;
                 case AddJob add: AddJobs(world, add); break;
                 case RemoveJob remove: RemoveJobAt(world, remove); break;
@@ -199,6 +200,24 @@ public sealed partial class ProductionSystem : ITickSystem
                 case RepeatCrafts repeat: if (world.Machines.Find(repeat.Site)?.Craft is { } state) { state.Repeat = repeat.Repeat; world.Machines.Touch(); } break;
             }
         }
+    }
+
+    /// <summary>The nearest able one of the order's characters walks to the turret's gunner spot (engine choice: one gunner, the original's pick among several is Unknown).</summary>
+    void UseTurret(World world, UseTurretOrder order)
+    {
+        if (Site(world, order.Site) is not { Complete: true } site || db.Find(site.Record) is not { } record ||
+            (record.GetReferences("functionality") is [var link, ..] ? db.Find(link.TargetStringId) : null) is not { } fn || fn.GetInt("function") != Meitou.Data.World.ObjectRanges.TurretFunction) return;
+        var forward = Vector3.Transform(Vector3.UnitZ, site.Rotation);
+        var post = new Meitou.Data.World.TurretPost(site.Position, MathF.Atan2(forward.X, forward.Z), fn.GetFloat("use range", 10),
+            record.GetReferences("gun turret").Select(r => r.TargetStringId).FirstOrDefault() ?? "", null);
+        var spot = Ai.AiSystem.TurretSpot(world, post);
+        var table = world.Characters;
+        int best = -1;
+        float bestGap = float.MaxValue;
+        foreach (var id in Who(world, order.Characters))
+            if (table.TryResolveNext(id, out int slot) && table.Cold(slot) is { IsPlayer: true } cold && Able(cold) && Gap(table.Next[slot].Position, spot) is var gap && gap < bestGap)
+                (best, bestGap) = (slot, gap);
+        if (best >= 0) MovementSystem.GoTo(table, best, new Vector2(spot.X, spot.Z), SpeedMode.Run);
     }
 
     /// <summary>A character that can work: awake, not fighting, not carrying or carried, not caged.</summary>

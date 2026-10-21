@@ -541,7 +541,7 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
     /// few distances behind it whose ground is walkable at the turret's height, else beside or before it, else the turret's own place. The Y is the walkable surface
     /// there, so the path goes up to the tower's floor rather than to the ground below it. Engine choice: the game's gunner spot is not in the data.
     /// </summary>
-    static Vector3 TurretSpot(World world, in TurretPost turret)
+    internal static Vector3 TurretSpot(World world, in TurretPost turret)
     {
         var at = Flat(turret.Position);
         var forward = new Vector2(MathF.Sin(turret.Yaw), MathF.Cos(turret.Yaw));

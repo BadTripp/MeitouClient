@@ -859,7 +859,9 @@ crafting benches, generators and batteries. Facts: [production](game/buildings-p
   - The original's verb names, row widgets and colours are **Unknown**.
 - **Engine gaps:**
   - No rain filling farm water.
-  - No furnaces or turrets.
+  - Furnaces do not burn and turrets do not fire. A quick right click on the player's furnace walks the selection there and opens its window
+    (the original's 26 LOOT_TARGET); on the player's turret the nearest able selected character walks to its gunner spot (146 USE_TURRET,
+    `UseTurretOrder`; the spot as for town turrets below; one gunner, engine choice).
   - Plants are not drawn.
 
 ### Prospecting
