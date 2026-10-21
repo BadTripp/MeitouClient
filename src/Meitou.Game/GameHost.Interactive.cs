@@ -505,6 +505,10 @@ sealed partial class GameHost
                 profiler?.BeginFrame();
                 // A scene load draws only the loading screen; the warm-up draws whole frames under it (the first frames of a new place build what it needs).
                 bool covered = Covered, sceneLoading = sceneLoad is not null;
+                loadBar.Update(PendingLoads());
+                player.LoadBar = loadBar;
+                // The loading screen follows the interface's mode as it is now (the settings can switch it at any time).
+                if (loading is not null) (loading.LoadBar, loading.Faithful) = (loadBar, player.UiMode == Meitou.Data.Ui.UiMode.Faithful);
                 if (sceneLoading && skyArrival is { AtStars: true })
                     WorldFrame.DrawLoadingSky(gpu, scene, camera, size.X, size.Y, presentationHour ?? 0, (float)animSeconds, o.FogDistance);
                 else if (!sceneLoading || skyArrival is not null) DrawWorld(size.X, size.Y);

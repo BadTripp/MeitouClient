@@ -299,9 +299,16 @@ sealed partial class PlayerInterface
         }
     }
 
-    void DrawGameUi(DebugOverlay overlay, int width, int height) =>
-        uiPainter?.Draw(ArrangeUi(), width, height, mouse, $"meitou:speed.{Array.IndexOf(ButtonSpeeds, session.Simulation.Speed)}",
+    /// <summary>The original's background-loading bar, drawn over the interface in the Faithful mode (the host steps it).</summary>
+    internal ResourceLoadBar? LoadBar { get; set; }
+
+    void DrawGameUi(DebugOverlay overlay, int width, int height)
+    {
+        IReadOnlyList<UiControl> controls = ArrangeUi();
+        if (UiMode == UiMode.Faithful && LoadBar is { Visible: true } bar) controls = [.. controls, .. bar.Controls(uiResources, width, height)];
+        uiPainter?.Draw(controls, width, height, mouse, $"meitou:speed.{Array.IndexOf(ButtonSpeeds, session.Simulation.Speed)}",
             minimumTextPixels: TitleOpen ? 0 : StandardTextPixels * height / 1080f);
+    }
 
     /// <summary>For screenshot reviews: open the same panel through its registered button action.</summary>
     public void ShowUiPanel(string? panel, bool? expandInformation = null)
