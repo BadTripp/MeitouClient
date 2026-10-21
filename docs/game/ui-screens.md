@@ -239,6 +239,17 @@ holds `BiomeTextBox` (`Kenshi_BannerTextFont`, centred, shadowed) between `Biome
 
 Meitou (`PlayerInterface.Biome.cs`, both UI modes): the group comes from the weather region under the pivot; the layout's own line positions (**engine choice**: the text-size layout above is not reproduced); the block is "a conversation is showing"; a new world or a load only takes the group under the pivot (a load keeps the saved cooldown, clamped at 0 on save where the original writes its raw falling value).
 
+### Messages
+
+**Verified** (`MessageRoller`, constructor `140724af0`, update `140724310`, show-next `140723590`) unless noted. Event messages ("Discovered {1}"...) show one at a time in
+`Kenshi_MessagePanel.layout` (Popup layer; `Kenshi_MessageSkin`, a three-part paper strip, 0.359 x 0.065 of the screen; `MessageTextBox` centred, word-wrapped,
+`Kenshi_StandardFont_Large` in ink `#140806`), queued. Its top-left is the absolute position of the HUD's `MessagePanel` (`14072d3b0`; lower centre, 0.32 / 0.71 of the
+screen), of the build window's `MessagePanel` while that is open (`1404e5210`). Each message shows at alpha 1 for 4 s, then a MyGUI alpha fade to 0 at coef 3 (⅓ s); its end shows
+the next (**Observed**: the delegate's body is not read). Nothing new comes up while the LoadingWindow is up. When an unknown widget (`DAT_1421337d0 + 0x38`) is visible the panel
+sits above another one instead (**Unknown**).
+
+Meitou (`PlayerInterface.Hud.cs`, both UI modes): its own notices (Saved, Loaded, errors) share the queue, errors in `Bad` red; always at the HUD's spot; real-time timers.
+
 ### Prospecting
 
 **Verified** unless noted. `OrdersProspectButton` (`FUN_140721800`): with the window visible it hides it; else the selected character nearest the camera pivot (`FUN_1407f4ba0`, **Observed** over the selection) that has no task 150 gets one (`FUN_1405d20d0`,
