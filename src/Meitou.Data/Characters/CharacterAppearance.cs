@@ -89,6 +89,9 @@ public sealed class CharacterAppearance
     public string BodyMesh { get; private init; } = "";
     public string? BodyTexture { get; private init; }
     public string? BodyNormal { get; private init; }
+    /// <summary>Race <c>nm male strong</c> / <c>nm male skinny</c> (female: <c>nm female ...</c>): the body normal maps a well-defined or a starving body blends towards.</summary>
+    public string? BodyNormalStrong { get; private init; }
+    public string? BodyNormalSkinny { get; private init; }
     public string? BodyMask { get; private init; }
     public string? PartMap { get; private init; }
     public GameRecord? Head { get; private init; }
@@ -178,6 +181,7 @@ public sealed class CharacterAppearance
             Character = character, Race = race, Female = female, Body = body, BodyFile = bodyFile, Loadout = loadout,
             BodyMesh = bodyMesh,
             BodyTexture = FilePath(race, $"body texture {g}"), BodyNormal = FilePath(race, $"nm {g}"),
+            BodyNormalStrong = FilePath(race, $"nm {g} strong"), BodyNormalSkinny = FilePath(race, $"nm {g} skinny"),
             BodyMask = FilePath(race, $"body mask {g}"), PartMap = FilePath(race, $"part map {g}"),
             Head = head,
             SkinToneParameter = body?.SkinTone is { } tone ? Vector3.One - tone : Vector3.Zero,
@@ -407,7 +411,7 @@ public sealed class CharacterAppearance
         var copy = new CharacterAppearance
         {
             Character = Character, Animal = Animal, Race = Race, Female = Female, Body = Body, BodyFile = BodyFile, Loadout = Loadout,
-            BodyMesh = BodyMesh, BodyTexture = BodyTexture, BodyNormal = BodyNormal, BodyMask = BodyMask, PartMap = PartMap, Head = Head, Hair = Hair,
+            BodyMesh = BodyMesh, BodyTexture = BodyTexture, BodyNormal = BodyNormal, BodyNormalStrong = BodyNormalStrong, BodyNormalSkinny = BodyNormalSkinny, BodyMask = BodyMask, PartMap = PartMap, Head = Head, Hair = Hair,
             Shape = Shape, Beard = Beard, SkinToneParameter = SkinToneParameter, HairColour = HairColour, HiddenLimbs = HiddenLimbs,
         };
         copy.Parts.AddRange(Parts);

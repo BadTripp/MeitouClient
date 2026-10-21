@@ -31,7 +31,7 @@ static class CharacterShaders
     public const uint ShadeItem = 0, ShadeBody = 1, ShadeHair = 2;
     // Texture slots (CharacterMaterialRecord.Tex).
     public const int SlotDiffuse = 0, SlotNormal = 1, SlotColourMap = 2, SlotHeadDiffuse = 3, SlotHeadNormal = 4, SlotHeadMask = 5, SlotBodyMask = 6,
-        SlotHairOverlay = 7, SlotBeardOverlay = 8, SlotVest = 9, Slots = 18;
+        SlotHairOverlay = 7, SlotBeardOverlay = 8, SlotVest = 9, SlotBlendNormal = 18, Slots = 19;
 
     const string PushMembers = """
             vec3 flatColour;
@@ -206,6 +206,8 @@ static class CharacterShaders
             {
                 vec4 body = flag(f, 1u) ? tex(m.tex[0], uv) : vec4(0.7, 0.6, 0.5, 0.2);
                 if (flag(f, 2u)) nm = tex(m.tex[1], uv);
+                // The original's muscleBlend: towards the strong or the skinny body normal map (skinTone.w, 0 while that map is not resident).
+                if (flag(f, 2u) && m.skinTone.w > 0.0) nm = mix(nm, tex(m.tex[18], uv), m.skinTone.w);
                 float tone = flag(f, 64u) ? tex(m.tex[6], uv).r : 0.0;
                 vec2 huv = uv + vec2(0.0, 1.0);          // head UVs sit in v -1..0
                 if (flag(f, 8u)) body += tex(m.tex[3], huv);

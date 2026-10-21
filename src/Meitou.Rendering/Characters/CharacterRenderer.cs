@@ -237,6 +237,7 @@ internal sealed unsafe partial class CharacterRenderer : IDisposable
                 built++;
             }
             if (asset is null) continue;
+            if (inst.Build is { } build) ApplyBuild(asset, build);
             if (inst.BlendFrom is { } blendFrom && inst.Blend < 1 && assets.TryGetValue(blendFrom, out var fromAsset) && fromAsset is not null) ApplyBlend(asset, fromAsset, inst.Blend);
             else RestoreBlend(asset);
             float scale = inst.Scale > 0 ? inst.Scale : 1;
@@ -391,6 +392,43 @@ internal sealed unsafe partial class CharacterRenderer : IDisposable
         return present ? content.Textures.Index(key, textureBias, textureStandIn) : textureStandIn;
     }
 
+    /// <summary>
+    /// A person's stat-driven body (docs/animation.md "Stat-driven body"), applied when it has changed by more than 0.01: the bone shape and ground offset with its
+    /// muscle and starvation, and the body-shaded parts' normal maps (<see cref="CharacterShape.NormalBlend"/>: base, blend and weight), as <c>FUN_140531820</c> sets them.
+    /// The maps change once both are resident, so a body is not drawn without one while it loads.
+    /// </summary>
+    void ApplyBuild(CharacterAsset asset, BodyBuild build)
+    {
+        if (asset.Animal) return;
+        if (asset.AppliedBuild is not { } applied || !applied.Near(build))
+        {
+            asset.AppliedBuild = build;
+            var c = asset.Appearance;
+            if (content.Rigs.Reshape(c, build) is { } reshaped)
+            {
+                // A glide mixes the rest values (CharacterRenderer.Blend), so the build goes there too, or the end of a glide would bring back an older one.
+                if (asset.Rest is { } rest) (rest.Shape, rest.GroundOffset) = reshaped;
+                if (!asset.Blending) (asset.Shape, asset.GroundOffset) = reshaped;
+            }
+            var (baseField, blendField, weight) = CharacterShape.NormalBlend(c.Female, build.Definition, build.Starvation);
+            string? File(string field) => field.EndsWith(" strong", StringComparison.Ordinal) ? c.BodyNormalStrong : field.EndsWith(" skinny", StringComparison.Ordinal) ? c.BodyNormalSkinny : c.BodyNormal;
+            // A race without the strong or skinny map keeps its own as the base.
+            asset.PendingNormals = (content.BodyTexture(File(baseField) ?? c.BodyNormal), content.BodyTexture(File(blendField)), weight);
+        }
+        if (asset.PendingNormals is not { } p || !Ready(p.Normal) || !Ready(p.Blend)) return;
+        asset.PendingNormals = null;
+        foreach (var part in asset.Parts)
+            if (part.Material.Shading == CharacterShaders.ShadeBody)
+            {
+                part.Material.Tex[CharacterShaders.SlotNormal] = p.Normal;
+                part.Material.Tex[CharacterShaders.SlotBlendNormal] = p.Blend;
+                part.Material.MuscleBlend = p.Weight;
+            }
+
+        // Reading the key asks for the texture; a missing file never becomes resident.
+        static bool Ready(WorldTexture? t) => t is null || t.Key != 0 || t.State == WorldTexture.Residency.Missing;
+    }
+
     void Write(PartMaterial m, ref CharacterMaterialRecord r)
     {
         r = default;
@@ -428,7 +466,7 @@ internal sealed unsafe partial class CharacterRenderer : IDisposable
         r.VestCount = vests;
         r.AlphaThreshold = m.AlphaThreshold;
         r.ShirtColour = new Vector4(m.ShirtColour, 1);
-        r.SkinTone = new Vector4(m.SkinTone, 0);
+        r.SkinTone = new Vector4(m.SkinTone, has[CharacterShaders.SlotBlendNormal] ? m.MuscleBlend : 0);
         r.HairColour = new Vector4(m.HairColour, 1);
         r.HairAlpha = m.HairAlpha; r.HairMult = m.HairMult; r.BeardAlpha = m.BeardAlpha;
         r.DiffuseChannel = m.DiffuseChannel; r.AlphaChannel = m.AlphaChannel;

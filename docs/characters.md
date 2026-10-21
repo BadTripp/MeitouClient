@@ -51,6 +51,11 @@ vests/backpacks, hair-hidden/part-map flags, stumps and missing limbs are not or
 checkboxes. Weapon inventory choice, equipped/drawn location and sheath/back/hip attach bone
 are separate; .phs attachment points are data. Part scales/transforms must follow skeletal axes.
 
+**Verified** (decompilation, `AppearanceBase::setupItemMaterial` `FUN_140536210`): an attached item without a material record whose type is
+LIMB_REPLACEMENT (111) gets the appearance's body material (its textures, skin tone and stat-driven normal blend). The races' stumps
+(`Human Left Arm Stump` and the others in `Newwworld.mod`, mesh material `default`, no texture fields) are drawn so; prosthetics have a
+material. Meitou: `CharacterContent.ItemMaterial` (they were untextured, white, before).
+
 ## Shading, poses and LOD
 
 **Observed HLSL** body/head texture layering uses head UV+(0,1), border-black and body normal.wy.
