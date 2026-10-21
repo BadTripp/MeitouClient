@@ -287,6 +287,13 @@ holding at most 10. Save (`vfunc_17`/`18` `FUN_1402a1fa0` / `FUN_1402a23a0`, **O
 not a natural site, has a functionality and passes the owner test of [resources](#resources); 0 occurrences in two saves),
 `consumption amount-<k>` (input levels); the items are in the building's INVENTORY_STATE.
 
+**Held tool** (**Observed**, `Task_OperateMachine` set-up `FUN_14035b430`): when the task starts, a functionality with a
+`special tool` reference gets that item made and attached to the operator's `hands` point (`Bip01 Prop2`); the
+`special tool` records are ITEMs with a `mesh` in Newwworld.mod: Pickaxe (mines, rocks) and Hoe (farms). The attach is
+skipped when a virtual test on the character (`+0x30`) fails (**Unknown** what it tests; Meitou skips animals). Meitou
+shows it for the whole operate task, the walk there included, and drops it when the task ends (the original's removal
+was not traced, **Unknown**).
+
 | function | examples (production mult) |
 |---|---|
 | 1 MINE | Ore mine 64, Stone mine 128, copper mine 72, well 48 |

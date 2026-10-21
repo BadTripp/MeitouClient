@@ -258,6 +258,7 @@ public sealed partial class ProductionSystem : ITickSystem
         n.TaskTime = 0;
         cold.OperateSite = site.Id;
         cold.OperateClip = m.Data.Animation;
+        cold.OperateTool = m.Data.Tool;
         cold.HaulSite = null;
         cold.HaulFetch = null;
         cold.Operating = false;

@@ -68,6 +68,7 @@ public sealed partial class World
                 CarriedBy = cold?.CarriedBy ?? CharacterId.None,
                 AttachBone = cold is { CarriedBy.IsNone: false } ? Carrying.CarrySystem.AttachBone : null,
                 Carrying = cold?.Carrying ?? CharacterId.None,
+                HeldTool = state[i].Task == (byte)CharacterTask.Operate && cold is { OperateSite: not null, Appearance.Animal: null } ? cold.OperateTool : null,
                 Task = (CharacterTask)state[i].Task,
                 PickingLock = cold?.PickingLock is not null,
                 WorkingShackles = cold?.Shackles is { Work: Locks.ShackleWork.Pick or Locks.ShackleWork.Cut },

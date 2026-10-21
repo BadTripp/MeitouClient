@@ -397,6 +397,28 @@ public sealed class CharacterAppearance
             Shown = both && bare ? WeaponShown.Sheathed : WeaponShown.Always });
     }
 
+    /// <summary>
+    /// This look with <paramref name="item"/>'s <c>mesh</c> in the <c>hands</c> point, as the original attaches an operator's <c>special tool</c>
+    /// (docs/game/buildings-production.md "Production"); this look itself when the item has no mesh.
+    /// </summary>
+    public CharacterAppearance WithHeld(GameRecord item)
+    {
+        if (item.GetPath("mesh") is not { Length: > 0 } mesh) return this;
+        var copy = new CharacterAppearance
+        {
+            Character = Character, Animal = Animal, Race = Race, Female = Female, Body = Body, BodyFile = BodyFile, Loadout = Loadout,
+            BodyMesh = BodyMesh, BodyTexture = BodyTexture, BodyNormal = BodyNormal, BodyMask = BodyMask, PartMap = PartMap, Head = Head, Hair = Hair,
+            Shape = Shape, Beard = Beard, SkinToneParameter = SkinToneParameter, HairColour = HairColour, HiddenLimbs = HiddenLimbs,
+        };
+        copy.Parts.AddRange(Parts);
+        copy.Parts.Add(new CharacterPart { Record = item, Mesh = mesh, Field = "mesh", Mode = AttachMode.Bone, Slot = AttachSlot.Weapon, Point = "hands" });
+        copy.BodyLayers.AddRange(BodyLayers);
+        copy.Lights.AddRange(Lights);
+        foreach (var (name, point) in AttachmentPoints) copy.AttachmentPoints[name] = point;
+        foreach (var (name, weight) in PoseWeights) copy.PoseWeights[name] = weight;
+        return copy;
+    }
+
     void LoadAttachmentPoints(string installRoot, GameRecord race)
     {
         AttachmentPoints["hands"] = new AttachmentPoint("hands", "Bip01 Prop2", Vector3.Zero, Quaternion.Identity);

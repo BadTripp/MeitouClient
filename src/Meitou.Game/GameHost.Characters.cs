@@ -122,7 +122,8 @@ sealed partial class GameHost
                         }
                 poses[i] = new CharacterPose(layer.Name, time, weight);
             }
-            var look = player.EditorPreview(c.Id, c.Appearance) ?? c.Appearance;
+            var held = HeldLook(c.Appearance, c.HeldTool, out var heldPending);
+            var look = player.EditorPreview(c.Id, c.Appearance) ?? held;
             var glide = player.EditorBlend(c.Id);   // after the preview, which may just have swapped the look
             list.Add(new CharacterInstance(DrawKey(c.Id), look, position, yaw, poses)
             {
@@ -133,7 +134,26 @@ sealed partial class GameHost
             // The editor's next preview look, listed hidden so the renderer prepares it while the last one is still shown.
             if (player.EditorPending(c.Id) is { } pending)
                 list.Add(new CharacterInstance(DrawKey(c.Id) ^ (1L << 55), pending, position, yaw, poses) { Hidden = true });
+            else if (heldPending is not null)
+                list.Add(new CharacterInstance(DrawKey(c.Id) ^ (1L << 55), heldPending, position, yaw, poses) { Hidden = true });
         }
+    }
+
+    readonly System.Runtime.CompilerServices.ConditionalWeakTable<Meitou.Data.Characters.CharacterAppearance, Dictionary<string, Meitou.Data.Characters.CharacterAppearance>> heldLooks = new();
+
+    /// <summary>
+    /// The look with the tool an operator holds (<see cref="CharacterSnapshot.HeldTool"/>), made once per look and tool. Until the renderer has prepared it the plain look is
+    /// drawn and the tool's look is <paramref name="pending"/>, to be listed hidden so it gets prepared.
+    /// </summary>
+    Meitou.Data.Characters.CharacterAppearance HeldLook(Meitou.Data.Characters.CharacterAppearance look, string? tool, out Meitou.Data.Characters.CharacterAppearance? pending)
+    {
+        pending = null;
+        if (tool is null || scene.Database is not { } db) return look;
+        var byTool = heldLooks.GetOrCreateValue(look);
+        if (!byTool.TryGetValue(tool, out var held)) byTool[tool] = held = db.Find(tool) is { } item ? look.WithHeld(item) : look;
+        if (gpu.Characters is not { } characters || characters.IsPrepared(held)) return held;
+        pending = held;
+        return look;
     }
 
     /// <summary>A ragdoll's bones between the last two ticks: rotations by nlerp, root positions and the get-up weight linearly; a bone only in the newer one as it is.</summary>

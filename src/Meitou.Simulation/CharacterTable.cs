@@ -252,6 +252,8 @@ public sealed class CharacterCold
     public string? HaulTo { get; set; }
     /// <summary>The clip the operator plays while it works (the functionality's <c>animation</c>).</summary>
     public string? OperateClip { get; set; }
+    /// <summary>The ITEM the operator holds while its operate task runs (the functionality's <c>special tool</c>); derived, not hashed.</summary>
+    public string? OperateTool { get; set; }
     /// <summary>The operator did work this tick (it plays <see cref="OperateClip"/>); derived, not hashed.</summary>
     public bool Operating { get; set; }
 }
