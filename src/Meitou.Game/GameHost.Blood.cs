@@ -33,6 +33,7 @@ sealed partial class GameHost
     void SetUpBlood(GpuContext context)
     {
         gpu.Debris ??= new DebrisRenderer(context, gpu.Objects?.Resolver, assets.Find);   // made now: its shaders compile here, not at the first burst
+        gpu.Particles?.PrepareBursts(BurstSplash, BurstSpray);
         if (gpu.Decals is not null || AudioSystem.Setting(install, "Blood", 1) == 0) return;
         var files = BloodTextureFiles(assets.Configured);
         decalStore = new TerrainDecalStore([.. files.Select(list => (IReadOnlyList<(int, int)>)[.. list.Select(DdsSize)])]);

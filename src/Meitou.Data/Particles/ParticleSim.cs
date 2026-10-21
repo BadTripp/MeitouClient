@@ -52,6 +52,8 @@ public sealed class ParticleSimulation
     public Vector3 Origin { get; set; }
     /// <summary>Where the coordinates of the simulation are in the world (added to a particle's position for the observers, which compare world positions). Zero when the simulation is in world coordinates itself.</summary>
     public Vector3 WorldOffset { get; set; }
+    /// <summary>The system node's turn: the emitters' offsets and directions are rotated by it (identity for every effect but the host's one-shot bursts).</summary>
+    public Quaternion Orientation { get; set; } = Quaternion.Identity;
     /// <summary>The system was stopped (an effect whose life is over): the emitters make nothing more and the particles live out.</summary>
     public bool EmissionStopped { get; set; }
     /// <summary>Seconds since the system started.</summary>
@@ -238,6 +240,11 @@ public sealed class ParticleSimulation
         }
         var direction = e.AutoDirection && offset.LengthSquared() > 1e-12f ? Vector3.Normalize(offset)
             : Cone(e.Direction.LengthSquared() > 1e-12f ? Vector3.Normalize(e.Direction) : Vector3.UnitY, e.Angle.Evaluate(0, random));
+        if (!Orientation.IsIdentity)
+        {
+            offset = Vector3.Transform(offset, Orientation);
+            direction = Vector3.Transform(direction, Orientation);
+        }
         if (env.WindDirectionEmission && env.Wind.LengthSquared() > 1e-6f)
         {
             float horizontal = MathF.Sqrt(direction.X * direction.X + direction.Z * direction.Z);

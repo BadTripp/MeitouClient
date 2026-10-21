@@ -222,6 +222,37 @@ public sealed unsafe class ParticleRenderer : IDisposable
         placerGroups.Clear();
         placerGroups.AddRange(MapEffectPlacers.Groups(placements, Library, World, Seed));
         toWarm.AddRange(placerGroups);
+        placerGroups.AddRange(bursts.Values);
+    }
+
+    readonly Dictionary<string, BurstEffectGroup> bursts = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Fires the particle system <paramref name="system"/> once at <paramref name="position"/>, its emitters turned by <paramref name="orientation"/>, emitting for
+    /// <paramref name="seconds"/> of the frame clock (luckyren Mode's blood). Drawn with the map's placers; an unknown system does nothing.
+    /// </summary>
+    public void Burst(string system, Vector3 position, Quaternion orientation, float seconds)
+    {
+        if (!Enabled) return;
+        Sync();
+        if (BurstGroup(system) is { } group) group.Spawn(position, orientation, seconds);
+    }
+
+    /// <summary>Makes the <see cref="Burst"/> groups of <paramref name="systems"/> and starts decoding their textures, so a first burst is not drawn without them.</summary>
+    public void PrepareBursts(params string[] systems)
+    {
+        Sync();
+        foreach (var system in systems)
+            if (BurstGroup(system) is { } group) PreloadTextures([group]);
+    }
+
+    BurstEffectGroup? BurstGroup(string system)
+    {
+        if (bursts.TryGetValue(system, out var group)) return group;
+        if (Library.FindSystem(system) is not { } def) return null;
+        bursts[system] = group = new BurstEffectGroup(def, Seed + 5000 + bursts.Count, World);
+        placerGroups.Add(group);
+        return group;
     }
 
     /// <summary>

@@ -34,3 +34,10 @@ hit bursts. No original behaviour; every rule here is an engine choice. Implemen
 - Drawn in the near slice's scene pass before the characters, colour only (the alpha is the
   characters' SSAO mask), lit with `kenshiLight` under the game sky; no shadows or motion vectors.
   Textures come from the object material resolver; a mesh without one is bone-coloured.
+- A race that bleeds also throws 4 pieces of raw meat (`Item_Meat_Raw.mesh`, rebirth.mod's "Raw Meat", a 39 × 26 cm slab, at 0.5–0.9 size).
+- Blood particles (with a bleeding race): `Bloodsplash01` at the burst for 0.2 s and 5 `HackBlood-system` sprays (the system emits along +Z;
+  turned to random directions biased along the blow, 30–70% up) for 0.15–0.3 s; `Bloodsplash01` for 0.15 s where a limb or meat first lands.
+  One-shot units (`ParticleRenderer.Burst`) drawn with the map's placers, on the frame clock.
+- Sounds (the game has no gore event: **Verified**, hashing gore-like names against all 148 events of the banks): `Impact` with `Impacts` =
+  `Heavy_Hit` at the burst and `Light_Hit` where a limb or meat first lands, on the pooled impact objects; within 400 units of the eye also
+  `Item_Drop` with `Inventory_Items` = `Meat` on the GUI object (a 2D sound: no distance falloff, hence the limit).
