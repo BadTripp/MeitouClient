@@ -158,7 +158,7 @@ sealed partial class GameHost(GameInstall install, WorldScene scene, AssetLocato
                 Meitou.Data.World.FoliageLayoutCache? layoutCache = null;
                 try { layoutCache = new Meitou.Data.World.FoliageLayoutCache(install, foliageCatalog, Meitou.Data.World.FoliageWorld.ReadTowns(gameDb, levels)); }
                 catch (IOException e) { Console.Error.WriteLine($"resource rocks without the layout cache: {e.Message}"); }
-                data.ResourceNodes = new Meitou.Data.Gameplay.Construction.FoliageResourceNodes(new Meitou.Data.World.FoliageWorld(install, gameDb, levels, foliageCatalog, cache: layoutCache), gameDb);
+                data.ResourceNodes = new Meitou.Data.Gameplay.Construction.FoliageResourceNodes(new Meitou.Data.World.FoliageWorld(install, gameDb, levels, foliageCatalog, cache: layoutCache), gameDb, name => assets.Find(name));
             }
             // One set of skeleton rigs for the ragdolls and the renderer, so a ragdoll starts from the drawn pose.
             characterRigs = CharacterRenderer.CreateRigs(gameDb, assets);
