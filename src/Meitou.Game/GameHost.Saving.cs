@@ -33,6 +33,7 @@ sealed partial class GameHost
     Task<SaveBuilder>? preparedBase;
     LoadedSave? preparedFor;
     int captures;
+    NewGameSettings difficulty = new();
 
     SaveCaptureOptions CaptureOptions()
     {
@@ -47,8 +48,8 @@ sealed partial class GameHost
     }
 
     /// <summary>The system list and its order are <see cref="StandardSystems"/>' (docs/simulation.md "Threading"); built again for each world.</summary>
-    Meitou.Simulation.StandardSystemSet BuildSystems(bool interactive) =>
-        Meitou.Simulation.StandardSystems.Build(popData!, simWalkability!, new Meitou.Simulation.StandardSystemOptions
+    Meitou.Simulation.StandardSystemSet BuildSystems(bool interactive, PopulationData? data = null, NewGameSettings? settings = null) =>
+        Meitou.Simulation.StandardSystems.Build(data ?? popData!, simWalkability!, new Meitou.Simulation.StandardSystemOptions
         {
             // The sandbox compares motion with the original on characters standing still: a hostile foe there must not start a fight by itself. The duel scripts its fight.
             Parts = IsSandbox || IsDuel ? Meitou.Simulation.StandardParts.All & ~Meitou.Simulation.StandardParts.Aggro : Meitou.Simulation.StandardParts.All,
@@ -59,7 +60,10 @@ sealed partial class GameHost
             {
                 Background = interactive && !IsDuel, KeepRoamers = config.KeepRoamers, OffscreenFights = config.OffscreenFights, OffscreenHealing = config.OffscreenHealing,
                 CampaignAncestorsOnce = config.CampaignAncestorsOnce, KeepWild = config.KeepWild, ResidentSchedule = config.ResidentSchedule,
+                NestsMultiplier = (settings ?? difficulty)[6],
             },
+            Construction = new Meitou.Simulation.Construction.ConstructionSettings { BuildingSpeed = (settings ?? difficulty)[5] },
+            Production = new Meitou.Simulation.Production.ProductionSettings { ProductionOption = (settings ?? difficulty)[3], ResearchOption = (settings ?? difficulty)[4] },
             // The duel replays exactly: its paths are answered inside the tick, never on a thread whose timing differs from lap to lap.
             SynchronousPaths = !interactive || IsDuel,
             // The duel prints what its measured lap holds (MeasureLap).
@@ -113,6 +117,7 @@ sealed partial class GameHost
             var prepared = ahead ? preparedBase!.Result : null;
             preparedBase = null;   // used, or stale
             game = SaveCapture.Capture(world, popData!, new SaveClock((int)clock.Day, clock.Hour, clock.Minute), loadedSave, CaptureOptions(), prepared);
+            difficulty.Write(game.Camera);
             WriteWeather(game, (int)clock.Day, clock.HourOfDay);
             WriteDecals(game);
             player.WriteBiome(game.Camera);
@@ -198,10 +203,12 @@ sealed partial class GameHost
         var watch = Stopwatch.StartNew();
         LoadedSave? loaded = null;
         StandardSystemSet built;
+        var nextDifficulty = NewGameSettings.Read(read.Result.Camera);
+        var nextData = nextDifficulty.Apply(popData!);
         try
         {
-            built = BuildSystems(interactive);
-            var data = popData!;
+            built = BuildSystems(interactive, nextData, nextDifficulty);
+            var data = nextData;
             // A world that fails to load leaves the old one running (ReplaceWorld drops the half-made one).
             session.ReplaceWorld(built.Systems, world =>
             {
@@ -218,6 +225,8 @@ sealed partial class GameHost
             Console.Error.WriteLine($"load      failed: {e}");
             throw new SceneLoadFailed($"Load failed: {e.Message}");
         }
+        popData = nextData;
+        difficulty = nextDifficulty;
         population = built.Population;
         aggro = built.Aggro;
         if (nav is not null) population!.ZoneGate = zone => nav.Walkability.World.Contains(zone);

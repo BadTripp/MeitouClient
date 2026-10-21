@@ -46,6 +46,7 @@ Addresses are `kenshi_x64.exe` (1.0.68).
   inside), stat help (`StatHelpCatalog`), the loading tip, the day text, and the interpolated simulation messages (relations, bounties, research,
   campaigns, construction, fixtures, discoveries). Layout captions the original leaves English stay English.
 - **Fonts, tips, names**: through the overlay folder (`OgreScriptResources.ForInstall`) and `Loc.FindTextFile`.
+- **New-game option help**: `NewGameHelpCatalog` reads the installed English `main.pot` source references and passes the exact msgid through `Loc.Tr`; no paraphrases or translated paragraphs are embedded. Missing translations fall back to the original English; a missing template leaves help empty. Font resources use the active locale overlay.
 - All text files are read and written as UTF-8.
 
 ## Unknown / not done

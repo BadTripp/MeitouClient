@@ -33,7 +33,7 @@ sealed partial class PlayerInterface
     public void ShowMainMenu() => ShowTitle();
     public void CloseFrontend()
     {
-        foreach (string id in new[] { "title", "menu", "new-game", "advanced", "save", "load", "message", "editor", "file" }) faithfulScreens.Close(id);
+        foreach (string id in new[] { "title", "menu", "new-game", "save", "load", "message", "editor", "file" }) faithfulScreens.Close(id);
         editor = null; previews.Clear();
         confirmation = null; UpdateMenuPause();
     }
@@ -74,7 +74,7 @@ sealed partial class PlayerInterface
             switch (e.Widget)
             {
                 case "ResumeButton": faithfulScreens.Close("menu"); break;
-                case "NewGameButton": faithfulScreens.Open("new-game"); break;
+                case "NewGameButton": NewGameOptions = new(); advancedOpen = false; faithfulScreens.Open("new-game"); break;
                 case "SaveGameButton": OpenSlots("save"); break;
                 case "LoadGameButton": OpenSlots("load"); break;
                 case "OptionsButton": ScreenAction?.Invoke(e); break;
@@ -98,10 +98,11 @@ sealed partial class PlayerInterface
         }
         if (e.Screen == "new-game")
         {
+            if (AdvancedAction(e)) return true;
             if (e.Widget == "CancelButton") faithfulScreens.Close(e.Screen);
             else if (e.Widget == "LeftButton" && starts.Count > 0) startIndex = (startIndex + starts.Count - 1) % starts.Count;
             else if (e.Widget == "RightButton" && starts.Count > 0) startIndex = (startIndex + 1) % starts.Count;
-            else if (e.Widget == "AdvancedButton") faithfulScreens.Open("advanced");
+            else if (e.Widget == "AdvancedButton") advancedOpen = !advancedOpen;
             else if (e.Widget == "BeginButton" && starts.Count > 0)
             {
                 void Start() => ScreenAction?.Invoke(new("new-game", "BeginButton", "new-game", starts[startIndex].Id));
@@ -163,6 +164,7 @@ sealed partial class PlayerInterface
         }
         else if (id == "new-game")
         {
+            BindNewGamePanels(b);
             Enable("CancelButton", "AdvancedButton");
             if (starts.Count > 0)
             {
@@ -194,10 +196,6 @@ sealed partial class PlayerInterface
             else { Enable("ButtonA", "ButtonB"); b.Hidden.Add("ButtonC"); b.Text["ButtonB"] = "CANCEL"; }
             b.Properties["MessageText"] = new Dictionary<string, string> { ["Static"] = "true", ["WordWrap"] = "true" };
             b.Properties["ButtonA"] = new Dictionary<string, string> { ["DefaultAction"] = "true" };
-        }
-        else if (id == "advanced")
-        {
-            foreach (var widget in faithfulScreens.Layout(id).Widgets.Where(w => w.Type is "ScrollBar" or "ComboBox" or "EditBox")) b.Disabled.Add(widget.Name);
         }
         else return false;
         return true;

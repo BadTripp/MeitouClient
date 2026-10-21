@@ -104,6 +104,13 @@ public sealed class PopulationData
     public RoadNetwork? Roads { get; init; }
     /// <summary>The new-game options that change the body mechanics (hunger time, chance of death...).</summary>
     public BodyOptions BodyOptions { get; init; } = BodyOptions.Default;
+    /// <summary>A new world's body options without changing the data retained by the running world's systems.</summary>
+    public PopulationData WithBodyOptions(BodyOptions options) => new()
+    {
+        Db = Db, Sites = Sites, Factions = Factions, Appearances = Appearances, States = States,
+        PlayerFaction = PlayerFaction, Relations = Relations, SiteFactions = SiteFactions,
+        Biomes = Biomes, ResourceNodes = ResourceNodes, Roads = Roads, BodyOptions = options,
+    };
     Dictionary<string, int>? factionIndex;
 
     readonly Dictionary<int, IReadOnlyList<TownBuilding>> turrets = [];

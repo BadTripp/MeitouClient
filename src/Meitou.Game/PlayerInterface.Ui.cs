@@ -39,6 +39,8 @@ sealed partial class PlayerInterface
     {
         UiMode = mode;
         uiResolve = resolve;
+        advancedHelp = NewGameHelpCatalog.Read(resolve("locale/en_GB/LC_MESSAGES/main.pot")
+            ?? (Meitou.Content.GameInstall.Locate() is { } gameInstall ? Path.Combine(gameInstall.Root, "locale/en_GB/LC_MESSAGES/main.pot") : null));
         statHelp = StatHelpCatalog.Read(resolve("locale/en_GB/LC_MESSAGES/main.pot")
             ?? (Meitou.Content.GameInstall.Locate() is { } install ? Path.Combine(install.Root, "locale/en_GB/LC_MESSAGES/main.pot") : null));
         MyGuiColours.LoadPalette(resolve("kenshi_colours.xml"));
@@ -47,8 +49,11 @@ sealed partial class PlayerInterface
         squadBoxLayout = resolve("Kenshi_SquadBox.layout") is { } squadBox ? MyGuiTemplates.Expand(MyGuiReader.ReadLayout(squadBox), uiResources) : null;
         faithfulScreens = new(uiResources) { ClipboardReader = () => ClipboardRead?.Invoke(), ClipboardWriter = text => ClipboardWrite?.Invoke(text) };
         foreach (var (id, file, modal) in FaithfulScreenFiles)
-            faithfulScreens.Register(id, MyGuiReader.ReadLayout(resolve(file + ".layout") ?? throw new FileNotFoundException(file)), modal,
-                centreRoot: id is "new-game" or "save" or "load" or "file");
+        {
+            var layout = MyGuiReader.ReadLayout(resolve(file + ".layout") ?? throw new FileNotFoundException(file));
+            if (id == "new-game") layout = WithAdvancedPanel(layout, MyGuiReader.ReadLayout(resolve("Kenshi_AdvancedOptionsWindow.layout") ?? throw new FileNotFoundException("Kenshi_AdvancedOptionsWindow.layout")));
+            faithfulScreens.Register(id, layout, modal, centreRoot: id is "save" or "load" or "file");
+        }
         faithfulScreens.Follow("bag", "inventory");   // the bag window is married to the inventory, opened and closed by OPEN BAG only
         faithfulScreens.Activated += FaithfulAction;
         uiHost.Diagnostic += d => Console.Error.WriteLine($"ui        {d.Extension} {d.Operation}: {d.Error.Message}");
@@ -61,7 +66,7 @@ sealed partial class PlayerInterface
         ("inventory", "Kenshi_InventoryCharacterWindow", false), ("stats", "Kenshi_StatsWindow", false),
         ("overview", "Kenshi_OverviewWindow", false), ("menu", "Kenshi_MainMenuPopupPanel", true),
         ("title", "Kenshi_MainMenu", true), ("new-game", "Kenshi_NewGamePanel", true),
-        ("advanced", "Kenshi_AdvancedOptionsWindow", true), ("save", "Kenshi_SaveGamePanel", true),
+        ("save", "Kenshi_SaveGamePanel", true),
         ("load", "Kenshi_LoadGamePanel", true), ("message", "Kenshi_MessageBox", true),
         ("bag", "Kenshi_InventoryGenericWindow", false), ("limbs", "Kenshi_LimbReplacementWindow", false), ("trader", "Kenshi_InventoryTraderWindow", false),
         ("building", "Kenshi_GenericBuildingWindow", false), ("bench", "Kenshi_InventoryResearchWindow", false),

@@ -981,6 +981,18 @@ state's `mounted` handle). Claim order and gunner spot are engine choices (the g
 is undecoded); turrets do not fire yet (no power, aiming or damage model,
 [combat.md](game/combat.md) "Ranged and turrets").
 
+## New-game difficulty
+
+`NewGameSettings` in the game host binds seven numeric options to each new world: body hunger/death/damage,
+production/research, construction and nest density. Defaults are neutral (1); ranges follow
+[researched bindings](game/character-stats.md#new-game-advanced-options-that-change-these-mechanics).
+The two new-game panels share one modal screen; expanding raises the start panel, and its Begin/Cancel remain usable.
+Opening a fresh new-game dialog resets the draft; collapsing keeps it. Failed world replacement retains the running
+world's options and body factory. Saves carry seven `meitou difficulty <key>` CAMERA floats (hunger, death, damage,
+production, research, building, nests). Missing/nonfinite values use 1; out-of-range values clamp to the slider range.
+These are Meitou extensions; original difficulty save encoding is not implemented here. Saves without the extensions
+use neutral values. Bandit looting and easy prospecting are not exposed.
+
 ## Saves
 
 `Meitou.Data.Save` parses/writes folders; `Meitou.Simulation.Saving` maps world state. Capture

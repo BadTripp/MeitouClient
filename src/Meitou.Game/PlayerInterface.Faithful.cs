@@ -22,6 +22,7 @@ sealed partial class PlayerInterface
         if (key == Meitou.Engine.Input.Key.Escape && CloseContextMenu()) return true;
         if (key == Meitou.Engine.Input.Key.Escape)
         {
+            if (advancedOpen && faithfulScreens.OpenScreens.LastOrDefault() == "new-game") { advancedOpen = false; return true; }
             if (faithfulScreens.IsOpen("title") && faithfulScreens.OpenScreens.Count == 1) return true;
             if (EditorOpen && faithfulScreens.OpenScreens[^1] == "editor") { EditorEscape(); UpdateMenuPause(); return true; }
             // Esc presses the last button of the top message box (Return the first, docs/game/ui-input.md section 5).
@@ -182,6 +183,7 @@ sealed partial class PlayerInterface
     {
         if (id == "title" && UiMode == UiMode.Meitou) { MeitouTitleMenu(controls); return; }
         if (id == "stats") { AddStatsContent(controls); return; }
+        if (id == "new-game") { AddAdvancedContent(controls); return; }
         if (id == "editor") { AddEditorContent(controls); return; }
         if (id == "build") { AddBuildContent(controls); return; }
         if (id == "dialogue") { AddDialogueChoices(controls); return; }

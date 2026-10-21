@@ -14,18 +14,132 @@ using Meitou.Ui;
 
 namespace Meitou.Tests.Ui;
 
+[CollectionDefinition("Localised UI", DisableParallelization = true)]
+public class LocalisedUiCollection;
+
+[Collection("Localised UI")]
 public class FaithfulInteractionTests(ITestOutputHelper output)
 {
-    static PlayerInterface Ui(WorldSession session)
+    static PlayerInterface Ui(WorldSession session, OgreScriptResources? selectedResources = null)
     {
         var install = GameInstall.Locate(); Assert.SkipWhen(install is null, "No Kenshi install configured");
-        var resources = OgreScriptResources.ForInstall(install, LoadOrder.FromInstall(install));
+        var resources = selectedResources ?? OgreScriptResources.ForInstall(install, LoadOrder.FromInstall(install));
         var ui = new PlayerInterface(session, (_, _) => 0, c => c.Position) { Width = 1600, Height = 900 };
         ui.LoadUi(UiMode.Faithful, name => resources.Find(name));
         ui.ConfigureFrontend(SyntheticTown.Database(), () => [], ""); return ui;
     }
     static Vector2 Centre(UiControl c) => new(c.Bounds.X + c.Bounds.Width / 2, c.Bounds.Y + c.Bounds.Height / 2);
     static void Click(PlayerInterface ui, string name) => ui.MouseDown(MouseButton.Left, Centre(ui.UiFrame.Last(c => c.Name == name)), false);
+
+    [Theory, Slow]
+    [InlineData("en_GB")]
+    [InlineData("zh_CN")]
+    [InlineData("ja_JP")]
+    [InlineData("ko_KR")]
+    [InlineData("de_DE")]
+    [InlineData("fr_FR")]
+    [InlineData("es_ES")]
+    [InlineData("pt_BR")]
+    [InlineData("ru_RU")]
+    public void AdvancedOptionsRenderWithInstalledSkins(string code)
+    {
+        var install = GameInstall.Locate(); Assert.SkipWhen(install is null, "No Kenshi install configured");
+        string locale = Path.Combine(install.Root, "locale", code);
+        Assert.SkipWhen(!Directory.Exists(locale), "Language not installed");
+        var resources = OgreScriptResources.ReadConfig(Path.Combine(install.Root, "resources.cfg"), install.Root);
+        if (code != "en_GB") resources.AddModFolder(locale);
+        using var session = new WorldSession(Vector3.Zero, (-100, -100, 100, 100), (_, _) => 0);
+        var previousLanguage = Meitou.Localisation.Loc.Language;
+        var ui = Ui(session, resources);
+        try
+        {
+            Meitou.Localisation.Loc.Use(new Meitou.Localisation.GameLanguage(code, code == "en_GB", code == "en_GB" ? null : locale, Path.Combine(locale, "LC_MESSAGES"), null, null));
+            ui.ShowTitle(); Click(ui, "NewGameButton"); Click(ui, "AdvancedButton");
+            var help = NewGameHelpCatalog.Read(Path.Combine(install.Root, "locale/en_GB/LC_MESSAGES/main.pot"));
+            int longest = Enumerable.Range(0, 7).MaxBy(i => help.TextAt(NewGameSettings.Options[i].HelpLine).Length);
+            ui.MouseMove(Centre(ui.UiFrame.Last(c => c.Name == $"advanced-label-{longest}")));
+            Assert.Equal(help.TextAt(NewGameSettings.Options[longest].HelpLine), ui.UiFrame.Last(c => c.Name == "advanced-help").Caption);
+            Meitou.Rendering.Gpu.Core.VulkanDevice? available;
+            try { available = Meitou.Rendering.Gpu.Core.VulkanDevice.Create(new()); }
+            catch (Exception e) when (e is Meitou.Rendering.Gpu.Core.VulkanException or DllNotFoundException or EntryPointNotFoundException or Silk.NET.Core.Loader.SymbolLoadingException) { output.WriteLine(e.Message); available = null; }
+            using var device = available;
+            Assert.SkipWhen(device is null, "No Vulkan 1.3 device");
+            using var gpu = new Meitou.Rendering.Gpu.GpuContext(device);
+            using var overlay = Meitou.Rendering.DebugOverlay.TryCreate(gpu);
+            Assert.SkipWhen(overlay is null, "No UI font available");
+            using var painter = new Meitou.Rendering.Ui.UiPainter(overlay, MyGuiResources.Load("kenshi_init.xml", name => resources.Find(name), "kenshi_fonts.xml"), name => resources.Find(name)) { Mode = UiMode.Faithful };
+            using var target = Meitou.Rendering.Gpu.Texture.Create(gpu, new(Silk.NET.Vulkan.Format.R8G8B8A8Unorm, ui.Width, ui.Height,
+                Use: Meitou.Rendering.Gpu.TextureUse.ColourTarget | Meitou.Rendering.Gpu.TextureUse.TransferSrc));
+            overlay.Target = target;
+            painter.Draw(ui.UiFrame, ui.Width, ui.Height, Vector2.Zero, null);
+            gpu.Finish();
+            Assert.Equal(0, device.ValidationErrors);
+            Assert.Contains(gpu.ReadBack(target, 4), pixel => pixel != 0);
+            string picture = Path.Combine(Path.GetTempPath(), $"meitou-advanced-options-{code}.png");
+            Meitou.Rendering.FramebufferCapture.SavePng(gpu, target, picture, ui.Width, ui.Height);
+            output.WriteLine(picture);
+        }
+        finally { ui.DisposeUi(); Meitou.Localisation.Loc.Use(previousLanguage); }
+    }
+
+    [Theory, Slow]
+    [InlineData(UiMode.Faithful, 1280, 720)]
+    [InlineData(UiMode.Meitou, 1920, 1080)]
+    [InlineData(UiMode.Faithful, 1024, 768)]
+    public void AdvancedOptionsShareTheNewGameScreenAndRemainOperable(UiMode mode, int width, int height)
+    {
+        using var session = new WorldSession(Vector3.Zero, (-100, -100, 100, 100), (_, _) => 0);
+        var ui = Ui(session);
+        try
+        {
+            ui.Width = width; ui.Height = height; ui.SetUiMode(mode); ui.ShowTitle();
+            Click(ui, "NewGameButton");
+            float closedY = ui.UiFrame.Last(c => c.Name == "BeginButton").Bounds.Y;
+            Click(ui, "AdvancedButton");
+            var controls = ui.UiFrame;
+            var begin = controls.Last(c => c.Name == "BeginButton");
+            var lower = controls.Last(c => c.Name == "advanced-Root");
+            Assert.True(begin.Bounds.Y < closedY);
+            Assert.True(lower.Bounds.Y >= begin.Bounds.Y + begin.Bounds.Height);
+            Assert.True(lower.Bounds.Y + lower.Bounds.Height <= height);
+            Assert.DoesNotContain(controls, c => c.Name is "advanced-reset" or "advanced-close");
+            for (int i = 0; i < 7; i++)
+            {
+                foreach (string part in new[] { "label", "track", "less", "more", "value" })
+                {
+                    ui.MouseMove(Centre(ui.UiFrame.Last(c => c.Name == $"advanced-{part}-{i}")));
+                    var install = GameInstall.Locate()!;
+                    var help = NewGameHelpCatalog.Read(Path.Combine(install.Root, "locale/en_GB/LC_MESSAGES/main.pot"));
+                    Assert.NotEmpty(help.EnglishAt(NewGameSettings.Options[i].HelpLine));
+                    Assert.Equal(help.TextAt(NewGameSettings.Options[i].HelpLine), ui.UiFrame.Last(c => c.Name == "advanced-help").Caption);
+                }
+                Click(ui, $"advanced-more-{i}");
+                Assert.Equal(1.05f, ui.NewGameOptions[i]);
+                var track = ui.UiFrame.Last(c => c.Name == $"advanced-track-{i}");
+                ui.MouseDown(MouseButton.Left, Centre(track), false);
+                ui.MouseUp(MouseButton.Left, Centre(track), false);
+                Assert.InRange(ui.NewGameOptions[i], NewGameSettings.Options[i].Min, NewGameSettings.Options[i].Max);
+            }
+            ui.MouseMove(Vector2.Zero);
+            Assert.Empty(ui.UiFrame.Last(c => c.Name == "advanced-help").Caption);
+            float selectedHunger = ui.NewGameOptions[0];
+            Click(ui, "AdvancedButton"); // The lower panel must not intercept the parent toggle.
+            Assert.DoesNotContain(ui.UiFrame, c => c.Name == "advanced-track-0");
+            Click(ui, "AdvancedButton");
+            Assert.Equal(selectedHunger, ui.NewGameOptions[0]);
+            ui.UiKey(Key.Escape);
+            Assert.Contains(ui.UiFrame, c => c.Name == "BeginButton");
+            Assert.DoesNotContain(ui.UiFrame, c => c.Name == "advanced-track-0");
+            Click(ui, "AdvancedButton");
+            MyGuiEvent? request = null; ui.ScreenAction += e => request = e;
+            Click(ui, "BeginButton"); Assert.Equal("new-game", request?.Action);
+            Assert.Equal(selectedHunger, ui.NewGameOptions[0]);
+            Click(ui, "CancelButton");
+            Assert.DoesNotContain(ui.UiFrame, c => c.Name == "advanced-track-0");
+            Click(ui, "NewGameButton"); Assert.Equal(1, ui.NewGameOptions[0]);
+        }
+        finally { ui.DisposeUi(); }
+    }
 
     [Fact, Slow]
     public void MeitouTitleUsesTheWorldAndKeepsNewGameDialogsAndModeSwitchingFunctional()
