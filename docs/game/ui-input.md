@@ -206,6 +206,20 @@ real parts whose owning BUILDING has `is sign` receive a yellow tint, including 
 during a transition. Release restores their materials. Loading, menus, hidden UI, free camera and cinema suppress it.
 Rendering details: [objects](../render-objects.md#building-sign-highlight).
 
+### Ground item labels
+
+**Observed** (owner's original-game report): holding Alt shows a small name label over each loose item.
+**Verified** (`Kenshi_ItemDropLabel.layout`, `kenshi_colours.xml`): root `Kenshi_GenericTextBoxFlatSmallSkin` 0.0521 x 0.0259 of the screen, layer Back,
+pointer `pick`; `ItemNameText` (`Kenshi_TextboxStandardText`, Kenshi_StandardFont_Medium) centred. Colours: `DropItemLabelBack/TextDefault` #ffffff,
+`...Selected` #66ff66, `...SelectedStealing` #ff6666.
+**Observed** (`ItemManager::ItemLabel`, `FUN_1401649e0` / `FUN_140162950`): the root's width is fitted to the text; a quantity above 1 is appended
+(exact text **Unknown**); the label widget takes a mouse click; hovered labels turn Selected, or SelectedStealing when the item counts as stolen
+(owner-faction test, **Unknown** detail). Weapons, armour and some other item types take their text colour from the item's grade
+(`ItemGrade0`–`5` by thresholds 16/36/51/66/81, `ItemArtifact`, else `ItemStandard`). Range and anchor **Unknown**.
+Meitou (`PlayerInterface.GroundItems.cs`): with the Highlight gating above, every item within 500 units of the camera's focus not hidden by a
+building, name only, white, green under the pointer; a label picks like its item (pointer `pick_item`, right click picks it up). Overlapping
+labels are stacked above the nearer one. No quantity, grade or stealing colours yet (ground items have no owner).
+
 ### Hover outline
 
 Meitou only (Advanced → Hover outline, `HoverOutline`, default on; the game has none). The character under the cursor is drawn alone into a
