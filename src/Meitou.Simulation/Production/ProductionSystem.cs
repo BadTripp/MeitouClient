@@ -782,12 +782,20 @@ public sealed partial class ProductionSystem : ITickSystem
         world.Machines.Touch();
     }
 
-    /// <summary>Take an item (<see cref="TakeFromMachine.Count"/> units) out of a container into the character's inventory; what does not fit stays in the container.</summary>
+    /// <summary>
+    /// Take an item (<see cref="TakeFromMachine.Count"/> units) out of a container into the character's inventory; what does not fit stays in the container. Taken from another faction's
+    /// container it is stolen from that faction (engine choice: no witness or crime yet).
+    /// </summary>
     static void TakeFromContainer(World world, Locks.Fixture container, CharacterCold cold, TakeFromMachine take)
     {
         var storage = container.Contents!;
         if (take.Index < 0 || take.Index >= storage.Items.Count) return;
-        if (InventoryCommands.MoveUnits(storage, storage.Items[take.Index], take.Count, cold.Inventory!) > 0) world.Machines.Touch();
+        var item = storage.Items[take.Index];
+        int mark = item.StolenFrom;
+        if (container.Owner >= 0 && container.Owner != cold.Faction) item.StolenFrom = container.Owner;
+        int moved = InventoryCommands.MoveUnits(storage, item, take.Count, cold.Inventory!);
+        if (storage.Items.Contains(item)) item.StolenFrom = mark;   // what stayed keeps its mark
+        if (moved > 0) world.Machines.Touch();
     }
 
     void Put(World world, PutInMachine put)

@@ -46,7 +46,7 @@ public sealed class FixtureRegistry
     IReadOnlyList<ContainerSpot>? containerSpots;
 
     /// <summary>Where the containers with an inventory stand, for the host's picking; rebuilt (serial phases) only when a building registers or goes.</summary>
-    public IReadOnlyList<ContainerSpot> ContainerSpots => containerSpots ??= [.. all.Where(f => f.Contents is not null).Select(f => new ContainerSpot(f.Id, f.RecordId, f.Position))];
+    public IReadOnlyList<ContainerSpot> ContainerSpots => containerSpots ??= [.. all.Where(f => f.Contents is not null).Select(f => new ContainerSpot(f.Id, f.RecordId, f.Position, f.Owner, f.Lock is { EffectivelyLocked: true }))];
 
     IReadOnlyList<DoorPick>? doorPicks;
 
@@ -316,6 +316,7 @@ public sealed class FixtureRegistry
     /// <summary>Tells navigation after a door's lock changed (a pick, a break, an unlock).</summary>
     public void Touch(Fixture fixture)
     {
+        if (fixture.Contents is not null) containerSpots = null;   // its lock state is published with the spots
         if (fixture.Kind == FixtureKind.Door) SyncDoors(fixture.Building);
     }
 

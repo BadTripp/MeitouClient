@@ -109,7 +109,7 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
             else if (QuickOrder(p)?.Do is var quick && ContextPress(p, quick)) { }
             else if (quick is not null) quick();
             else if (GroundItemClick(p)) { }
-            else if (ContainerClick(p)) { }
+            else if (ContainerClick(p, alt)) { }
             else if (DoorClick(p, alt)) { }
             else if (RockPress(p)) { }
             else if (Ray(p) is { } ray && MoveHit(ray.Origin, ray.Direction) is { } hit)

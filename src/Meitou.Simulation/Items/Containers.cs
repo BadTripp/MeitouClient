@@ -2,8 +2,11 @@ using System.Numerics;
 
 namespace Meitou.Simulation.Items
 {
-    /// <summary>Open a container (<see cref="Locks.Fixture.Id"/>): the nearest of the characters (the selection when empty) who may walks to it and its window opens.</summary>
-    public sealed record OpenContainerOrder(IReadOnlyList<CharacterId> Characters, string Fixture) : SimCommand;
+    /// <summary>
+    /// Open a container (<see cref="Locks.Fixture.Id"/>): the nearest of the characters (the selection when empty) who may walks to it and its window opens. Another faction's locked one:
+    /// with <paramref name="Alt"/> its lock is picked (76 PICK_LOCK), else the hint and a walk to it; a shop's without Alt: the steal hint and a walk.
+    /// </summary>
+    public sealed record OpenContainerOrder(IReadOnlyList<CharacterId> Characters, string Fixture, bool Alt = false) : SimCommand;
 
     /// <summary>Closes the open container's window.</summary>
     public sealed record CloseContainer : SimCommand;
@@ -14,7 +17,7 @@ namespace Meitou.Simulation
     /// <summary>
     /// Opening a container of a building's interior (docs/game/locks.md "Containers"): a character walks up to it, its inventory shows in a window beside the character's, and items are
     /// moved with <see cref="Production.PutInMachine"/> / <see cref="Production.TakeFromMachine"/> addressed by the fixture id. <b>Engine choices</b>: the reach, a locked one refusing, a shop's
-    /// containers staying the shop's (its stock is one merged inventory, <see cref="Trading.Shop.ForBuilding"/>), the window closing when the opener walks off.
+    /// containers staying the shop's (its stock is one merged inventory, <see cref="Trading.Shop.ForBuilding"/>), what is taken from another faction's marked stolen with no witness test.
     /// </summary>
     public sealed partial class PlayerSystem
     {
@@ -41,14 +44,30 @@ namespace Meitou.Simulation
             }
             if (best < 0) return;
             var walker = table.Cold(best)!;
+            bool theirs = fixture.Owner >= 0 && fixture.Owner != world.Player.Faction;
             if (fixture.Lock is { EffectivelyLocked: true })
             {
-                world.Post($"{walker.Name}: It's locked.");
+                if (!theirs)
+                {
+                    world.Post($"{walker.Name}: It's locked.");
+                    return;
+                }
+                // Another faction's locked container (the original's FUN_1407fc6e0): Alt picks the lock, else the hint and a walk to it.
+                walker.Shackles = null;
+                walker.PickingLock = order.Alt ? fixture.Id : null;
+                if (!order.Alt) world.Post("Hold down the ALT key to pick the lock.");
+                MovementSystem.GoTo(table, best, Flat(fixture.Position), walker.RunSpeed);
                 return;
             }
             if (world.Squads.All.Any(s => s.Shop?.Building == fixture.Building))
             {
-                world.Post($"{walker.Name}: That stock is the shop's. Trade with the shopkeeper.");
+                // A shop's stock: the original's hint and a move without Alt; with Alt Meitou still refuses (the stock is the shop's one merged inventory, engine choice).
+                if (!order.Alt && theirs)
+                {
+                    world.Post("Hold down the ALT key to steal items");
+                    MovementSystem.GoTo(table, best, Flat(fixture.Position), walker.RunSpeed);
+                }
+                else world.Post($"{walker.Name}: That stock is the shop's. Trade with the shopkeeper.");
                 return;
             }
             var player = world.Player;

@@ -19,8 +19,8 @@ public enum FixtureKind : byte
     Bed,
 }
 
-/// <summary>A container with an inventory as the host picks it: its fixture id, BUILDING record and position.</summary>
-public sealed record ContainerSpot(string Id, string Record, Vector3 Position);
+/// <summary>A container with an inventory as the host picks it: its fixture id, BUILDING record, position, owner faction (-1: none) and whether its lock is locked.</summary>
+public sealed record ContainerSpot(string Id, string Record, Vector3 Position, int Owner = -1, bool Locked = false);
 
 /// <summary>A door for the host's picking: its fixture id, its key in <see cref="WorldSnapshot.Doors"/>, its owner faction and where its leaf is (else its building's origin).</summary>
 public sealed record DoorPick(string Id, string Building, int Door, int Owner, Vector3 Position);

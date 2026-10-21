@@ -89,7 +89,7 @@ sealed partial class PlayerInterface
             if ((CtrlHeld || AltHeld) && PickDowned(mouse) is { } downed) chosen = (AltHeld ? "search" : "lift", downed);
             else if (QuickOrder(mouse) is { } order) chosen = (order.Pointer, order.Target);
             else if (PickGroundItem(mouse) is not null) chosen = ("pick_item", null);
-            else if (PickContainer(mouse) is not null) chosen = ("search", null);
+            else if (PickContainer(mouse) is { } container) chosen = (ContainerPointer(container), null);
             else if (PickDoor(mouse) is { } door) chosen = (DoorPointer(door), null);
             else if (SitePointer(mouse) is { } siteMode) chosen = (siteMode, null);
             else if (PickRock(mouse) is not null) chosen = ("mine", null);   // a resource rock a right click would mine (the original's `mine` pointer)
