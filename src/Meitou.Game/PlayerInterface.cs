@@ -130,7 +130,7 @@ sealed partial class PlayerInterface(WorldSession session, Func<float, float, fl
     (string Pointer, CharacterId Target, Action Do)? QuickOrder(Vector2 p)
     {
         if (SelectedIds() is not { Count: > 0 } selection) return null;
-        if (PickTrader(p) is { } trader) return ("talk", trader, () => Say(new Meitou.Simulation.Trading.OpenTrade(selection[0], trader) { Tick = session.World.Tick }));
+        if (PickTrader(p) is { } trader && !Hostile(trader)) return ("talk", trader, () => Say(new Meitou.Simulation.Trading.OpenTrade(selection[0], trader) { Tick = session.World.Tick }));
         // A non-hostile character with something to say is talked to (the same Talk as the context menu's).
         if (PickTarget(p) is { } talkee && !Hostile(talkee) && session.World.CanTalk(talkee, selection[0]))
             return ("talk", talkee, () => Say(new Meitou.Simulation.Dialogue.TalkOrder(selection[0], talkee) { Tick = session.World.Tick }));

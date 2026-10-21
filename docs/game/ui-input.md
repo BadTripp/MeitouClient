@@ -180,7 +180,7 @@ hit with no walkable point sets `invalidmove` (`FUN_140800250`). Which other hov
 
 Meitou (`PlayerInterface.Pointer.cs`, engine choices): the window's own cursor is hidden and the pointer drawn last in the frame (not in
 screenshots or cinema takes). It follows the quick right-click order, so it never disagrees with the click: with a selection, over a
-trader or a non-hostile character with a talk dialogue (`World.CanTalk`) `talk`, a hostile living character `attk` (any other non-hostile one: no quick order, `arrow`, white outline, a right click moves), an own hurt character `med`, an own downed one `lift`, anyone else's downed one `search` (a right click opens its inventory), else a loose item (`pick_item`, a right click picks it up: [ground items](../simulation.md)); Ctrl over a downed character
+non-hostile trader or a non-hostile character with a talk dialogue (`World.CanTalk`) `talk`, a hostile living character `attk` (also without a selection, red outline; any other non-hostile one: no quick order, `arrow`, white outline, a right click moves), an own hurt character `med`, an own downed one `lift`, anyone else's downed one `search` (a right click opens its inventory), else a loose item (`pick_item`, a right click picks it up: [ground items](../simulation.md)); Ctrl over a downed character
 `lift`, Alt `search`; otherwise, over the interface, the settings panel or the loading screen, `arrow`. The free camera hides it (as mode 0's
 `invisible`). Interface → Hardware mouse (`HardwareMouse` in meitou.user.json, default off as the game's `hardware_mouse`; settings.cfg is
 not read) shows the Windows cursor instead, applied at once.
