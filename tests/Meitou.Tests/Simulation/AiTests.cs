@@ -217,6 +217,71 @@ public class AiTests(ITestOutputHelper output)
         }
     }
 
+    /// <summary>A character's world for the planner: in bed or not, at the node or not; nothing drawn, carried or attacking; the rest held true.</summary>
+    sealed class PlanStub(bool inBed, bool atNode) : IPlanWorld
+    {
+        public int Category => 1;
+        public bool Squadless => false;
+        public float Desire(TaskDataRow row, in PlanTarget target) => 1;
+        public PlanTarget Find(TaskDataRow row, in PlanTarget from) => new(1, new Vector3(10, 0, 10));
+        public bool Holds(TaskCondition c, in PlanTarget target) => c.Holds == c.State switch
+        {
+            StateType.isInBed => inBed,
+            StateType.isAtLocation or StateType.atNode => atNode,
+            StateType.hasWeaponEquipped or StateType.hasWeaponEquipped_156 or StateType.hasWeaponEquipped_157 or StateType.IS_CARRYING_SOMETHING
+                or StateType.iAmBeingMeleeAttacked_immediate or StateType.isCrouching or StateType.IS_CROUCHING_OR_LYING or StateType.iAmProne => false,
+            _ => true,
+        };
+    }
+
+    [Fact]
+    public void A_goal_plans_through_the_TaskData_rows_and_one_without_a_plan_gives_way_to_the_next()
+    {
+        // In bed and away from its node, a general-node goal chains getting up, the walk and standing at the node (docs/game/ai-tasks.md "Planner").
+        var plan = new List<PlanStep>();
+        var node = TaskDataTable.Of(TaskType.STAND_AT_GENERAL_NODE)!;
+        Assert.True(TaskPlanner.Local.Plan(node, 1, default, new PlanStub(inBed: true, atNode: false), [], plan) > 0);
+        Assert.Equal([TaskType.GET_OUT_OF_BED, TaskType.MOVE_ON_FREE_WILL, TaskType.STAND_AT_NODE, TaskType.STAND_AT_GENERAL_NODE], plan.Select(s => s.Type));
+        Assert.True(TaskPlanner.Local.Plan(node, 1, default, new PlanStub(inBed: false, atNode: true), [], plan) > 0);
+        Assert.Equal([TaskType.STAND_AT_NODE, TaskType.STAND_AT_GENERAL_NODE], plan.Select(s => s.Type));
+
+        // Sleeping on the floor is urgent but needs to be away from the home town, which nothing provides: at home going to bed wins.
+        var floor = Task("130-t", TaskType.SLEEP_ON_FLOOR, TaskPriority.Urgent);
+        var package = Rec("131-t", FcsRecordType.AI_PACKAGE, "Floor or bed");
+        package.References["Leader AI Goals"] = package.References["Squad AI Goals"] = [Ref("130-t", 0, 100), Ref("102-t", 0, 100)];
+        var db = SyntheticTown.Database(1, extra: [.. Records(), floor, package], changePatrol: p => p.References["AI packages"] = [Ref("131-t", 0)]);
+        using var world = Town(1, out _, WithHomes(db, out _, out _), null);
+        world.RunTicks(120);
+        var minds = world.Squads.All.Where(s => s.TemplateId == "10-t").SelectMany(s => s.Members).Select(m => world.Characters.Cold(m.Slot)!.Ai!).ToList();
+        Assert.NotEmpty(minds);
+        Assert.All(minds, m => Assert.Equal(TaskType.GO_HOME_AND_GO_TO_BED, m.Goal!.Task.Type));
+    }
+
+    [Fact]
+    public void Residents_back_after_hours_away_are_where_their_schedule_puts_them_only_with_the_switch()
+    {
+        foreach (bool schedule in new[] { true, false })
+        {
+            var data = WithHomes(Database(2), out _, out _);
+            using var world = Town(1, out _, data, null);
+            world.Systems.OfType<PopulationSystem>().Single().ResidentSchedule = schedule;
+            world.RunTicks(400);   // noon: at their nodes and posts
+            world.Commands.Enqueue(new FocusCommand(new Vector3(-50000, 0, -50000)) { Tick = world.Tick });
+            world.RunTicks(3000);
+            Assert.Equal(0, world.Squads.Count);
+            world.GameHours = 24 + 23;   // ten hours on: bed time
+            world.Commands.Enqueue(new FocusCommand(Centre) { Tick = world.Tick });
+            world.RunTicks(30);
+            var sleepers = world.Squads.All.Where(s => s.TemplateId == "10-t")
+                .SelectMany(s => s.Members.Where(m => m != s.Leader).Select(m => (m, Beds: s.Ai!.Home!.Of(HomeSpotKind.Bed).Select(b => b.Position).ToList()))).ToList();
+            Assert.NotEmpty(sleepers);
+            bool InBed((CharacterId M, List<Vector3> Beds) x) => (CharacterTask)world.Characters.Previous[x.M.Slot].Task == CharacterTask.Rest && x.Beds.Min(b => Off(world, x.M, b)) <= 13;
+            // With the switch they are in bed within a second of the town coming back; without it some are still on their way from where the town unloaded.
+            if (schedule) Assert.All(sleepers, x => Assert.True(InBed(x)));
+            else Assert.Contains(sleepers, x => !InBed(x));
+        }
+    }
+
     [Fact]
     public void A_roaming_platoons_package_is_saved_and_loaded()
     {

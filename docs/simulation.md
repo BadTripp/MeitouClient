@@ -134,7 +134,7 @@ Six Faithful/Meitou switches (the fifth, campaign inheritance, under Campaigns b
   save's wild platoon despawned on leaving (the orphan timer). **Observed** (headless, synthetic sectors and nests): Meitou keeps 12 squads and
   brings back a renamed character; Faithful remakes the squads from the seed.
 - **Towns keep their schedule** (`ResidentSchedule`). Meitou: a town squad that comes back after at least an hour unloaded (`ScheduleAfterHours`) is
-  marked `Squad.Resume`; each member's first think puts it where its plan's walk ends (its bed at night, the counter, its node, seat or gun) and
+  marked `Squad.Resume`; each member's first think picks where its plan's walk ends (its bed at night, the counter, its node, seat or gun; a ring of 4 by member index, walkable only), the serial step moves it there (Movement would overwrite a move from the parallel think) and
   the act-out goes on from there, so the town looks as if it had lived through the time; nothing runs while it is unloaded. Faithful (the
   original, which runs nothing for residents off screen): where they stood when it unloaded.
 

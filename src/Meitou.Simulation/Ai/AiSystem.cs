@@ -394,12 +394,15 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
                 var walk = world.Walkability;
                 var at = !float.IsNaN(end.Y) && walk.FloorNear(end.X, end.Z, end.Y, FloorSlack) is { } floor ? floor
                     : new Vector3(end.X, float.IsNaN(end.Y) ? walk.GroundHeight(end.X, end.Z) : end.Y, end.Z);
-                // Only onto walkable ground: a spot it could not walk to either is left to the walk and its give-up rule.
+                // Only onto walkable ground: a spot it could not walk to either is left to the walk and its give-up rule. The serial step puts it
+                // there (after the movement, which steps from the last tick's place), and it thinks again on the next tick, from the spot.
                 if (walk.IsWalkable(at.X, at.Z, at.Y))
                 {
-                    MovementSystem.Stop(table, slot);
-                    n.Position = at;
-                    n.Task = (byte)CharacterTask.Idle;
+                    mind.PlaceAt = at;
+                    mind.Version = -1;
+                    Interlocked.Exchange(ref placing, 1);
+                    Become(table, slot, CharacterTask.Idle);
+                    return;
                 }
             }
         }
@@ -591,6 +594,23 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
         return n.Task != (byte)CharacterTask.GoTo;   // arriving: the movement system ends the walk
     }
 
+    // Set by a think that left a resident to be placed (<see cref="AiMind.PlaceAt"/>); the serial step looks for them only then.
+    int placing;
+
+    /// <summary>Puts the residents back from their town's time unloaded on the spots their thinks chose (serial, after the movement).</summary>
+    static void Place(CharacterTable table)
+    {
+        for (int s = 0; s < table.HighWater; s++)
+        {
+            if (table.Cold(s)?.Ai is not { PlaceAt: { } at } mind) continue;
+            mind.PlaceAt = null;
+            MovementSystem.Stop(table, s);
+            ref var n = ref table.Next[s];
+            n.Position = at;
+            n.Velocity = Vector3.Zero;
+        }
+    }
+
     /// <summary>What a character gives up when its walks to a spot keep failing: its home's spots (it uses its post), its post (where it stands becomes it), the target, or relaxing at its bar seat.</summary>
     enum GiveUp : byte { Home, Post, Target, Seat }
 
@@ -638,6 +658,7 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
     public void SlowWorld(World world)
     {
         var table = world.Characters;
+        if (Interlocked.Exchange(ref placing, 0) != 0) Place(table);
         bool cadence = world.Tick % Math.Max(1, Settings.PackageEveryTicks) == 0;
         // Each town's turrets are claimed once per cadence, by the squads in squad order (derived, not hashed).
         if (cadence) { turretTaken.Clear(); seatTaken.Clear(); RefreshPlaces(world); }

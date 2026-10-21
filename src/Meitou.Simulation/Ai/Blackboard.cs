@@ -283,6 +283,8 @@ public sealed class AiMind
     public string? SitClip { get; set; }
     /// <summary>Its first think puts it where its plan's walk ends (<see cref="Squad.Resume"/>: back from its town's time unloaded); cleared by that think.</summary>
     public bool Resume { get; set; }
+    /// <summary>Where the serial step puts it this tick (set by the think that took <see cref="Resume"/> up); null otherwise.</summary>
+    public Vector3? PlaceAt { get; set; }
     /// <summary>Whether its lists hold any combat goal at all (else the stance stays the old default).</summary>
     public bool HasCombatGoals { get; set; }
     /// <summary>The role list and hour <see cref="Stance"/> was worked out for (a cache; the stance itself is hashed).</summary>
@@ -306,5 +308,6 @@ public sealed class AiMind
         hasher.Add(CommitUntil);
         hasher.Add(Target ?? new Vector3(float.NaN));
         if (Resume) hasher.Add(0x52657375);
+        if (PlaceAt is { } place) hasher.Add(place);
     }
 }
