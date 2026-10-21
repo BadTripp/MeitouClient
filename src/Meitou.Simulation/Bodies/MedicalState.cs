@@ -75,7 +75,8 @@ public sealed partial class MedicalState
     /// </summary>
     public static MedicalState Create(RaceData race, float strength, bool hasStats = true, float hpMultiplier = 1, float bodyScale = 1)
     {
-        var parts = race.Anatomy.Select(a =>
+        // In the original's part order (BodyPartTemplate.MedicalOrder; parts of one place keep the race's order, which gives vanilla's stomach before chest).
+        var parts = race.Anatomy.OrderBy(a => a.Part.MedicalOrder).Select(a =>
         {
             var p = new HealthPart(a.Part, a.HitWeight, a.BaseHp)
             {
