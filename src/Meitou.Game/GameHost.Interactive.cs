@@ -475,15 +475,18 @@ sealed partial class GameHost
             bool Held(SilkKey a, SilkKey b) => silkInput.Keyboards.Any(k => k.IsKeyPressed(a) || k.IsKeyPressed(b));
             player.CtrlHeld = Held(SilkKey.ControlLeft, SilkKey.ControlRight);
             player.AltHeld = Held(SilkKey.AltLeft, SilkKey.AltRight);
-            if (gpu.Objects is { } signObjects)
-                signObjects.HighlightSigns = highlightHeld && windowFocused && !Covered && !session.Camera.IsFree &&
-                    panel?.Visible != true && !interfaceHidden && !cinema.Clean && !cinemaHolds && !cinema.EditorVisible;
+            // The Highlight key (Alt) lights up the signs and outlines the NPCs near the focus.
+            bool highlighting = highlightHeld && windowFocused && !Covered && !session.Camera.IsFree &&
+                panel?.Visible != true && !interfaceHidden && !cinema.Clean && !cinemaHolds && !cinema.EditorVisible;
+            if (gpu.Objects is { } signObjects) signObjects.HighlightSigns = highlighting;
             bool pointerWorld = pointerMouse is not null && !Covered && !g.NoPopulation && !(PanelLive() && panel?.Visible == true) && !cinema.Contains(pointerAt);
             bool freeLook = pointerWorld && session.Camera.IsFree;
             // Hover outline (Advanced, Meitou only): not in the free camera, with the interface hidden, or in saved pictures.
-            bool outlined = config.HoverOutline && pointerWorld && !freeLook && !interfaceHidden && !cinema.Clean && !screenshotRequested && takeFile is null;
-            gpu.HoverKey = outlined && player.HoverTarget is { } hover ? DrawKey(hover.Id) : null;
-            if (gpu.HoverOutline is { } outline && player.HoverTarget is { } hovered) outline.Colour = hovered.Colour;
+            bool outlining = config.HoverOutline && !session.Camera.IsFree && !interfaceHidden && !cinema.Clean && !screenshotRequested && takeFile is null;
+            if (outlining && highlighting)
+                gpu.HoverKeys = [.. player.HighlightTargets(camera.Target, PlayerInterface.HighlightRadius).Select(t => (DrawKey(t.Id), t.Colour))];
+            else
+                gpu.HoverKeys = outlining && pointerWorld && player.HoverTarget is { } hover ? [(DrawKey(hover.Id), hover.Colour)] : [];
             if (display.BeginFrame(size.X, size.Y))
             {
                 long t0 = Stopwatch.GetTimestamp();

@@ -607,9 +607,9 @@ static class WorldFrame
         public InteriorMaskRenderer? InteriorMask;
         /// <summary>The navmesh debug view (null in the viewer; drawn while visible).</summary>
         public NavmeshOverlayRenderer? NavmeshOverlay;
-        /// <summary>The hover outline the game draws round the character under the mouse (null in the viewer); <see cref="HoverKey"/> picks the character by its draw-list key (null: none).</summary>
+        /// <summary>The hover outline the game draws round the character under the mouse, and with Alt those near (null in the viewer); <see cref="HoverKeys"/> picks the characters by their draw-list keys, each with its colour (empty: none).</summary>
         public HoverOutlineRenderer? HoverOutline;
-        public long? HoverKey;
+        public IReadOnlyList<(long Key, Vector4 Colour)> HoverKeys = [];
         /// <summary>The Tab panel's weather particles at 0 and its particle density, given to <see cref="Particles"/> every frame (it is made only with the first weather).</summary>
         public bool WeatherParticles = true;
         public float ParticleDensity = 1;
@@ -1196,7 +1196,7 @@ static class WorldFrame
         StageClock.Lap(2);
         gpu.Characters?.Update(eye);
         gpu.Characters?.DrawPortraits();   // the squad portraits, from this update's poses
-        gpu.Characters?.DrawHoverMask(gpu.HoverOutline is null ? null : gpu.HoverKey, width, height, camera.View, camera.FieldOfView, eye);   // before the colour pass, whose statistics stand
+        gpu.Characters?.DrawHoverMasks(gpu.HoverOutline is null ? [] : gpu.HoverKeys, width, height, camera.View, camera.FieldOfView, eye);   // before the colour pass, whose statistics stand
         gpu.Characters?.DrawIcons();   // the item icons being made, from the same update
         gpu.Objects?.DrawBuildingIcons();   // the build window's pictures being made
         StageClock.Lap(StageClock.UpdChars);
@@ -1472,7 +1472,7 @@ static class WorldFrame
             navOverlay.Record(navPicture, width, height, navPost.SceneDepth, navPost.RenderWidth, navPost.RenderHeight, view * camera.Projection(aspect, navNear, navFar), eye);
         }
         // The hover outline over the finished picture too (Meitou only): the mask drawn after the portraits, sorted against the near slice.
-        if (gpu.HoverOutline is { } outline && gpu.HoverKey is not null && gpu.Characters?.HoverMask is { } hover && gpu.Post is { Target: { } hoverPicture } hoverPost)
+        if (gpu.HoverOutline is { } outline && gpu.Characters?.HoverMasks is { Count: > 0 } hover && gpu.Post is { Target: { } hoverPicture } hoverPost)
         {
             var (hoverNear, hoverFar) = camera.Slices().Last();
             outline.Record(hoverPicture, width, height, hover, hoverPost.SceneDepth, hoverPost.RenderWidth, hoverPost.RenderHeight, hoverNear, hoverFar, view * camera.Projection(aspect, hoverNear, hoverFar));
