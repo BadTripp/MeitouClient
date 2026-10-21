@@ -55,7 +55,7 @@ which are descriptive (RTTI knows `MessageBoxManager::Box`; the constructor of a
 | LoadGameMenu | 140480b50 | Kenshi_LoadGamePanel | Window | save list, info panel, "Reset squad positions" |
 | SaveGameMenu | 140481ed0 | Kenshi_SaveGamePanel | Window | name edit box |
 | ImportGameMenu | 140481130 | Kenshi_ImportGamePanel | Window | ticks: positions, buildings, research, dead NPCs, relations; Advanced options; the import kind of the save request is described in [save.md](../formats/save.md#save-requests-fun_14047c310) |
-| LoadingWindow | 14091a280 | Kenshi_LoadingScreen | Top | message text with a tip |
+| LoadingWindow | 14091a280 | Kenshi_LoadingScreen | Top | picture, "LOADING" with dots, a tip ([Loading screen](#loading-screen)) |
 | MainBarGUI (HUD) | 14072d3b0 | Kenshi_MainPanel | Middle | see section 4 |
 | Overview (ManagementScreen) | 14049f5b0 | Kenshi_OverviewWindow | Window | tabs Map, Faction, Research, Craft, Squads, Messages ("DIALOGUE"), AI |
 | MapScreen | 140490210 | in Overview | - | world map, markers ([Map](#map)) |
@@ -81,6 +81,41 @@ Root, Datapanel and TooltipPanel, with no option controls. Loading the layout al
 **Observed** (installed `locale/en_GB/LC_MESSAGES/main.pot` and the eight non-English catalogs, de/es/fr/ja/ko/pt/ru/zh; no test checks it):
 `kenshi/titlescreen.cpp:557..563` each identify a label and a longer description, in hunger/death/damage/production/research/building/nests
 order, and all seven have translations. Runtime reads the template and translates the exact message key.
+
+### Loading screen
+
+**Verified** (decompilation: constructor `FUN_14091a280`, show/hide `FUN_140916ca0`, picture `FUN_1409163e0`, tip `FUN_140913640`, per frame `FUN_1409133d0`):
+
+- The layout is used as it is; nothing is moved or resized but `LoadingText`.
+- `LoadingText`: the catalog's "Loading" upper-cased (through the global locale) and left-aligned. It is placed so that the text with two dots is centred
+  horizontally in `LoadingPanel`. One dot is added per second of real time, back to none after three. Its font `Kenshi_UI_Messages` (MailartRubberstamp)
+  has only the codes A-Z and the dot.
+- Tips: every non-empty line of `tips.txt` (resource group General, so a locale's own copy) is kept, with a written `
+` read as a line break. Each
+  showing puts one at random in `MessageText`, or nothing when there are none. `MessageText` wraps through its template (`Kenshi_GenericTextBox`).
+- Picture: each showing takes a random group, `Int(0, n − 1)` with the global `rand`, of the image set `Kenshi_LoadingScreen`
+  (`kenshi_images.xml`). The group is set by name and MyGUI resolves a name to its first group. The base data names the `loading_screen9` and
+  `loading_screen10` groups `LoadingScreen6`, so vanilla shows `loading_screen1..5` at 1/8 each and `loading_screen6` at 3/8. Pictures 0, 9 and 10
+  ship but never show.
+- Hiding is immediate, with no fade.
+- The bar at the top right is the background loading bar below, not part of this window.
+- Meitou (`LoadingScreen`, Faithful mode): as above. `tips.txt` is read as UTF-8, else Windows-1252, since the French, German and Spanish files are
+  Windows-1252 (engine choice: how the original shows those bytes is **Unknown**). The Meitou mode keeps its own panel, spinner, bar and slide-out.
+
+### Background loading bar
+
+**Verified** (decompilation, the resource loader's update `FUN_14044bf40`; **Observed** in a vanilla screenshot, also without RE_Kenshi):
+
+- Widget: a `ProgressBar`, skin `Kenshi_ProgressBarFill`, created once by `createWidgetRealT` at real coordinates (0.9, 0, 0.1, 0.02), align
+  Left Top, layer `Top`, no name. So it sits at the top right over the loading screen and over the game alike.
+- Counters: each update counts the loader's pending requests (two queues). A rise adds to a total, a fall adds to a done count, and both reset to 0
+  when nothing is pending. The bar's range is the total and its position the done count.
+- Visibility: the bar shows when the total is above 0 and a wait counter is 0, tested before the counter steps. The counter goes back to 6 when the
+  total is 0 and counts down otherwise, so the bar appears after six updates with work pending and hides as soon as the queue empties.
+- A second pair of counters over two other queues is kept the same way but not drawn.
+- Meitou (`ResourceLoadBar`, Faithful mode): stepped once a drawn frame. Pending means the objects' plus the characters' loads (engine choice: the
+  original's queue holds the meshes and textures it loads in the background; terrain and foliage streaming are left out). It is drawn last on the
+  loading screen and over the in-game UI.
 
 ## 4. HUD (MainBarGUI)
 
