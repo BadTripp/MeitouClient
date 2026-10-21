@@ -79,6 +79,8 @@ public sealed record CharacterSnapshot(CharacterId Id, CharacterAppearance? Appe
     public IReadOnlyList<Vector3> Path { get; init; } = [];
     /// <summary>Null for a character without a body (an animal).</summary>
     public BodyStatus? Body { get; init; }
+    /// <summary>The stat-driven body of a person (not a robot, not an animal), from its current stats and hunger; null for the others.</summary>
+    public Meitou.Data.Characters.BodyBuild? Build { get; init; }
     /// <summary>What a selected character carries, one line per item (empty for the others).</summary>
     public IReadOnlyList<string> Inventory { get; init; } = [];
     /// <summary>A selected character's bounties, one line per faction that wants it (empty for the others and for one nobody wants).</summary>

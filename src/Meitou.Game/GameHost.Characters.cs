@@ -156,7 +156,7 @@ sealed partial class GameHost
             {
                 WeaponDrawn = c.WeaponDrawn, Scale = c.Scale, Hidden = aboveFloor.Contains(c.Id), FullRateAnimation = c.IsPlayer,
                 Bones = Blend(before?.Ragdoll, c.Ragdoll, alpha),
-                BlendFrom = glide?.From, Blend = glide?.Blend ?? 0,
+                BlendFrom = glide?.From, Blend = glide?.Blend ?? 0, Build = c.Build,
             });
             // The editor's next preview look, listed hidden so the renderer prepares it while the last one is still shown.
             if (player.EditorPending(c.Id) is { } pending)

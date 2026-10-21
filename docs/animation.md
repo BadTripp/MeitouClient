@@ -83,6 +83,25 @@ Muscle normal blends, head poses and skinning follow their own data/shader rules
 it does not re-ground crouches or prove the original controller's mechanism. Physically moving
 characters/root collision and leg-health/lying/care selection belong in [simulation](simulation.md#animation).
 
+### Stat-driven body
+
+**Verified** (decompilation): `FUN_14052bc70` sets three values on the human appearance (+0x1a0..+0x1a8) from the character's `CharStats`
+(offsets: [character-stats](game/character-stats.md#the-stat-list)) and hunger (`+0x4b8`, [ui-screens](game/ui-screens.md)):
+
+- **Bulk M** = map(max(strength, weapon smith, armour smith) × 0.01, 0.2 → 0, 0.99 → 1), not clamped. Strength is read through the stats object's slot-2
+  accessor; Meitou takes the stat itself.
+- **Definition D** = map((swimming + athletics + 3 × max(dexterity × x, martial arts) − cooking − science) × 0.01 / 5, 0.2 → 0, 0.9 men / 0.99 women → 1),
+  clamped 0..1. x is the float at `CharStats +0x34` (**Unknown**; Meitou 1).
+- **Starvation S** = clamp((1 − clamp(hunger − 1, 0, 1)) × 1.5, 0, 1).
+
+`FUN_140531820` (not for robot races) then sets the body material's `normalMap` and `bodyBlendNormal` and its `muscleBlend` (`character.hlsl`:
+`bodyN = lerp(bodyN, blendNormalMap, muscleBlend)`, before the head's normal is added), and, for a character with stats, rebuilds the bone shape
+(`FUN_14052e6c0`, M and S above). The maps: base `nm <g>` blended to `nm <g> strong` by D; when S > 0.25 or S > D, blended to `nm <g> skinny`
+by S, the base being `nm <g> strong` when D > 0.33 (RACE fields; humans and Shek have their own `_muscular` / `_skinny` files, robots and hive
+one file for all). What calls it, and how often, is **Unknown** (it is a virtual of `AppearanceHuman`, slots 6 and 13).
+Meitou (`CharacterShape.BuildFromStats`, `CharacterSnapshot.Build`, `CharacterRenderer.ApplyBuild`): published every tick from the live stats,
+applied when a value moves by more than 0.01 (engine choice).
+
 ### Startup preprocessing
 
 | Field | Override bones |
@@ -153,7 +172,7 @@ The renderer samples at `clip length × slider / 100`; generated NPC posture fol
   movement blend, was not traced), how the idle timer's units work, the arm check `@ 14051d240` in detail,
   the get-up clip's playback rate, how fast the movement direction turns, and which of `foetal` /
   `sitting dazed` / `knockout training` play when. Our engine's rules are in [simulation.md](simulation.md#animation).
-- Body shape: the nutrition value behind starvation (+0x4b8), the two
+- Body shape: the two
   movement-scale exceptions, the stats field x in the muscle definition, what reads (`Height` − 80) × 0.025,
   and what the game does when a body file lacks a slider (the viewer uses 100).
 

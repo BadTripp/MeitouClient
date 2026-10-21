@@ -92,6 +92,19 @@ public sealed class CharacterRigs(GameDatabase db, Func<string, string?> findMes
     /// scale the legs about the hips while <c>Bip01</c> keeps its height, so a short body floats and a tall one sinks. What grounds them in Kenshi was not found;
     /// lowering the character by this is an engine choice.
     /// </summary>
+    /// <summary>
+    /// The bone shape and ground offset of <paramref name="c"/> with the stat-driven <paramref name="build"/> (its muscle and starvation); null for an animal or a skeleton
+    /// the body sliders do not apply to.
+    /// </summary>
+    public (BodyShapeData? Shape, float GroundOffset)? Reshape(CharacterAppearance c, BodyBuild build)
+    {
+        if (For(c) is not { Animal: false, Rig: { BoneCount: CharacterShape.HumanBoneCount } rig }) return null;
+        var input = (c.Shape ?? CharacterShape.InputFor(db, c)) with { Muscle = build.Muscle, Starvation = build.Starvation };
+        var shape = CharacterShape.Compute(input, name => rig.Handle(name) is not null);
+        var data = rig.Shape(shape.BoneSize, shape.PositionalSize, shape.MovementScale);
+        return (data, GroundOffset(rig, data));
+    }
+
     static float GroundOffset(SkeletonRig rig, BodyShapeData? shape)
     {
         if (shape is null) return 0;

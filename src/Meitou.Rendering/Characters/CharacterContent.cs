@@ -87,6 +87,8 @@ internal sealed class PartMaterial
     public bool HasShirtColour;
     public Vector4 HairAlpha, HairMult, BeardAlpha, DiffuseChannel = new(1, 0, 0, 0), AlphaChannel = new(1, 0, 0, 0), Colour1, Colour2;
     public float AlphaThreshold;
+    /// <summary>The body's normal blend weight towards <see cref="CharacterShaders.SlotBlendNormal"/> (the original's <c>muscleBlend</c>).</summary>
+    public float MuscleBlend;
 }
 
 /// <summary>Everything the renderer keeps for one appearance: the skeleton and its shape, the parts, the posture layers that always apply.</summary>
@@ -95,6 +97,8 @@ internal sealed class CharacterAsset
     public required CharacterAppearance Appearance;
     public required SkeletonRig Rig;
     public BodyShapeData? Shape;
+    /// <summary>The stat-driven body last applied to the shape and the body's normal maps (<see cref="CharacterRenderer"/>), null before the first.</summary>
+    public BodyBuild? AppliedBuild;
     public readonly List<AssetPart> Parts = [];
     /// <summary>The carried lights (<see cref="CharacterAppearance.Lights"/>): a bone, the offset from it and an attach slot, posed like a bone-attached part.</summary>
     public readonly List<(int Bone, Matrix4x4 Offset, int AttachIndex, Meitou.Data.World.WorldLight Light)> Lamps = [];
@@ -569,6 +573,9 @@ internal sealed class CharacterContent : IDisposable
 
     WorldTexture? Texture(string? name, bool border) => name is null ? null : Textures.Get(name, border, deferred: true);
 
+    /// <summary>A body texture by file (bordered, as the body's own), streamed in like the rest.</summary>
+    public WorldTexture? BodyTexture(string? name) => Texture(name, true);
+
     PartMaterial BodyMaterial(CharacterAppearance c)
     {
         string f = c.Female ? " female" : "";
@@ -655,6 +662,14 @@ internal sealed class CharacterContent : IDisposable
             m.ClipOnNormalAlpha = worn && Tex(spec, "normal map") is not null;
             m.DoubleSided = spec.GetInt("material type") == 2;
             return m;
+        }
+        // A limb replacement without a material (the races' stumps, mesh material "default") wears the body's own material: its textures and skin tone
+        // (AppearanceBase::setupItemMaterial, FUN_140536210: no material record and type 111 sets the appearance's body material). Prosthetics have one.
+        if (item.Type == FcsRecordType.LIMB_REPLACEMENT)
+        {
+            var body = BodyMaterial(c);
+            body.Description = $"RACE '{c.Race.Name}' body (stump '{item.Name}')";
+            return body;
         }
         // A weapon of a generated loadout: its manufacturer's model.
         if (part.Material is { Type: FcsRecordType.MATERIAL_SPECS_WEAPON } model && Tex(model, "texture map") is { } modelTexture)

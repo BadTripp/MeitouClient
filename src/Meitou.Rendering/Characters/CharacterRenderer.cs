@@ -237,6 +237,7 @@ internal sealed unsafe partial class CharacterRenderer : IDisposable
                 built++;
             }
             if (asset is null) continue;
+            if (inst.Build is { } build) ApplyBuild(asset, build);
             if (inst.BlendFrom is { } blendFrom && inst.Blend < 1 && assets.TryGetValue(blendFrom, out var fromAsset) && fromAsset is not null) ApplyBlend(asset, fromAsset, inst.Blend);
             else RestoreBlend(asset);
             float scale = inst.Scale > 0 ? inst.Scale : 1;
@@ -391,6 +392,29 @@ internal sealed unsafe partial class CharacterRenderer : IDisposable
         return present ? content.Textures.Index(key, textureBias, textureStandIn) : textureStandIn;
     }
 
+    /// <summary>
+    /// A person's stat-driven body (docs/animation.md "Stat-driven body"), applied when it has changed by more than 0.01: the bone shape and ground offset with its
+    /// muscle and starvation, and the body-shaded parts' normal maps (<see cref="CharacterShape.NormalBlend"/>: base, blend and weight), as <c>FUN_140531820</c> sets them.
+    /// </summary>
+    void ApplyBuild(CharacterAsset asset, BodyBuild build)
+    {
+        if (asset.Animal || asset.AppliedBuild is { } applied && applied.Near(build)) return;
+        asset.AppliedBuild = build;
+        var c = asset.Appearance;
+        if (content.Rigs.Reshape(c, build) is { } reshaped) (asset.Shape, asset.GroundOffset) = reshaped;
+        var (baseField, blendField, weight) = CharacterShape.NormalBlend(c.Female, build.Definition, build.Starvation);
+        string? File(string field) => field.EndsWith(" strong", StringComparison.Ordinal) ? c.BodyNormalStrong : field.EndsWith(" skinny", StringComparison.Ordinal) ? c.BodyNormalSkinny : c.BodyNormal;
+        var normal = content.BodyTexture(File(baseField));
+        var blend = content.BodyTexture(File(blendField));
+        foreach (var part in asset.Parts)
+            if (part.Material.Shading == CharacterShaders.ShadeBody)
+            {
+                part.Material.Tex[CharacterShaders.SlotNormal] = normal;
+                part.Material.Tex[CharacterShaders.SlotBlendNormal] = blend;
+                part.Material.MuscleBlend = weight;
+            }
+    }
+
     void Write(PartMaterial m, ref CharacterMaterialRecord r)
     {
         r = default;
@@ -428,7 +452,7 @@ internal sealed unsafe partial class CharacterRenderer : IDisposable
         r.VestCount = vests;
         r.AlphaThreshold = m.AlphaThreshold;
         r.ShirtColour = new Vector4(m.ShirtColour, 1);
-        r.SkinTone = new Vector4(m.SkinTone, 0);
+        r.SkinTone = new Vector4(m.SkinTone, has[CharacterShaders.SlotBlendNormal] ? m.MuscleBlend : 0);
         r.HairColour = new Vector4(m.HairColour, 1);
         r.HairAlpha = m.HairAlpha; r.HairMult = m.HairMult; r.BeardAlpha = m.BeardAlpha;
         r.DiffuseChannel = m.DiffuseChannel; r.AlphaChannel = m.AlphaChannel;
