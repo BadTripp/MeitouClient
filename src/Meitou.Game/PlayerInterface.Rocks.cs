@@ -1,6 +1,7 @@
 using System.Numerics;
 using Meitou.Data.Gameplay.Ai;
 using Meitou.Data.Gameplay.Construction;
+using Meitou.Simulation;
 using Meitou.Simulation.Production;
 
 namespace Meitou.Game;
@@ -30,7 +31,7 @@ sealed partial class PlayerInterface
         foreach (var rock in rocks.Near(0, ground.X, ground.Z, RockSearch))
         {
             if (rock.Record.Length == 0) continue;
-            var to = rock.Position - ray.Origin;
+            var to = (rock.Centre ?? rock.Position) - ray.Origin;
             float along = Vector3.Dot(to, ray.Direction);
             float miss = to.LengthSquared() - along * along, r2 = rock.Radius * rock.Radius;
             if (miss > r2) continue;
@@ -45,13 +46,45 @@ sealed partial class PlayerInterface
         new(buildHost?.ItemName(rock.Record) ?? rock.Record, null, null, null, ProductionSystem.NaturalId(rock.Record, rock.Position), ProductionSystem.NaturalId(rock.Record, rock.Position),
             rock.Position, null, Record: rock.Record);
 
-    /// <summary>A right click on a rock: the selection mines it, with Shift as a job (true: taken).</summary>
-    bool RockClick(Vector2 p, bool shift)
+    void MineRock(IReadOnlyList<CharacterId> selection, ResourceNode rock, bool asJob)
     {
-        if (SelectedIds() is not { Count: > 0 } selection || PickRock(p) is not { } rock) return false;
         string site = ProductionSystem.NaturalId(rock.Record, rock.Position);
-        if (shift) Say(new AddJob(selection, TaskType.OPERATE_MACHINERY, site) { Tick = session.World.Tick });
+        if (asJob) Say(new AddJob(selection, TaskType.OPERATE_MACHINERY, site) { Tick = session.World.Tick });
         else Say(new OperateOrder(selection, site) { Tick = session.World.Tick });
+    }
+
+    (ResourceNode Rock, Vector2 At, long Since)? rockPending;
+
+    /// <summary>
+    /// A right press on a rock with characters selected: released before the menu opens it mines (with Shift as a job), held longer it opens the menu (Mine, Add to jobs) as a site's does
+    /// (true: taken).
+    /// </summary>
+    bool RockPress(Vector2 p)
+    {
+        if (SelectedIds().Count == 0 || PickRock(p) is not { } rock) return false;
+        rockPending = (rock, p, System.Diagnostics.Stopwatch.GetTimestamp());
         return true;
+    }
+
+    /// <summary>The right button let go: a press on a rock released before the menu opened mines it.</summary>
+    void RockRelease()
+    {
+        if (rockPending is not { } pending) return;
+        rockPending = null;
+        if (SelectedIds() is { Count: > 0 } selection) MineRock(selection, pending.Rock, SlowModifier);
+    }
+
+    /// <summary>Once a frame: a rock press held long enough opens its menu.</summary>
+    void UpdateRock()
+    {
+        if (rockPending is not { } pending || System.Diagnostics.Stopwatch.GetElapsedTime(pending.Since).TotalSeconds < ContextHoldSeconds) return;
+        rockPending = null;
+        if (SelectedIds() is not { Count: > 0 } selection) return;
+        string name = buildHost?.ItemName(pending.Rock.Record) ?? pending.Rock.Record;
+        contextMenu = new(name, pending.At,
+        [
+            ("Mine", () => MineRock(selection, pending.Rock, false)),
+            ("Add to jobs", () => MineRock(selection, pending.Rock, true)),
+        ]);
     }
 }

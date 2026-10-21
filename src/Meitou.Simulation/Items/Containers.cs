@@ -55,7 +55,7 @@ namespace Meitou.Simulation
             if (bestDistance > ContainerReach) MovementSystem.GoTo(table, best, Flat(fixture.Position), walker.RunSpeed);
         }
 
-        /// <summary>Each tick: the walker in reach opens its container; one given another order, downed or gone gives up. An open window closes when its opener is far, down or gone.</summary>
+        /// <summary>Each tick: the walker in reach opens its container; one given another order, downed or gone gives up. An open window stays until the player closes it; it closes when its opener is down or gone.</summary>
         static void ContainerWorkers(World world)
         {
             var player = world.Player;
@@ -77,8 +77,8 @@ namespace Meitou.Simulation
             }
             if (player.OpenContainer is { } open)
             {
-                bool keep = world.Fixtures.Find(open) is { Contents: not null } f && table.TryResolveNext(player.ContainerOpener, out int o) && table.Cold(o) is { Medical.Incapacitated: false }
-                    && Vector2.Distance(Flat(table.Next[o].Position), Flat(f.Position)) <= ContainerReach * 1.5f;
+                // The original has no walk-away test: the windows stay until the player closes them (docs/game/locks.md "Containers"); only an opener who is down or gone closes it here.
+                bool keep = world.Fixtures.Find(open) is { Contents: not null } && table.TryResolveNext(player.ContainerOpener, out int o) && table.Cold(o) is { Medical.Incapacitated: false };
                 if (!keep) player.OpenContainer = null;
             }
         }

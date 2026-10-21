@@ -47,6 +47,7 @@ sealed partial class PlayerInterface
             faithfulScreens.Close("building");
             faithfulScreens.Close("bench");
             shownMachine = null;
+            storageWithInventory = null;
             machineDrag = null;
         }
         if (shownMachine is not null && Machine(shownMachine) is { } shown && !faithfulScreens.IsOpen(MachineScreen(shown)))
@@ -61,7 +62,10 @@ sealed partial class PlayerInterface
         shownMachine = m.Site;
         string screen = MachineScreen(m);
         inventoryScroll.Remove(screen);
-        if (Selected().Count > 0 && !faithfulScreens.IsOpen("inventory")) faithfulScreens.Open("inventory");
+        // The character's inventory opens with an order-driven container window (the original's order 26 opens the looter's own window and the target's together) and with a machine's; selecting
+        // a storage or a mined rock shows its window alone (the original's Storage window of a selected ore storage has no inventory beside it).
+        bool alone = !m.IsContainer && (m.IsStorage || ProductionSystem.IsNatural(m.Site)) && storageWithInventory != m.Site;
+        if (!alone && Selected().Count > 0 && !faithfulScreens.IsOpen("inventory")) faithfulScreens.Open("inventory");
         faithfulScreens.Open(screen);
         PlaceInventoryBeside(screen, left: false);
     }
