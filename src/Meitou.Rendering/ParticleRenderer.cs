@@ -306,6 +306,7 @@ public sealed unsafe class ParticleRenderer : IDisposable
             preloaded = weatherGroups.Building ? weatherGroups.BuildingGroups : weatherGroups.Groups;
             PreloadTextures(preloaded);   // decoded on a worker while the groups are warmed
         }
+        DropStalePreloads();
         if (weatherGroups.Groups.Count == 0 && placerGroups.Count == 0) { lastSeconds = seconds; return; }
         float dt = double.IsNaN(lastSeconds) ? 0 : (float)Math.Clamp(seconds - lastSeconds, 0, 0.25);
         lastSeconds = seconds;
@@ -654,12 +655,15 @@ public sealed unsafe class ParticleRenderer : IDisposable
     };
 
     /// <summary>The decodes of the particle textures in flight (<see cref="BackgroundWork"/>): a file is read and decoded off the render thread; the upload is quick.</summary>
-    readonly Dictionary<string, Task<RgbaImage?>> decoding = new(StringComparer.OrdinalIgnoreCase);
+    readonly Dictionary<string, (Task<RgbaImage?> Task, long Started)> decoding = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>A preloaded decode not drawn this long after it started is dropped (a decoded 2048² texture is 16 MB; a later first sight decodes it again).</summary>
+    const long PreloadKeepMilliseconds = 30_000;
 
     Task<RgbaImage?> StartDecode(string name)
     {
         string path = GameFiles.Resolve(Path.Combine(texturesDirectory, name));
-        return decoding[name] = BackgroundWork.Run<RgbaImage?>(() =>
+        var task = BackgroundWork.Run<RgbaImage?>(() =>
         {
             if (!File.Exists(path)) return null;
             try { return TextureLoader.LoadFile(path, allMips: false).Levels[0]; }
@@ -669,6 +673,16 @@ public sealed unsafe class ParticleRenderer : IDisposable
                 return null;
             }
         });
+        decoding[name] = (task, Environment.TickCount64);
+        return task;
+    }
+
+    /// <summary>Drops the finished decodes nothing drew within <see cref="PreloadKeepMilliseconds"/> (effects preloaded but never shown).</summary>
+    void DropStalePreloads()
+    {
+        long now = Environment.TickCount64;
+        foreach (var (name, (task, started)) in decoding)
+            if (task.IsCompleted && now - started > PreloadKeepMilliseconds) decoding.Remove(name);
     }
 
     /// <summary>Starts decoding the textures the groups' techniques will draw with (the ones not yet loaded), so they are there when the groups are shown.</summary>
@@ -691,7 +705,7 @@ public sealed unsafe class ParticleRenderer : IDisposable
     {
         if (material.Texture is not { } name) return white;
         if (textures.TryGetValue(name, out var cached)) return cached ?? white;
-        if (!decoding.TryGetValue(name, out var task)) task = StartDecode(name);
+        var task = decoding.TryGetValue(name, out var pending) ? pending.Task : StartDecode(name);
         if (!task.IsCompleted)
         {
             if (drawFrames > FramesThatWaitForTextures) return null;
