@@ -21,6 +21,12 @@ namespace Meitou.Simulation
         /// <summary>A character opens or uses a container within this distance of it (an engine choice).</summary>
         public const float ContainerReach = 20;
 
+        /// <summary>
+        /// How far (X/Z) a character may be from a container it puts into or takes from: the original's limit for an item moved out of a character's inventory (60; out of a building's, its
+        /// bounds radius + 40, which a chest's is close to; docs/game/economy.md "Trading range").
+        /// </summary>
+        public const float TradingRange = 60;
+
         static void OpenContainerInput(World world, Items.OpenContainerOrder order)
         {
             if (world.Fixtures.Find(order.Fixture) is not { Contents: not null } fixture) return;
@@ -83,14 +89,14 @@ namespace Meitou.Simulation
             }
         }
 
-        /// <summary>The container Take/Put address by <paramref name="site"/> (a fixture id) and the character, when it is open and the character is in reach; posts "too far" otherwise. Null when <paramref name="site"/> is not a container.</summary>
+        /// <summary>The container Take/Put address by <paramref name="site"/> (a fixture id) and the character, when it is open and the character is in reach; posts "Out of trading range." otherwise (<see cref="TradingRange"/>). Null when <paramref name="site"/> is not a container.</summary>
         internal static Locks.Fixture? ContainerFor(World world, string site, CharacterId who, out CharacterCold? cold)
         {
             cold = null;
             if (world.Fixtures.Find(site) is not { Contents: not null } f) return null;
             var table = world.Characters;
             if (!table.TryResolveNext(who, out int slot) || table.Cold(slot) is not { IsPlayer: true, Inventory: not null } c) return f;
-            if (Vector2.Distance(Flat(table.Next[slot].Position), Flat(f.Position)) > ContainerReach * 1.5f) { world.Post($"{c.Name} is too far away."); return f; }
+            if (Vector2.Distance(Flat(table.Next[slot].Position), Flat(f.Position)) > TradingRange) { world.Post("Out of trading range."); return f; }
             cold = c;
             return f;
         }

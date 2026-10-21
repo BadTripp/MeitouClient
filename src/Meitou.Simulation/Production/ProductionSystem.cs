@@ -23,7 +23,7 @@ public sealed class ProductionSettings
     public float SettleReach { get; init; } = 150;
     /// <summary>The footprint radius of a BUILDING record (the host knows it); null: 0.</summary>
     public Func<string, float>? Footprint { get; init; }
-    /// <summary>A character gives or takes items from within this far (X/Z) of a building (engine choice; the original walks the character to it first).</summary>
+    /// <summary>A character gives or takes items from within this far (X/Z) of a building, else "Out of trading range." (engine choice: the original allows the building's bounds radius + 40 for an item out of it and 60 for one out of a character's inventory, docs/game/economy.md "Trading range"; Meitou has no bounds radius in the sim).</summary>
     public float TransferReach { get; init; } = 200;
     /// <summary>Operators empty a full output into storages and fill empty inputs from them (docs/simulation.md "Production"; engine option: the original's wording "put any excess materials ... into storage" is the Ditch items squad AI option's, <see cref="SquadAi.Ditch"/>).</summary>
     public bool AutoHaul { get; init; } = true;
@@ -750,7 +750,7 @@ public sealed partial class ProductionSystem : ITickSystem
         if (!table.TryResolveNext(who, out int slot) || table.Cold(slot) is not { IsPlayer: true } c || c.Inventory is null) return false;
         cold = c;
         if (Gap(table.Next[slot].Position, site.Position) <= Settings.TransferReach + (Settings.Footprint?.Invoke(site.Record) ?? 0)) return true;
-        world.Post($"{c.Name} is too far away.");
+        world.Post("Out of trading range.");
         return false;
     }
 
