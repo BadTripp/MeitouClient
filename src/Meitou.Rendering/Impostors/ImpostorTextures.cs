@@ -14,18 +14,20 @@ public sealed class ImpostorTextures : IDisposable
 {
     readonly GpuContext gpu;
     readonly Texture[] maps = new Texture[2];
-    readonly ImpostorTexture[] sources = new ImpostorTexture[2];
+    readonly ImpostorTexture?[] sources = new ImpostorTexture?[2];
     readonly uint[] indices = new uint[2];
     float indexBias;
     bool registered;
 
-    public ImpostorAtlas Atlas { get; }
+    /// <summary>The atlas; once <see cref="Complete"/>, only its shape (<see cref="ImpostorAtlas.WithoutLevels"/>): the level data was the CPU copy.</summary>
+    public ImpostorAtlas Atlas { get; private set; }
+    readonly int levels;
     /// <summary>Top levels left out per map (0 albedo, 1 normal): the foliage path drops those its transition distance never needs
     /// (docs/impostors.md 7, "VRAM").</summary>
     readonly int[] skips = new int[2];
     public int SkipOf(int map) => skips[map];
     /// <summary>The levels of a map on the GPU.</summary>
-    public int LevelsOf(int map) => Atlas.Levels - skips[map];
+    public int LevelsOf(int map) => levels - skips[map];
     /// <summary>The GPU bytes: the levels kept, of the maps.</summary>
     public long Bytes { get; }
     public Texture Albedo => maps[0];
@@ -51,6 +53,7 @@ public sealed class ImpostorTextures : IDisposable
     {
         this.gpu = gpu;
         Atlas = atlas;
+        levels = atlas.Levels;
         ImpostorMap[] order = [ImpostorMap.Albedo, ImpostorMap.Normal];
         for (int i = 0; i < 2; i++)
         {
@@ -108,7 +111,7 @@ public sealed class ImpostorTextures : IDisposable
         {
             if (Complete) return 0;
             int source = skips[map] + level;
-            var (rows, rowBytes) = RowsOf(sources[map].Encoding, Atlas.AtlasPixels >> source);
+            var (rows, rowBytes) = RowsOf(sources[map]!.Encoding, Atlas.AtlasPixels >> source);
             int perSlab = Math.Max(1, SlabBytes / rowBytes);
             return (long)Math.Min(perSlab, rows - row) * rowBytes;
         }
@@ -120,7 +123,8 @@ public sealed class ImpostorTextures : IDisposable
         if (Complete) return false;
         int source = skips[map] + level;
         int pixels = Atlas.AtlasPixels >> source;
-        var encoding = sources[map].Encoding;
+        var texture = sources[map]!;
+        var encoding = texture.Encoding;
         var (rows, rowBytes) = RowsOf(encoding, pixels);
         int perSlab = Math.Max(1, SlabBytes / rowBytes);
         int n = Math.Min(perSlab, rows - row);
@@ -128,12 +132,18 @@ public sealed class ImpostorTextures : IDisposable
         // A slab of whole block rows; the last one ends at the level's edge.
         int y = row * unit, height = Math.Min(n * unit, pixels - y);
         batch.Write(maps[map], level, 0, new Rect2D(new Offset2D(0, y), new Extent2D((uint)pixels, (uint)height)),
-            sources[map].Levels[source].AsSpan(row * rowBytes, n * rowBytes));
+            texture.Levels[source].AsSpan(row * rowBytes, n * rowBytes));
         row += n;
         if (row >= rows)
         {
             row = 0;
             if (++level == LevelsOf(map)) (map, level) = (map + 1, 0);
+        }
+        if (Complete)
+        {
+            // All on the GPU: drop the level data, which otherwise stays in memory for as long as the textures do (up to tens of MB an atlas).
+            sources[0] = sources[1] = null;
+            Atlas = Atlas.WithoutLevels();
         }
         return true;
     }

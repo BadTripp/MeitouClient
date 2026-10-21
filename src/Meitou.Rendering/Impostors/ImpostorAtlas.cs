@@ -72,6 +72,12 @@ public sealed class ImpostorAtlas
 
     public ImpostorTexture? this[ImpostorMap map] => Textures.FirstOrDefault(t => t.Map == map);
 
+    /// <summary>This atlas's shape without its maps (no textures, <see cref="Levels"/> 0): what drawing reads once the maps are on the GPU.</summary>
+    public ImpostorAtlas WithoutLevels() => new()
+    {
+        Grid = Grid, FramePixels = FramePixels, Centre = Centre, Radius = Radius, Gloss = Gloss, Name = Name, FirstLevel = FirstLevel, Textures = [],
+    };
+
     public void Write(Stream stream)
     {
         if (FirstLevel != 0) throw new InvalidOperationException("an atlas read without its top levels cannot be written");
