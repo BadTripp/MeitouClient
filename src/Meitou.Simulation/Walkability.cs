@@ -90,8 +90,11 @@ public sealed class OpenGroundWalkability(Func<float, float, float> ground) : IW
 /// <summary>A walkability that answers paths for a given footprint radius (RACE <c>pathfind footprint radius</c>: the clearance across portals is twice it).</summary>
 public interface IAgentWalkability : IWalkability
 {
-    /// <summary>A path for an agent of <paramref name="footprintRadius"/> units; 0 or less means the default human, and a water cost factor of <paramref name="waterFactor"/> (0 or less: the default).</summary>
-    PathResult FindPath(Vector3 from, Vector3 to, float footprintRadius, float waterFactor);
+    /// <summary>
+    /// A path for an agent of <paramref name="footprintRadius"/> units; 0 or less means the default human, and a water cost factor of <paramref name="waterFactor"/> (0 or less: the default).
+    /// A long trip takes the roads by the original's rule for FACTION <c>road preference</c> <paramref name="roadPreference"/> (0: never).
+    /// </summary>
+    PathResult FindPath(Vector3 from, Vector3 to, float footprintRadius, float waterFactor, float roadPreference = 0);
 }
 
 /// <summary>Finding a walkable spot near a point (a stand-in's characters coming back into the world, docs/simulation.md "Off-screen tier").</summary>

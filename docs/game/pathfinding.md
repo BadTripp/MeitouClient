@@ -153,6 +153,15 @@ nearest reachable point and a straight provisional tail (the terrain search, und
 a way round through an unloaded zone within one block is not found). **Observed**: Hub→(-36000,-6000) and Hub→Squin arrive; "6 dudes"
 save, scratch harness with the host's zone loading: Fog Islands (-80620,-24171) → the squad at (-31620,11420), 60.5k units, arrives
 (17,506 ticks); before, it walked to the nearest reachable point and stopped on a cliff 10.6k short.
+**Roads** (original, **Observed**): `CharMovement::vfunc_18` (`FUN_140661270`, set destination) tries the road route
+(`FUN_14065f940`, the off-screen mover's [rule](factions-squads-towns.md#off-screen-world), its own gate 10000 units) for trips over 1000
+units when no road path is active, with w from the character's faction `road preference` (CharMovement +0x100, set in `FUN_140661f90`);
+after over 16 navmesh failures it falls back to the road route ("trying road network"). Nameless has 0.3, so player squads take roads too.
+Ours: the long route asks `RoadNetwork.Route` first (`NavAgent.RoadPreference`, `CharacterCold.RoadPreference`, kept on recruit/dismiss);
+when taken, the legs to and from the road are terrain-grid routes (engine choice) and the navmesh part reaches at most `RoadHandover`
+(1500) along it, so bends are not cut. Not built: the rule for a trip within one loaded block (navmesh only), the failure fallback.
+**Observed** (scratch harness, nothing loaded): Hub→Squin 17657 straight walks 25522 at 0.3 (99 % within 400 of a road; 43 % at 0);
+Hub→Stack 34054; Squin→Admag at 0.8 walks 132184 for 26834 straight (short road `length` values, as off screen).
 
 ### Generator (runtime and tool-time navmesh building)
 

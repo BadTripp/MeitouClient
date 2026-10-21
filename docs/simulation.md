@@ -149,7 +149,8 @@ Implemented (`PopulationRoaming.cs`):
   original's stands still). Destinations stay the engine's (towns, patrol points near home): the original keeps no roaming squad off screen,
   and saves give no usable target (**Observed**, 4 owner saves: `mission target` always type 0, `target town` on 1-3 platoons, `mission town`
   mostly a TOWN).
-- **Roads** (`RoadNetwork`, `PopulationData.Roads` from the level's ROAD records): a stand-in, or a campaign's leader, takes the roads by the
+- **Roads** (`RoadNetwork`, `PopulationData.Roads` from the level's ROAD records; the same instance serves on-screen long routes,
+  [pathfinding](game/pathfinding.md)): a stand-in, or a campaign's leader, takes the roads by the
   original's rule ([roads](game/factions-squads-towns.md#off-screen-world)), worked out when its goal changes and walked point by point; a
   campaign's followers go straight for their leader (engine choice: their goal moves every look). Hidden roads count. Engine reading: the
   join pull is clamp(w) × the point's forward distance. **Observed** (base data): 2109 roads, built in 33 ms; a route takes 0.5-16 ms; 193 of

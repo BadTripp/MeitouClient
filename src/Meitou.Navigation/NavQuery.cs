@@ -13,6 +13,8 @@ public sealed record NavAgent
     /// (docs/game/pathfinding.md, "Filters and costs"). 7 is a Greenlander (a = 6).
     /// </summary>
     public float WaterFactor { get; init; } = 7;
+    /// <summary>FACTION <c>road preference</c>: a long route takes the roads by the original's rule (<see cref="RoadNetwork.Route"/>); 0 never.</summary>
+    public float RoadPreference { get; init; }
     /// <summary>Doors are blocked (closed, face data 5) when this is true; open doors cost <see cref="OpenDoorCost"/> extra.</summary>
     public bool DoorsClosed { get; init; }
     public static NavAgent Human { get; } = new();
