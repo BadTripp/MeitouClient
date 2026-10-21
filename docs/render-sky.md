@@ -25,7 +25,9 @@ Part of the world view of `meitou-viewer` (and the game, which shares `src/Meito
   `SkyRenderer.Prepare` publishes it in place of the sun's light (`uAtmoLight`, `uAtmoSunLight`, the `WorldLighting`, the shadows' direction), blended
   through twilight ([formats/sky.md](formats/sky.md), "Planetshine"); the ambient, the sky and the exposure stay the game's.
   The "Ambient light strength" slider (ours, default 1) multiplies the environment factor (`uAtmoLight.w`, the `WorldLighting` ambients), so the flat ambient,
-  the probes' sky rays and the GI resolve all scale; the sun's bounce does not.
+  the probes' sky rays and the GI resolve all scale; the sun's bounce does not. "Night ambient light strength" (ours, default 1) multiplies it further,
+  weighted `1 - saturate(5 sunY)` like the exposure's night floor. Auto exposure does not undo either at night while the mean scene luminance stays under
+  that floor (0.28, so the scale is pinned at 0.55 / 0.28); by day, inside the 0.8..1.2 band, it largely does.
   New shaders include `AtmosphereShaders.Functions` (sky.md, "Using the atmosphere in a new shader"). The old colour model
   (`--simple-sky` / `B`) was removed.
   Cost: not re-measured after the 2026-10-05 rewrite (the sky's integral now runs per pixel, about 4 × 5 exponentials, instead of

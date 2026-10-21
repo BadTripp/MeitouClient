@@ -495,6 +495,12 @@ public sealed unsafe partial class SkyRenderer : IDisposable
     /// <summary>A multiple of the sky's ambient light (the environment factor every lit surface, the probes and the GI resolve read); 1 is the game's.</summary>
     public float AmbientStrength { get; set; } = 1;
 
+    /// <summary>A further multiple of the ambient by night, faded in like the exposure's night floor (<see cref="KenshiLighting.MinLuminance"/>: full from the horizon down, none from sunY 0.2); 1 is the game's.</summary>
+    public float NightAmbientStrength { get; set; } = 1;
+
+    /// <summary>The ambient's multiple for a sun height: <see cref="AmbientStrength"/>, times <see cref="NightAmbientStrength"/> by night.</summary>
+    float AmbientFor(float sunY) => MathF.Max(AmbientStrength, 0) * (1 + (MathF.Max(NightAmbientStrength, 0) - 1) * (1 - Math.Clamp(sunY * 5, 0, 1)));
+
     /// <summary>The planet's mean colour (<see cref="Meitou.Data.World.Planetshine.MeanAlbedo(Meitou.Data.Textures.DdsFile)"/>), read when the texture loads.</summary>
     public Vector3 PlanetAlbedo { get; private set; } = new(Meitou.Data.World.Planetshine.FallbackAlbedo);
 
@@ -663,7 +669,7 @@ public sealed unsafe partial class SkyRenderer : IDisposable
     }
     State state;
     Vector3 builtSun = new(float.NaN);
-    (bool On, float Strength, Vector3 Albedo, bool Air, float Ambient) builtPlanetshine;
+    (bool On, float Strength, Vector3 Albedo, bool Air, float Ambient, float NightAmbient) builtPlanetshine;
     SkyWeather? builtWeather;
     Vector3 builtTint;
     bool builtPhysical;
@@ -760,7 +766,8 @@ public sealed unsafe partial class SkyRenderer : IDisposable
         {
             var simple = SkyColours.For(sun);
             var light = simple.Lighting(fogDistance);
-            light = light with { AmbientSky = light.AmbientSky * AmbientStrength, AmbientGround = light.AmbientGround * AmbientStrength };
+            float ambient = AmbientFor(sun.Y);
+            light = light with { AmbientSky = light.AmbientSky * ambient, AmbientGround = light.AmbientGround * ambient };
             state = new State { Sun = sun, Colours = simple, Light = light, FogDistance = fogDistance, Valid = true, MinLuminance = Exposure.Min,
                 CloudSun = KenshiLighting.SunColour(sun), CloudZenith = CloudLayer.ZenithLight(sun, SkyColourMultiplier),
                 CloudKey = KenshiLighting.SunColour(sun), CloudKeyDirection = sun, CloudAmbient = MeitouClouds.Ambient(sun, SkyColourMultiplier, Vector4.Zero) };
@@ -769,7 +776,7 @@ public sealed unsafe partial class SkyRenderer : IDisposable
             return (simple, light);
         }
         // SkyX's sky does not depend on the eye's height (its camera is fixed); the light only changes with the sun and the weather.
-        var planetshine = (Planetshine, PlanetshineStrength, PlanetAlbedo, NightAir, AmbientStrength);
+        var planetshine = (Planetshine, PlanetshineStrength, PlanetAlbedo, NightAir, AmbientStrength, NightAmbientStrength);
         if (!builtPhysical || !ReferenceEquals(builtWeather, Weather) || builtTint != SkyColourMultiplier || (sun - builtSun).LengthSquared() > 1e-10f || builtPlanetshine != planetshine)
         {
             builtSun = sun;
@@ -780,8 +787,8 @@ public sealed unsafe partial class SkyRenderer : IDisposable
             var sunLight = KenshiLighting.SunLight(sun);
             var lightDir = KenshiLighting.LightDirection(sun);
             // The ambient stays the game's: its factor comes from the sun's own (clamped) direction, never the planet's, whose height of 12 degrees would
-            // raise the night ambient fivefold. The ambient slider scales it.
-            float env = KenshiLighting.EnvironmentFactor(lightDir) * MathF.Max(AmbientStrength, 0);
+            // raise the night ambient fivefold. The ambient sliders scale it.
+            float env = KenshiLighting.EnvironmentFactor(lightDir) * AmbientFor(sun.Y);
             // Meitou planetshine: from the end of the sun's light the planet is the light (docs/formats/sky.md "Planetshine"): its colour in the sun light's own
             // unit (the sun at the zenith, undimmed by the air in between, is the reference), added to the sun's, the direction weighted by their brightness.
             bool planetLit = false;
