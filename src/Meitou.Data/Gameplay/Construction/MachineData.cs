@@ -124,6 +124,8 @@ public sealed record MachineData
                 if (db.Find(option.Item)?.GetReferences("ingredients") is { } list)
                     for (int k = inputs.Count; k < list.Count; k++) inputs.Add(new RecipeInput(list[k].TargetStringId, capacity, 0));
         }
+        var limits = building.GetReferences("limit inventory");
+        var single = limits.Count == 1 ? db.Find(limits[0].TargetStringId) : null;
         return new MachineData
         {
             Id = building.StringId,
@@ -141,9 +143,10 @@ public sealed record MachineData
             Farm = farm,
             Craft = craft,
             HasInventory = stores,
-            StorageWidth = Math.Max(1, building.GetInt("storage size width", 18)),
-            StorageHeight = Math.Max(1, building.GetInt("storage size height", 18)),
-            StorageLimit = [.. building.GetReferences("limit inventory").Select(r => r.TargetStringId)],
+            // A storage limited to one item is as big as that item (the original's loader), not its own `storage size`.
+            StorageWidth = Math.Max(1, single?.GetInt("inventory footprint width", 1) ?? building.GetInt("storage size width", 18)),
+            StorageHeight = Math.Max(1, single?.GetInt("inventory footprint height", 1) ?? building.GetInt("storage size height", 18)),
+            StorageLimit = [.. limits.Select(r => r.TargetStringId)],
             ItemTypeLimit = (FcsRecordType)building.GetInt("itemtype limit", (int)FcsRecordType.ITEM),
             StackBonusMult = building.GetFloat("stackable bonus mult", 1),
             PowerOutput = building.GetInt("power output"),

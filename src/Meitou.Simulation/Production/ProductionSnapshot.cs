@@ -42,6 +42,10 @@ public sealed record MachineSnapshot(string Site, string Record, IReadOnlyList<M
     public bool Operable { get; init; }
     /// <summary>A storage (a "Hauling to" job can name it).</summary>
     public bool IsStorage { get; init; }
+    /// <summary>The one item a storage is limited to (its heading in the window), else null.</summary>
+    public string? StorageLimitName { get; init; }
+    /// <summary>A limited storage's <c>Max Capacity</c>: the building's <c>stackable bonus mult</c> (0 when it has none).</summary>
+    public int StorageCapacity { get; init; }
     /// <summary>The crafting bench state (null for other machines).</summary>
     public CraftView? Craft { get; init; }
     /// <summary>Its power (null for a building outside the grid).</summary>
@@ -61,7 +65,7 @@ public sealed record MachineSnapshot(string Site, string Record, IReadOnlyList<M
             ? new FarmView(f.Growth, f.Death, f.Harvested, f.Plants.Length, f.Status, m.Yield, m.CropMatch, ProductionSystem.Ripeness(f)) { PlantGrowth = [.. f.Plants] } : null;
         // The classes that update their emitter every frame tell it the efficiency and the power; the others powered it once, when built, with no operators (efficiency 0).
         var sound = m.Data.PowersEmitterEachFrame ? new MachineSound(m.Efficiency, m.HasPower && m.Efficiency > 0) : new MachineSound(0, true);
-        return new MachineSnapshot(m.Site, m.Data.Id, inputs, output, storage, farm, m.Status, m.Operators, m.Data.MaxOperators) { Sound = sound, TechLevel = m.Data.IsResearch ? m.Data.TechLevel : 0, Operable = m.Data.Operable, IsStorage = m.Data.IsStorage, Craft = Crafting(m, items),
+        return new MachineSnapshot(m.Site, m.Data.Id, inputs, output, storage, farm, m.Status, m.Operators, m.Data.MaxOperators) { Sound = sound, TechLevel = m.Data.IsResearch ? m.Data.TechLevel : 0, Operable = m.Data.Operable, IsStorage = m.Data.IsStorage, StorageLimitName = m.Data.StorageLimit is [var only] ? Name(only) : null, StorageCapacity = m.Data.StorageLimit is [_] ? (int)m.Data.StackBonusMult : 0, Craft = Crafting(m, items),
             Power = m.Data.IsConsumer || m.Data.IsGenerator || m.Data.IsBattery ? new PowerView(m.Data.IsBattery ? PowerKind.Battery : m.Data.IsGenerator ? PowerKind.Generator : PowerKind.Consumer, m.Demand, m.Granted, m.Usage, m.Charge, m.Store, m.Inputs.Length == 0 || Array.Exists(m.Inputs, i => i.Level > 0 || i.Count > 0)) : null };
     }
 

@@ -85,7 +85,7 @@ sealed partial class PlayerInterface
         else if (e.Screen == "dialogue") DialogueAction(e);
         else if (e.Screen == "prospect") ProspectScreenAction(e);
         else if (e.Screen == "overview") { MapAction(e.Widget); ResearchAction(e); CraftAction(e); AiAction(e); SquadsAction(e); }
-        else if (e.Screen is "building" or "bench") MachineAction(e);
+        else if (e.Screen is "building" or "bench" or "storage") MachineAction(e);
         else if (e.Screen == "trader" && e.Widget == "ArrangeButton") Say(new Meitou.Simulation.Trading.ArrangeStock { Tick = session.World.Tick });
         else if (e.Screen is "inventory" or "bag")
         {
@@ -107,7 +107,7 @@ sealed partial class PlayerInterface
         else if (id == "dialogue") BindDialogueScreen(b);
         else if (id == "prospect") BindProspectScreen(b);
         else if (id == "build") BindBuildScreen(b);
-        else if (id is "building" or "bench") BindMachineScreen(id, b);
+        else if (id is "building" or "bench" or "storage") BindMachineScreen(id, b);
         else if (id is "inventory" or "stats" or "bag" or "limbs")
         {
             b.Text["Root"] = id == "stats" ? lead?.Name.ToUpperInvariant() ?? "CHARACTER STATS"
@@ -188,7 +188,7 @@ sealed partial class PlayerInterface
         if (id == "build") { AddBuildContent(controls); return; }
         if (id == "dialogue") { AddDialogueChoices(controls); return; }
         if (id == "prospect") { AddProspectContent(controls); return; }
-        if (id is "building" or "bench") { AddMachineContent(id, controls); return; }
+        if (id is "building" or "bench" or "storage") { AddMachineContent(id, controls); return; }
         // The bag window has no caption buttons (the vanilla screenshot): OPEN BAG closes it.
         if (id == "bag") controls.RemoveAll(c => c.Action.StartsWith("mygui:close", StringComparison.Ordinal) || c.Action.StartsWith("mygui:pin", StringComparison.Ordinal));
         AddMapContent(id, controls);
