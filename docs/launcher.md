@@ -55,7 +55,7 @@ items); the launcher never downloads or hosts mods.
   the newest 10 releases (`per_page=10`, page 1; **Verified** in its source 2026-10-19), which game releases would crowd out;
   its `GitBase` merges the feed of every release given and skips releases without one.
 - Checked each time the release list loads. Installed by Setup or AppImage (`UpdateManager.IsInstalled`): at startup the launcher
-  downloads and applies a newer version and restarts into it; if that fails, the title bar and Settings offer "Update launcher to
+  downloads and applies a newer version and restarts into it (Settings toggle, `AutoUpdateLauncher`, default on); when off or failed, the title bar and Settings offer "Update launcher to
   <v>" / "Update to <v>" to retry. Launchers up to 1.0.4 only offer the buttons. Run from anywhere else (a build, a copied folder):
   the same buttons open the newest `launcher-v*` release page.
 - **Unknown**: the update path end to end (1.0.1 → 1.0.2 is the first real one).

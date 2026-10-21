@@ -50,6 +50,8 @@ public sealed partial class MainWindow : Window
         ModListBox.AddHandler(PointerCaptureLostEvent, (_, _) => EndDrag(), RoutingStrategies.Direct | RoutingStrategies.Bubble, handledEventsToo: true);
         ArgumentsBox.Text = config.LaunchArguments;
         NightlyBox.IsChecked = config.IncludePrereleases;
+        AutoUpdateBox.IsChecked = config.AutoUpdateLauncher;
+        AutoUpdateBox.IsEnabled = updater.IsInstalled;
         DataFolderText.Text = $"The launcher's and the game's settings: {LauncherConfig.DataDirectory}";
         InstallPathBox.Text = LauncherConfig.InstallDirectory;
         LauncherVersionText.Text = $"v{LauncherVersion} · {Releases.Rid}";
@@ -547,7 +549,7 @@ public sealed partial class MainWindow : Window
         SelectVersionButton.IsEnabled = installed && row?.Played != true;
     }
 
-    // At startup (updateLauncher) an installed launcher also applies its own update and restarts into it.
+    // At startup (updateLauncher) an installed launcher also applies its own update and restarts into it, unless turned off in Settings.
     async Task RefreshReleasesAsync(bool updateLauncher = false)
     {
         Status("Checking GitHub for releases...");
@@ -556,7 +558,7 @@ public sealed partial class MainWindow : Window
         ShowReleases();
         Status(problem ?? "");
         await ShowLauncherUpdateAsync();   // after: its "Launcher … is available" line must not be cleared
-        if (updateLauncher && updater.IsInstalled && LauncherUpdateButton.IsVisible) await UpdateLauncherAsync();
+        if (updateLauncher && config.AutoUpdateLauncher && updater.IsInstalled && LauncherUpdateButton.IsVisible) await UpdateLauncherAsync();
     }
 
     void ShowReleases()
@@ -756,6 +758,12 @@ public sealed partial class MainWindow : Window
         TitleLauncherUpdateText.Text = updater.IsInstalled ? $"Update launcher to {version}" : $"Get launcher {version}";
         ToolTip.SetTip(TitleLauncherUpdateButton, updater.IsInstalled ? "Download the new launcher and restart into it" : "Open the launcher's release page");
         if (version is not null) Status($"Launcher {version} is available.");
+    }
+
+    void AutoUpdate_Click(object? sender, RoutedEventArgs e)
+    {
+        config.AutoUpdateLauncher = AutoUpdateBox.IsChecked == true;
+        config.Save();
     }
 
     async void LauncherUpdate_Click(object? sender, RoutedEventArgs e)
