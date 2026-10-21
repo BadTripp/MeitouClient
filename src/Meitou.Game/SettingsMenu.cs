@@ -72,7 +72,7 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
 
     sealed record Choice(Func<IReadOnlyList<string>> Options, Func<int> Current, Action<int> Choose);
     sealed record Entry(string Label, string Hint = "", Slider? Slider = null, Toggle? Toggle = null, Choice? Choice = null,
-        InputAction? Binding = null, Action? Run = null, string? Picture = null);
+        InputAction? Binding = null, Action? Run = null, string? Picture = null, bool Segmented = false);
     sealed record Hit(UiRect Bounds, Action Activate, Slider? Slider = null, UiRect? Track = null);
 
     public IReadOnlyList<Slider> Sliders => values.Sliders;
@@ -153,7 +153,7 @@ sealed partial class SettingsMenu(PlayerInterface player, SettingsPanel values, 
         var result = values.Sliders.Where(s => s.Label is not ("Time of day" or "Time speed") && Section(s) == section).Select(SliderEntry).ToList();
         if (page == 1)
             result.InsertRange(0, values.Toggles.Where(toggle => ToggleSection(toggle) == section)
-                .Select(toggle => new Entry(Label(toggle.Label), ToggleHint(toggle.Label), Toggle: toggle)));
+                .Select(toggle => new Entry(Label(toggle.Label), ToggleHint(toggle.Label), Toggle: toggle)).Prepend(LookEntry).Prepend(PresetEntry));
         if (page == 0) result.Insert(2, new("Frame limit", "Used while vertical sync is off; 0 is unlimited.", Slider: frameLimit));
         if (page == 2)
             result.Add(new("UI style", "Choose original Kenshi skins or Meitou materials.", Choice: new(() => ["Faithful", "Meitou"],
