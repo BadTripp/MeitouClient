@@ -144,5 +144,9 @@ public interface IDoorGate
     DoorSpot? DoorSpotOf(string buildingRecordId, int doorIndex) => null;
 }
 
-/// <summary>A door leaf's closed box: its centre, the horizontal unit normal of its thinnest side (the way through), and half its width along the wall.</summary>
-public readonly record struct DoorSpot(Vector3 Centre, Vector3 Normal, float HalfWidth);
+/// <summary>A door leaf's closed box: its centre, the horizontal unit normal of its thinnest side (the way through), half its width along the wall and half its height (0: not known).</summary>
+public readonly record struct DoorSpot(Vector3 Centre, Vector3 Normal, float HalfWidth, float HalfHeight = 0)
+{
+    /// <summary>The height of the leaf's foot, where a walker through it stands (its centre when the height is not known).</summary>
+    public float Foot => Centre.Y - HalfHeight;
+}

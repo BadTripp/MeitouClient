@@ -673,7 +673,7 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
         if (Interlocked.Exchange(ref placing, 0) != 0) Place(table);
         bool cadence = world.Tick % Math.Max(1, Settings.PackageEveryTicks) == 0;
         // Each town's turrets are claimed once per cadence, by the squads in squad order (derived, not hashed).
-        if (cadence) { turretTaken.Clear(); seatTaken.Clear(); RefreshPlaces(world); }
+        if (cadence) { turretTaken.Clear(); seatTaken.Clear(); ReserveSeats(world); RefreshPlaces(world); }
         foreach (var squad in world.Squads.All)
         {
             if (squad.Ai is null)
@@ -749,10 +749,13 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
     /// package's bar under a bar package): in member order each takes the first seat no one in that building claimed in this cadence pass; members left without one
     /// do not relax or sit. Relaxing takes a chair, else a bar node, else a general node (the original operates furniture of the bar, docs/game/ai-tasks.md "Town
     /// goals", Observed; the node fallbacks are an engine choice); sitting around a chair only (the original's furniture not claimed by others, Observed; its
-    /// training and throne furniture are left out).
+    /// training and throne furniture are left out). A member keeps the seat it had while it still relaxes or sits (engine choice: reassigning every pass in member
+    /// order moved every later sitter to another chair whenever one came or went); the seats kept are reserved for every squad first (<see cref="ReserveSeats"/>).
     /// </summary>
     void ClaimSeats(World world, Blackboard board, Squad squad)
     {
+        kept.Clear();
+        foreach (var (slot, spot) in board.SeatClaims) kept[slot] = spot;
         board.SeatClaims.Clear();
         if (board.Home is not { } home) return;
         bool bar = board.CurrentClass == PackageClass.Bar;
@@ -770,8 +773,19 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
                 relaxes |= bar && roles[g].Task.Type == TaskType.RELAX_IN_TOWN_PACKAGE;
                 sits |= roles[g].Task.Type == TaskType.SIT_AROUND;
             }
-            if (!relaxes && !sits || cold.Ai.SeatUnreachable) continue;   // one that gave its seat up leaves it to the next member
             if (taken is null && !seatTaken.TryGetValue(home, out taken)) seatTaken[home] = taken = [];
+            int had = kept.TryGetValue(s, out var old) ? IndexOf(home, old) : -1;
+            if (!relaxes && !sits || cold.Ai.SeatUnreachable)   // one that gave its seat up leaves it to the next member
+            {
+                if (had >= 0) taken.Remove(had);
+                continue;
+            }
+            if (had >= 0 && (relaxes || old.Kind == HomeSpotKind.Chair))
+            {
+                taken.Add(had);
+                board.SeatClaims[s] = old;
+                continue;
+            }
             int seat = FreeSeat(home, taken, HomeSpotKind.Chair);
             if (seat < 0 && relaxes) seat = FreeSeat(home, taken, HomeSpotKind.Bar);
             if (seat < 0 && relaxes) seat = FreeSeat(home, taken, HomeSpotKind.General);
@@ -779,6 +793,27 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
             taken.Add(seat);
             board.SeatClaims[s] = home.Spots[seat];
         }
+    }
+
+    readonly Dictionary<int, HomeSpot> kept = [];
+
+    /// <summary>Marks every seat a squad's member holds from the last pass as taken, before any squad claims (the cadence pass; see <see cref="ClaimSeats"/>).</summary>
+    void ReserveSeats(World world)
+    {
+        foreach (var squad in world.Squads.All)
+        {
+            if (squad.Ai is not { Home: { } home } board || board.SeatClaims.Count == 0) continue;
+            if (!seatTaken.TryGetValue(home, out var taken)) seatTaken[home] = taken = [];
+            foreach (var spot in board.SeatClaims.Values)
+                if (IndexOf(home, spot) is >= 0 and var i) taken.Add(i);
+        }
+    }
+
+    static int IndexOf(TownBuilding building, HomeSpot spot)
+    {
+        for (int i = 0; i < building.Spots.Count; i++)
+            if (building.Spots[i] == spot) return i;
+        return -1;
     }
 
     static int FreeSeat(TownBuilding bar, HashSet<int> taken, HomeSpotKind kind)

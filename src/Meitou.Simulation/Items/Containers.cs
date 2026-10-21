@@ -24,6 +24,9 @@ namespace Meitou.Simulation
         /// <summary>A character opens or uses a container within this distance of it (an engine choice).</summary>
         public const float ContainerReach = 20;
 
+        /// <summary>How far above or below a container a character may stand to open or use it, and how near its origin's height the floor walked to must be (engine choices: a storey is about 66).</summary>
+        public const float ContainerFloorSlack = 20;
+
         /// <summary>
         /// How far (X/Z) a character may be from a container it puts into or takes from: the original's limit for an item moved out of a character's inventory (60; out of a building's, its
         /// bounds radius + 40, which a chest's is close to; docs/game/economy.md "Trading range").
@@ -77,7 +80,13 @@ namespace Meitou.Simulation
             player.OpenContainer = null;
             player.OpeningContainer = order.Fixture;
             player.ContainerWalker = table.IdOf(best);
-            if (bestDistance > ContainerReach) MovementSystem.GoTo(table, best, Flat(fixture.Position), walker.RunSpeed);
+            if (bestDistance > ContainerReach || !SameFloor(table.Next[best].Position, fixture.Position))
+            {
+                // Onto the container's own floor: furniture cuts a hole in the floor's navmesh, and a goal without a height resolves to the storey above or the ground below.
+                var at = world.Walkability.FloorNear(fixture.Position.X, fixture.Position.Z, fixture.Position.Y, ContainerFloorSlack) is { } onFloor ? onFloor : fixture.Position;
+                MovementSystem.GoTo(table, best, Flat(at), walker.RunSpeed);
+                (walker.GoalHeight, walker.GoalHeightAt) = (at.Y, Flat(at));
+            }
         }
 
         /// <summary>Each tick: the walker in reach opens its container; one given another order, downed or gone gives up. An open window stays until the player closes it; it closes when its opener is down or gone.</summary>
@@ -92,7 +101,7 @@ namespace Meitou.Simulation
                 else
                 {
                     var at = Flat(fixture.Position);
-                    if (Vector2.Distance(Flat(table.Next[s].Position), at) <= ContainerReach)
+                    if (Vector2.Distance(Flat(table.Next[s].Position), at) <= ContainerReach && SameFloor(table.Next[s].Position, fixture.Position))
                     {
                         if (table.Next[s].Task == (byte)CharacterTask.GoTo) MovementSystem.Stop(table, s);
                         (player.OpenContainer, player.ContainerOpener, player.OpeningContainer) = (wanted, player.ContainerWalker, null);
@@ -107,6 +116,8 @@ namespace Meitou.Simulation
                 if (!keep) player.OpenContainer = null;
             }
         }
+
+        static bool SameFloor(Vector3 a, Vector3 b) => MathF.Abs(a.Y - b.Y) <= ContainerFloorSlack;
 
         /// <summary>The container Take/Put address by <paramref name="site"/> (a fixture id) and the character, when it is open and the character is in reach; posts "Out of trading range." otherwise (<see cref="TradingRange"/>). Null when <paramref name="site"/> is not a container.</summary>
         internal static Locks.Fixture? ContainerFor(World world, string site, CharacterId who, out CharacterCold? cold)
