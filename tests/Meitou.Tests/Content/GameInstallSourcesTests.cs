@@ -96,10 +96,10 @@ public sealed class GameInstallSourcesTests : IDisposable
         Assert.DoesNotContain(kenshi, GameInstallSources.Launchers(home));
 
         var relative = GameInstallSources.Xdg.From(home, name => name is "XDG_DATA_HOME" or "XDG_CONFIG_HOME" ? "relative/path" : null);
-        Assert.Equal(Path.Combine(home, ".local/share"), relative.DataHome);
+        Assert.Equal(Path.Combine(home, ".local", "share"), relative.DataHome);
         Assert.Equal(Path.Combine(home, ".config"), relative.ConfigHome);
         Assert.Contains("/usr/share", relative.DataDirs);
-        var extra = Path.Combine(home, "extra-share");
+        const string extra = "/srv/extra-share";   // ':' separates the list, so no Windows drive letter
         Assert.Contains(extra, GameInstallSources.Xdg.From(home, name => name == "XDG_DATA_DIRS" ? extra + ":/opt/share" : null).DataDirs);
     }
 
@@ -114,6 +114,7 @@ public sealed class GameInstallSourcesTests : IDisposable
     [Fact]
     public void A_wine_prefixs_registry_names_where_gog_installed_kenshi()
     {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Wine prefixes map Z: to a Linux root");
         var prefix = Path.Combine(home, "prefix");
         var kenshi = MakeInstall("games", "Kenshi");
         Directory.CreateDirectory(Path.Combine(prefix, "dosdevices"));
@@ -134,6 +135,7 @@ public sealed class GameInstallSourcesTests : IDisposable
     [Fact]
     public void A_proton_prefix_and_an_uninstall_entry_are_read_too_and_heroics_game_config_names_the_prefix()
     {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Wine prefixes map Z: to a Linux root");
         var kenshi = MakeInstall("games", "Kenshi");
         var prefix = Path.Combine(home, "proton");
         Directory.CreateDirectory(Path.Combine(prefix, "pfx"));

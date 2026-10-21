@@ -170,7 +170,8 @@ public sealed class GameInstall
         else if (OperatingSystem.IsLinux())
         {
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var candidates = new[] { Path.Combine(GameInstallSources.Xdg.From(home, Environment.GetEnvironmentVariable).DataHome, "Steam"), Path.Combine(home, ".steam/steam"), Path.Combine(home, ".var/app/com.valvesoftware.Steam/.local/share/Steam") };
+            // Steam itself installs to ~/.local/share/Steam whatever XDG_DATA_HOME says, so both are tried.
+            var candidates = new[] { Path.Combine(GameInstallSources.Xdg.From(home, Environment.GetEnvironmentVariable).DataHome, "Steam"), Path.Combine(home, ".local/share/Steam"), Path.Combine(home, ".steam/steam"), Path.Combine(home, ".var/app/com.valvesoftware.Steam/.local/share/Steam") };
             foreach (var steam in candidates.Distinct())
                 if (Directory.Exists(steam)) yield return steam;
         }
@@ -179,7 +180,12 @@ public sealed class GameInstall
     static string? ReadLocalConfig(string file)
     {
         if (!File.Exists(file)) return null;
-        using var doc = JsonDocument.Parse(File.ReadAllText(file));
-        return doc.RootElement.TryGetProperty("kenshiPath", out var p) ? p.GetString() : null;
+        // A broken file (an interrupted save) is skipped, so the other sources and the prompt still run.
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(file));
+            return doc.RootElement.ValueKind == JsonValueKind.Object && doc.RootElement.TryGetProperty("kenshiPath", out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null;
+        }
+        catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException) { return null; }
     }
 }

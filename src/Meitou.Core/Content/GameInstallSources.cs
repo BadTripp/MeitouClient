@@ -10,12 +10,34 @@ namespace Meitou.Content;
 /// </summary>
 public static partial class GameInstallSources
 {
-    /// <summary>The candidates from every launcher on this machine, in the order they are tried.</summary>
-    public static IEnumerable<string> Launchers()
+    /// <summary>
+    /// The candidates from every launcher on this machine, in the order they are tried; scanned once per process. Windows: its registry and Heroic's list (the Wine and Linux
+    /// launcher folders do not exist there).
+    /// </summary>
+    public static IEnumerable<string> Launchers() => launchers.Value;
+
+    static readonly Lazy<string[]> launchers = new(() =>
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        foreach (var path in Registered()) yield return path;
-        foreach (var path in Launchers(home, Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Environment.GetEnvironmentVariable)) yield return path;
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        return OperatingSystem.IsWindows()
+            ? [.. Registered(), .. HeroicInstalls(Path.Combine(appData, "heroic", "gog_store", "installed.json"))]
+            : [.. Launchers(home, appData, Environment.GetEnvironmentVariable)];
+    });
+
+    /// <summary>The entries of a folder listing, none when it cannot be read (another user's folder, a broken mount).</summary>
+    static string[] Safe(Func<IEnumerable<string>> list)
+    {
+        try { return [.. list()]; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException) { return []; }
+    }
+
+    /// <summary>A path from a launcher's file without quotes, with a leading <c>~</c> as the user's home.</summary>
+    static string Unquote(string value)
+    {
+        value = value.Trim().Trim('"', '\'');
+        return value == "~" || value.StartsWith("~/", StringComparison.Ordinal)
+            ? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + value[1..] : value;
     }
 
     /// <summary>
@@ -27,11 +49,11 @@ public static partial class GameInstallSources
         public static Xdg From(string home, Func<string, string?> env)
         {
             string Home(string variable, string fallback) => env(variable) is { } v && Path.IsPathRooted(v) ? v : Path.Combine(home, fallback);
-            var dataHome = Home("XDG_DATA_HOME", ".local/share");
+            var dataHome = Home("XDG_DATA_HOME", Path.Combine(".local", "share"));
             var dirs = (env("XDG_DATA_DIRS") ?? "").Split(':', StringSplitOptions.RemoveEmptyEntries).Where(Path.IsPathRooted).ToList();
             if (dirs.Count == 0) dirs = ["/usr/local/share", "/usr/share"];
             dirs.Add("/var/lib/flatpak/exports/share");
-            dirs.Add(Path.Combine(dataHome, "flatpak/exports/share"));
+            dirs.Add(Path.Combine(dataHome, "flatpak", "exports", "share"));
             return new(dataHome, Home("XDG_CONFIG_HOME", ".config"), dirs);
         }
     }
@@ -50,22 +72,24 @@ public static partial class GameInstallSources
     public static IEnumerable<string> Launchers(string home, string? appData = null, Func<string, string?>? env = null)
     {
         var xdg = Xdg.From(home, env ?? (_ => null));
-        var configs = new List<string> { xdg.ConfigHome, Path.Combine(home, ".var/app/com.heroicgameslauncher.hgl/config") };
+        var configs = new List<string> { xdg.ConfigHome, Path.Combine(home, ".var", "app", "com.heroicgameslauncher.hgl", "config") };
         if (!string.IsNullOrEmpty(appData)) configs.Add(appData);
         foreach (var config in configs)
             foreach (var path in HeroicInstalls(Path.Combine(config, "heroic", "gog_store", "installed.json"))) yield return path;
-        foreach (var path in LutrisInstalls(Path.Combine(xdg.ConfigHome, "lutris", "games"))) yield return path;
-        foreach (var path in LutrisInstalls(Path.Combine(home, ".var/app/net.lutris.Lutris/config/lutris/games"))) yield return path;
+        string[] lutris = [Path.Combine(xdg.ConfigHome, "lutris", "games"), Path.Combine(home, ".var", "app", "net.lutris.Lutris", "config", "lutris", "games")];
+        foreach (var games in lutris)
+            foreach (var path in LutrisInstalls(games)) yield return path;
         foreach (var directory in xdg.DataDirs.Prepend(xdg.DataHome).Select(d => Path.Combine(d, "applications")).Distinct())
             foreach (var path in DesktopEntries(directory)) yield return path;
         yield return Path.Combine(home, "Games", "Heroic", "Kenshi");
         var prefixes = new List<string> { Path.Combine(home, ".wine") };
-        foreach (var bottles in new[] { Path.Combine(xdg.DataHome, "bottles/bottles"), Path.Combine(home, ".var/app/com.usebottles.bottles/data/bottles/bottles") })
-            if (Directory.Exists(bottles)) prefixes.AddRange(Directory.EnumerateDirectories(bottles));
+        foreach (var bottles in new[] { Path.Combine(xdg.DataHome, "bottles", "bottles"), Path.Combine(home, ".var", "app", "com.usebottles.bottles", "data", "bottles", "bottles") })
+            if (Directory.Exists(bottles)) prefixes.AddRange(Safe(() => Directory.EnumerateDirectories(bottles)));
         // The registry of every Wine prefix we know of: what a GOG installer wrote there says where it installed Kenshi.
         foreach (var heroic in configs)
             foreach (var prefix in HeroicPrefixes(Path.Combine(heroic, "heroic", "GamesConfig"))) prefixes.Add(prefix);
-        foreach (var prefix in LutrisPrefixes(Path.Combine(xdg.ConfigHome, "lutris", "games"))) prefixes.Add(prefix);
+        foreach (var games in lutris)
+            foreach (var prefix in LutrisPrefixes(games)) prefixes.Add(prefix);
         foreach (var prefix in prefixes.SelectMany(PrefixAndSiblings).Distinct())
             foreach (var path in WinePrefixInstalls(prefix)) yield return path;
         foreach (var prefix in prefixes)
@@ -91,7 +115,7 @@ public static partial class GameInstallSources
         yield return prefix;
         var parent = Path.GetDirectoryName(prefix.TrimEnd('/', '\\'));
         if (parent is not null && Path.GetFileName(parent) == "default" && Directory.Exists(parent))
-            foreach (var sibling in Directory.EnumerateDirectories(parent)) yield return sibling;
+            foreach (var sibling in Safe(() => Directory.EnumerateDirectories(parent))) yield return sibling;
     }
 
     /// <summary>The <c>winePrefix</c> of every game in Heroic's <c>GamesConfig</c> folder (one JSON file per game).</summary>
@@ -99,14 +123,15 @@ public static partial class GameInstallSources
     {
         if (!Directory.Exists(gamesConfig)) yield break;
         List<string> found = [];
-        foreach (var file in Directory.EnumerateFiles(gamesConfig, "*.json"))
+        foreach (var file in Safe(() => Directory.EnumerateFiles(gamesConfig, "*.json")))
         {
             try
             {
                 using var doc = JsonDocument.Parse(File.ReadAllText(file));
+                if (doc.RootElement.ValueKind != JsonValueKind.Object) continue;
                 foreach (var game in doc.RootElement.EnumerateObject())
-                    if (game.Value.ValueKind == JsonValueKind.Object && game.Value.TryGetProperty("winePrefix", out var prefix) && prefix.GetString() is { Length: > 0 } text)
-                        found.Add(text);
+                    if (game.Value.ValueKind == JsonValueKind.Object && game.Value.TryGetProperty("winePrefix", out var prefix) && prefix.ValueKind == JsonValueKind.String && prefix.GetString() is { Length: > 0 } text)
+                        found.Add(Unquote(text));
             }
             catch (Exception e) when (e is JsonException or IOException or UnauthorizedAccessException) { }
         }
@@ -117,14 +142,14 @@ public static partial class GameInstallSources
     public static IEnumerable<string> LutrisPrefixes(string gamesDirectory)
     {
         if (!Directory.Exists(gamesDirectory)) yield break;
-        foreach (var file in Directory.EnumerateFiles(gamesDirectory, "*.yml"))
+        foreach (var file in Safe(() => Directory.EnumerateFiles(gamesDirectory, "*.yml")))
         {
             string text;
             try { text = File.ReadAllText(file); }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException) { continue; }
             if (!text.Contains("kenshi", StringComparison.OrdinalIgnoreCase)) continue;
-            foreach (Match m in Regex.Matches(text, @"^\s*prefix:\s*(\S.*)$", RegexOptions.Multiline))
-                yield return m.Groups[1].Value.Trim().Trim('"', '\'');
+            foreach (Match m in LutrisPrefix().Matches(text))
+                yield return Unquote(m.Groups[1].Value);
         }
     }
 
@@ -212,27 +237,42 @@ public static partial class GameInstallSources
         foreach (var path in paths) yield return path;
     }
 
-    /// <summary>The folder of the <c>exe</c> of every Lutris game file in <paramref name="gamesDirectory"/> that mentions Kenshi.</summary>
+    /// <summary>
+    /// The folder of the <c>exe</c>, and the <c>working_dir</c>, of every Lutris game file in <paramref name="gamesDirectory"/> that mentions Kenshi; a relative path is the game's
+    /// <c>prefix</c>'s (skipped without one).
+    /// </summary>
     public static IEnumerable<string> LutrisInstalls(string gamesDirectory)
     {
         if (!Directory.Exists(gamesDirectory)) yield break;
-        foreach (var file in Directory.EnumerateFiles(gamesDirectory, "*.yml"))
+        foreach (var file in Safe(() => Directory.EnumerateFiles(gamesDirectory, "*.yml")))
         {
             string text;
             try { text = File.ReadAllText(file); }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException) { continue; }
             if (!text.Contains("kenshi", StringComparison.OrdinalIgnoreCase)) continue;
+            var prefix = LutrisPrefix().Match(text) is { Success: true } p ? Unquote(p.Groups[1].Value) : null;
             foreach (Match m in LutrisExe().Matches(text))
-                if (Path.GetDirectoryName(m.Groups[1].Value.Trim().Trim('"', '\'')) is { Length: > 0 } folder) yield return folder;
+            {
+                var value = Unquote(m.Groups[2].Value);
+                if (!Path.IsPathRooted(value))
+                {
+                    if (prefix is null) continue;
+                    value = Path.Combine(prefix, value);
+                }
+                if ((m.Groups[1].Value == "working_dir" ? value : Path.GetDirectoryName(value)) is { Length: > 0 } folder) yield return folder;
+            }
         }
     }
 
-    [GeneratedRegex(@"^\s*(?:exe|working_dir):\s*(\S.*)$", RegexOptions.Multiline)]
+    [GeneratedRegex(@"^\s*(exe|working_dir):\s*(\S.*)$", RegexOptions.Multiline)]
     private static partial Regex LutrisExe();
+
+    [GeneratedRegex(@"^\s*prefix:\s*(\S.*)$", RegexOptions.Multiline)]
+    private static partial Regex LutrisPrefix();
 
     /// <summary>
     /// The folder a <c>.desktop</c> launcher that is named Kenshi starts from: its <c>Path=</c>, else the folder of the program in its <c>Exec=</c> (a Wine/Heroic/Lutris launcher
-    /// puts the game's exe there). Looks in <paramref name="directory"/> and one level of folders below it (Wine keeps its launchers in <c>wine/Programs</c>).
+    /// puts the game's exe there; only absolute paths count). Looks in <paramref name="directory"/> and two levels of folders below it (Wine keeps its launchers in <c>wine/Programs</c>).
     /// </summary>
     public static IEnumerable<string> DesktopEntries(string directory)
     {
@@ -240,7 +280,7 @@ public static partial class GameInstallSources
         var found = new List<string>();
         try
         {
-            foreach (var file in Directory.EnumerateFiles(directory, "*.desktop", new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = 3, IgnoreInaccessible = true }))
+            foreach (var file in Directory.EnumerateFiles(directory, "*.desktop", new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = 2, IgnoreInaccessible = true }))
             {
                 string text;
                 try { text = File.ReadAllText(file); }
@@ -250,7 +290,12 @@ public static partial class GameInstallSources
                 if (DesktopField(text, "Path") is { Length: > 0 } path) found.Add(path);
                 if (DesktopField(text, "Exec") is { } exec)
                     foreach (Match m in ExecPath().Matches(exec))
-                        if (Path.GetDirectoryName(m.Groups[1].Value.Trim('"', '\'')) is { Length: > 0 } folder) found.Add(folder);
+                    {
+                        // Only a program's absolute path: not WINEPREFIX=/x, a URL (steam://...) or a switch like /unix (whose folder is the root).
+                        var program = m.Groups[1].Value.Trim('"', '\'');
+                        if (Path.IsPathRooted(program) && !program.Contains('=') && Path.GetDirectoryName(program) is { Length: > 0 } folder && Path.GetPathRoot(folder) != folder)
+                            found.Add(folder);
+                    }
             }
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
