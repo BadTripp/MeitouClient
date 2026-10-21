@@ -13,7 +13,7 @@ meitou-viewer --view swamp --bench-frames 600 --bench-out run.json
 meitou-viewer --impostor-preview <FOLIAGE_MESH>
 ```
 
-Find install through KENSHI_PATH/meitou.local.json/Steam; asset lookup/load order is documented
+Find install through KENSHI_PATH/meitou.local.json/the per-user `$XDG_CONFIG_HOME/meitou/config.json` (Linux, macOS; same `kenshiPath` key; where the first-start prompt saves when the executable's folder is read-only)/the executable's folder/Steam/other launchers (Windows uninstall entries and GOG registry, Steam's appmanifest, `.desktop` launchers, Heroic, Lutris, Bottles, Wine prefixes; the Linux folders follow `XDG_DATA_HOME`, `XDG_CONFIG_HOME` and `XDG_DATA_DIRS`; Heroic's list and the Wine prefix registry (`system.reg`: GOG's `GOG.com\Games\<id>` key with `gameName` and `path`, drive letters resolved through the prefix's `dosdevices` links) are **Verified** against a real Heroic install of Kenshi, the Lutris, Bottles and `.desktop` parsing only against test layouts; `GameInstallSources`; a candidate counts only if it has `data/gamedata.base`); asset lookup/load order is documented
 in [overview](formats/overview.md). Never substitute a guessed absolute game path.
 --at x,z / --zone / --town selects focus; --radius zones controls source height region, with
 power-of-two sample step keeping<=2048 cells/side. World renderers/streaming are shared with game.
