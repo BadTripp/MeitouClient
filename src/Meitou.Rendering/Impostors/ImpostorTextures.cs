@@ -132,7 +132,7 @@ public sealed class ImpostorTextures : IDisposable
         // A slab of whole block rows; the last one ends at the level's edge.
         int y = row * unit, height = Math.Min(n * unit, pixels - y);
         batch.Write(maps[map], level, 0, new Rect2D(new Offset2D(0, y), new Extent2D((uint)pixels, (uint)height)),
-            texture.Levels[source].AsSpan(row * rowBytes, n * rowBytes));
+            texture.Levels[source].Span.Slice(row * rowBytes, n * rowBytes));
         row += n;
         if (row >= rows)
         {

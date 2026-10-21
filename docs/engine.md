@@ -54,9 +54,16 @@ one point after its last reader, never while anything keeps it; a buffer that is
 `ArrayPool<byte>.Shared` rounds up to a power of two (a 4.2 MB file rents 8 MB) and trims idle arrays on gen2; textures in flight bound what it holds.
 **Observed** (swamp, 1920x1080, 3000-frame flight, 4 alternating pairs, 2026-10-21): allocated 6.2 GB to 4.8 GB (2.1 to 1.6 MB a frame), gen0+gen1
 45 to 35 in total, gen2 count unchanged; frame percentiles unchanged within noise.
-Not pooled, kept by their owners: `HeightWindow` arrays (read through `HeightSnapshot` on workers), impostor atlas levels (until uploaded;
-`ImpostorTextures` then keeps only the atlas's shape), grass blade arrays (kept as `PendingBlades`), particle texture decodes (preloads not drawn
-within 30 s are dropped). How to rank allocation sites: docs/bench.md.
+Not pooled, kept by their owners: `HeightWindow` arrays (read through `HeightSnapshot` on workers), grass blade arrays (kept as `PendingBlades`),
+particle texture decodes (preloads not drawn within 30 s are dropped). How to rank allocation sites: docs/bench.md.
+**Native buffers** (`Meitou.Data.NativeBuffer`, a `MemoryManager<byte>` over `NativeMemory`): outside the GC heap, freed at once on `Dispose`, so a
+transient buffer leaves no LOH garbage or holes. No finalizer (CA2015: it could free a block a `Span` still reads), so an undisposed block leaks;
+`NativeBuffer.LiveBytes` (F11 `ram` line, the flight's `gc` line) shows what is held. Used for impostor atlases read from the cache: `ImpostorAtlas.Read`
+inflates every kept level into one block, the levels are `ReadOnlyMemory<byte>` slices of it (baked atlases stay managed arrays; disposing them does
+nothing). The atlas's owner disposes it where it lets go: `FoliageRenderer` after the upload completes, on a refused upload, an abandoned or
+finished refine, a mismatched load, and `UnloadImpostor`/teardown (after the `Next` textures that read it). `ImpostorTextures` never frees.
+**Observed** (swamp, 1920x1080, 3000-frame flight, 2026-10-21): traced large-object allocations after loading 6.0 to 1.8 GB (`ImpostorAtlas.Read`
+4.2 GB to 85 MB); 2 alternating pairs: allocated 4.9 to 4.0 GB, peak working set 5.8-6.0 to 5.3-5.8 GB, 0 MB native held at the end.
 Cancel on window close. Helpers/services dispose/join with their owning scene/session.
 After warm-up, loading panels ease off the left/right edges over 0.7s while the loading image fades to the live scene and UI.
 Input remains blocked through this reveal. A new game ends warm-up as soon as the squad's characters are drawable, skips the sky arrival and opens the
