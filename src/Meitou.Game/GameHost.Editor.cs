@@ -75,6 +75,7 @@ sealed partial class GameHost
     void DrawEditorStage(int width, int height)
     {
         if (gpu.Characters is not { } characters) return;
+        editorStaged = true;
         if (player.EditorView() is not { } view || session.CurrentSnapshot.Characters.FirstOrDefault(c => c.Id == view.Character) is not { } c) { characters.StageRequest = null; return; }
         characters.StageRequest = new EditorStageRequest(DrawKey(view.Character), width, height, view.Yaw, view.Elevation, view.Distance, view.Head, camera.FieldOfView, EditorStageShift);
         characters.SetView(width, height, camera.FieldOfView);
@@ -103,9 +104,15 @@ sealed partial class GameHost
         objects.DrawStageProp(colour.Texture, depth, stage.ViewProjection, stage.Eye, stage.Light);
     }
 
-    /// <summary>The editor has closed: the platform goes.</summary>
-    void ClearEditorPlatform()
+    /// <summary>Whether the editor's stage was drawn since it last closed (<see cref="ClearEditorStage"/>).</summary>
+    bool editorStaged;
+
+    /// <summary>The editor has closed: the platform goes, and the close-up looks warmed for it and never shown are dropped.</summary>
+    void ClearEditorStage()
     {
+        if (!editorStaged) return;
+        editorStaged = false;
+        gpu.Characters?.ReleaseCloseUps();
         if (editorPlatformFor is null) return;
         editorPlatformFor = null;
         gpu.Objects?.SetStageProp(null);

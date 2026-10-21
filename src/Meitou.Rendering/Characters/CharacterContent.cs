@@ -347,6 +347,17 @@ internal sealed class CharacterContent : IDisposable
         Fetched(c, urgent: true);
     }
 
+    /// <summary>
+    /// The character editor has closed: the close-up preparations never uploaded (looks warmed ahead and never shown, every head, hair and beard of the races visited) are
+    /// dropped with their CPU copies, and so are the close-up requests. Uploaded close-ups keep their marker. Render thread.
+    /// </summary>
+    public void ReleaseCloseUps()
+    {
+        closeUp.Clear();
+        foreach (var (key, lazy) in prepared)
+            if (key.Close && !(lazy.IsValueCreated && ReferenceEquals(lazy.Value, Uploaded))) prepared.TryRemove(key, out _);
+    }
+
     /// <summary>Whether a mesh file has been prepared (for any skeleton), as a close-up or with its levels.</summary>
     bool IsPrepared(string path, bool close)
     {

@@ -58,7 +58,8 @@ are separate; .phs attachment points are data. Part scales/transforms must follo
 three-component tangent). Both human bodies store BINORMAL = cross(tangent, normal); `human_male` has four-component tangents (w ±1),
 `human_female` three. Meitou (`Model.Build` `gameBinormals`, characters only): w is set so that cross(normal, tangent) × w is that binormal; worn
 items flip their normal map's green (skin.hlsl), so their binormal is the opposite. Albedo is written darkened: × 0.7 for bodies, heads, hair and severed limbs (`character.hlsl`
-`DARKEN`), × 0.8 for worn items (`skin.hlsl`); the icons' forward shader (`rtticons.hlsl`) has none.
+`DARKEN`), × 0.8 for worn items (`skin.hlsl`); the icons' forward shader (`rtticons.hlsl`) has none. Items attached with their own mesh (`StaticObject`):
+their darken and green flip are **Unknown**; Meitou applies neither (both keyed on `PartMaterial.Worn`).
 Worn items (template `Skinned`, `AppearanceBase::setupItemMaterial` `FUN_140536210`) write gloss = diffuse alpha × `glossMult`, metalness = colour
 map blue; nothing sets `glossMult` there and `Skinned_FP` has no default, so it is 0: worn clothing is matte (**Observed**: no setter in the function,
 no default in `skin.program`). Items attached with their own mesh (`StaticObject`) keep `glossMult` 1. Meitou: worn metalness is not applied (**gap**).
@@ -159,7 +160,7 @@ exe decompile unless marked; Meitou: `CharacterDraft` (data), `EditCharacter` / 
   (mode 0) and, with a `force race` list, in it (none left: "Game start has no valid races", the list is unrestricted). Base data: Human
   {Greenlander, Scorchlander}, Shek, Hive {Prince, Soldier Drone, Worker Drone}, Skeleton (**Verified** by probe). Group order **Unknown**
   (Meitou: data order). Gender blank for single-gender races. Description = RACE `description`. Stats panel (`FUN_1405ee0c0`, **Observed**):
-  "Hit Points:" and the character's first medical part's maximum as an integer, "No bleeding" below `bleed rate` 0.1, then the stat multipliers
+  "Hit Points:" and the character's first medical part's maximum as an integer (Meitou, while the draft shows another race: that race's new medical state's), "No bleeding" below `bleed rate` 0.1, then the stat multipliers
   above 1, then those below 1, each as the stat's name (no colon) and (m-1)x100 %. Within each group the order is the race stat map's iteration order
   ([boost-unordered](formats/boost-unordered.md); `RaceData.StatMapOrder`), which gives vanilla's Greenlander Farming, Cooking, Science (**Observed**).
 - **Captions** (`FUN_1405f1a40`, **Observed**): the code sets every button and header from the catalog, upper case: Randomise, Reset (not the

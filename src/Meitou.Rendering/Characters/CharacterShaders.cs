@@ -254,14 +254,15 @@ static class CharacterShaders
             if (cut) discard;
             // The game writes character albedo darkened: 0.7 for bodies, heads and hair (character.hlsl DARKEN), 0.8 for worn items (skin.hlsl); not its icons (rtticons.hlsl,
             // a fog distance of -1).
-            if (view.fogDistance > -0.5 || view.fogDistance < -1.5) albedo *= m.shading == 0u ? 0.8 : 0.7;
+            // An item attached with its own mesh (StaticObject, not Worn) is not darkened.
+            if (view.fogDistance > -0.5 || view.fogDistance < -1.5) albedo *= m.shading != 0u ? 0.7 : flag(f, 16384u) ? 0.8 : 1.0;
 
             if (flag(f, 2u) && m.shading != 2u && dot(vTangent.xyz, vTangent.xyz) > 1e-8)
             {
                 vec3 t = normalize(vTangent.xyz - n * dot(n, vTangent.xyz));
-                // cross(n, t) * w is the game's binormal (the mesh's BINORMAL times its w, Model.Build gameBinormals); items flip their maps' green (skin.hlsl), so
+                // cross(n, t) * w is the game's binormal (the mesh's BINORMAL times its w, Model.Build gameBinormals); worn items flip their maps' green (skin.hlsl), so
                 // their binormal is the opposite.
-                vec3 b = (m.shading == 1u ? cross(n, t) : cross(t, n)) * vTangent.w;
+                vec3 b = (flag(f, 16384u) ? cross(t, n) : cross(n, t)) * vTangent.w;
                 vec3 tn;
                 if (swizzled) { vec2 xy = vec2(nm.a, nm.g) * 2.0 - 1.0; tn = vec3(xy, sqrt(max(0.0, 1.0 - dot(xy, xy)))); }
                 else tn = nm.xyz * 2.0 - 1.0;

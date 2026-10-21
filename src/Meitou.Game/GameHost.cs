@@ -346,7 +346,7 @@ sealed partial class GameHost(GameInstall install, WorldScene scene, AssetLocato
         if (TitleVisible) { DrawTitleWorld(width, height); return; }
         if (player.EditorOpen) { DrawEditorStage(width, height); return; }
         if (gpu.Characters is { StageRequest: not null } staged) staged.StageRequest = null;
-        ClearEditorPlatform();
+        ClearEditorStage();
         double seconds = animClock ? animSeconds : realTime.Elapsed.TotalSeconds;
         if (gpu.Foliage is { } foliage && o.Screenshot is null) foliage.SwaySeconds = seconds;
         // The heat haze's gameTime: game hours since the start (it stops while paused, as in the game).

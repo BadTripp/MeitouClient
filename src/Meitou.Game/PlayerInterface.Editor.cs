@@ -649,9 +649,12 @@ sealed partial class PlayerInterface
     void AddRaceStats(List<UiControl> controls, GameRecord race, UiRect area)
     {
         var lines = new List<(string Label, string Value, bool? Good)>();
-        // The first line is the character's hit points: its first body part's maximum (FUN_1405ee0c0 reads the medical state's first part, Observed), as an integer.
-        if (editor is { } s && session.CurrentSnapshot.Characters.FirstOrDefault(c => c.Id == s.Current) is { HealthParts: [var first, ..] })
-            lines.Add((Loc.Tr("Hit Points:"), ((int)(first.Maximum + 0.01f)).ToString(CultureInfo.InvariantCulture), null));
+        // The first line is the character's hit points: its first body part's maximum (FUN_1405ee0c0 reads the medical state's first part, Observed), as an integer. While the
+        // draft shows another race than the character has, that race's new medical state's (the character takes it on CONFIRM).
+        float? hitPoints = null;
+        if (editor is { } s && session.CurrentSnapshot.Characters.FirstOrDefault(c => c.Id == s.Current) is { } shown)
+            hitPoints = shown.Appearance?.Race.StringId == race.StringId && shown.HealthParts is [var first, ..] ? first.Maximum : RaceHitPoints(race);
+        if (hitPoints is { } hp) lines.Add((Loc.Tr("Hit Points:"), ((int)(hp + 0.01f)).ToString(CultureInfo.InvariantCulture), null));
         lines.AddRange(RaceStatLines(race).Select(l => (l.Label, l.Value, (bool?)l.Good)));
         float scale = Height / 1080f, row = Math.Min(22 * scale, area.Height / Math.Max(1, lines.Count));
         for (int i = 0; i < lines.Count; i++)
@@ -666,6 +669,16 @@ sealed partial class PlayerInterface
     }
 
     readonly Dictionary<string, IReadOnlyList<(string, string, bool)>> raceStatCache = [];
+    readonly Dictionary<string, float?> raceHitPointCache = [];
+
+    /// <summary>A healthy new person of <paramref name="race"/>: its first medical part's maximum (<see cref="Meitou.Simulation.Bodies.MedicalState.Create"/>); null without anatomy.</summary>
+    float? RaceHitPoints(GameRecord race)
+    {
+        if (raceHitPointCache.TryGetValue(race.StringId, out var cached)) return cached;
+        if (EditorData is not { } data) return null;
+        var parts = Meitou.Simulation.Bodies.MedicalState.Create(Meitou.Data.Gameplay.Bodies.RaceData.From(race, data.Db), 1).Parts;
+        return raceHitPointCache[race.StringId] = parts.Count > 0 ? parts[0].MaxHp : null;
+    }
 
     IReadOnlyList<(string Label, string Value, bool Good)> RaceStatLines(GameRecord race)
     {

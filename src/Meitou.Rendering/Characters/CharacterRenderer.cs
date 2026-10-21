@@ -73,6 +73,8 @@ internal sealed unsafe partial class CharacterRenderer : IDisposable
     public void Warm(CharacterAppearance appearance, bool urgent, bool close = false) => content.Warm(appearance, urgent, close);
     /// <summary>Starts preparing a look urgently as a close-up (the character editor's): its meshes without generated levels, which take nearly all of a mesh's preparation. Render thread.</summary>
     public void PrefetchCloseUp(CharacterAppearance appearance) => content.Prefetch(appearance, close: true);
+    /// <summary>The character editor has closed: drops the close-up preparations it warmed and never showed. Render thread.</summary>
+    public void ReleaseCloseUps() => content.ReleaseCloseUps();
     public List<string> Messages => content.Messages;
 
     /// <summary>One character in range this frame.</summary>
