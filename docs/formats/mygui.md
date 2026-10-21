@@ -47,12 +47,19 @@ Sources: the configured Kenshi install's `data/gui/`, the existing
   `Size = (int)getDefaultHeight() + font size2` (settings.cfg, default 3), still in
   points at the resource's resolution; the default height is taken from the
   font as first loaded. MyGUI 3.2.3 (MyGUI.log) makes the default height ascent +
-  descent in pixels. **Observed** (user screenshots at 1080 p, text widths): the
-  heights fit FreeType's grid-fitted metrics, hhea ascender rounded up plus
-  descender rounded down at the fractional em (each at least the OS/2 Windows value
-  at the rounded ppem): Sentencia 25 pt draws at 22 pt (15.3 px), Exo2 20 pt stays
-  20 pt (13.9 px). Rounding to the integer ppem instead (head flag bit 3) gives
-  20 pt for Sentencia and does not fit. Meitou: `KenshiFontSize` (default 3).
+  descent in pixels. **Observed** (user screenshots, text widths): the heights fit
+  the hhea ascender and descender each rounded to the nearest pixel at the fractional
+  em (each at least the OS/2 Windows value at the rounded ppem). At 1080 p,
+  Sentencia 25 pt draws at 22 pt (15.3 px) and Exo2 20 pt stays 20 pt (13.9 px).
+  At 1440 p (2026-10-22, the same French loading tip side by side), Exo2 24 pt draws
+  at 23 pt: lines within 1 % of vanilla's width, where rounding up gives 24 pt and
+  5 % too wide. MailartRubberstamp 110 pt gives 108 pt, its stamp matching vanilla's
+  to 2 px. Rounding at the integer ppem (head flag bit 3) gives 20 pt for Sentencia and
+  does not fit. Meitou: `KenshiFontSize` (default 3).
+- **Verified** against MyGUI 3.2.2 (`TextView`), **Observed** on the loading screen:
+  text is never scaled to its widget. A line taller than its box overflows it and is
+  clipped by the widget. Meitou's Faithful mode does the same for font resources
+  (`UiPainter`). The Meitou mode still shrinks text with no minimum size to fit.
 - **Observed** in the install's font files: `SubstituteCode` 0, `Distance` 2, `TabWidth` 4,
   `Codes` `32 126` and `8127 8217` for the English fonts; `locale/ja_JP` uses
   `ume-pgs5.ttf` with `32 255`, `12288 12543`, `19968 40959`, `65280 65519`. A locale's

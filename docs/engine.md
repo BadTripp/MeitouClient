@@ -66,7 +66,7 @@ finished refine, a mismatched load, and `UnloadImpostor`/teardown (after the `Ne
 4.2 GB to 85 MB); 4 alternating pairs (both orders): allocated 4.9-5.0 to 4.0-4.1 GB, peak working set 5.4-6.4 to 4.9-5.8 GB (set while loading),
 0 MB native held at the end, gen2 counts 3-4 vs 3, p99 unchanged. GC pause totals 28-161 ms (base) vs 98-158 ms (native): inconclusive, **Unknown**.
 Cancel on window close. Helpers/services dispose/join with their owning scene/session.
-After warm-up, loading panels ease off the left/right edges over 0.7s while the loading image fades to the live scene and UI.
+After warm-up, loading panels ease off the left/right edges over 0.7s while the loading image fades to the live scene and UI (Faithful: hidden at once, as the original).
 Input remains blocked through this reveal. A new game ends warm-up as soon as the squad's characters are drawable, skips the sky arrival and opens the
 character editor first (`GameHost.Editor`); once it closes, the loading screen returns and the world warms up as above. Sky loads dismiss only panels that were shown, keeping the sky flight visible.
 
