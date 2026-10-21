@@ -100,7 +100,7 @@ characters/root collision and leg-health/lying/care selection belong in [simulat
 by S, the base being `nm <g> strong` when D > 0.33 (RACE fields; humans and Shek have their own `_muscular` / `_skinny` files, robots and hive
 one file for all). What calls it, and how often, is **Unknown** (it is a virtual of `AppearanceHuman`, slots 6 and 13).
 Meitou (`CharacterShape.BuildFromStats`, `CharacterSnapshot.Build`, `CharacterRenderer.ApplyBuild`): published every tick from the live stats,
-applied when a value moves by more than 0.01 (engine choice).
+applied when a value moves by more than 0.01, the normal maps once both are resident (engine choices).
 
 ### Startup preprocessing
 

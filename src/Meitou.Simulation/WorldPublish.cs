@@ -66,7 +66,7 @@ public sealed partial class World
                 Body = cold?.Medical is { } med && cold.Race is { } race ? BodyOf(cold, med, race, state[i].Task) : null,
                 // The original skips robots' appearances (FUN_140531820) and animals have none.
                 Build = cold is { Stats: { } buildStats, Medical: { } fed, Race.IsRobot: false, Appearance: { Animal: null } look }
-                    ? Meitou.Data.Characters.CharacterShape.BuildFromStats(look.Female, s => buildStats[s], fed.Hunger) : null,
+                    ? Meitou.Data.Characters.CharacterShape.BuildFromStats(look.Female, buildStats, static (stats, s) => stats[s], fed.Hunger) : null,
                 Path = selected && (state[i].Flags & (ushort)MoveFlags.HasPath) != 0 ? cold!.Path.Skip(state[i].PathCursor).ToArray() : [],
                 CarriedBy = cold?.CarriedBy ?? CharacterId.None,
                 AttachBone = cold is { CarriedBy.IsNone: false } ? Carrying.CarrySystem.AttachBone : null,

@@ -99,6 +99,8 @@ internal sealed class CharacterAsset
     public BodyShapeData? Shape;
     /// <summary>The stat-driven body last applied to the shape and the body's normal maps (<see cref="CharacterRenderer"/>), null before the first.</summary>
     public BodyBuild? AppliedBuild;
+    /// <summary>The body normal maps and weight of <see cref="AppliedBuild"/> while a map is still loading; the parts keep the last ones until both are resident.</summary>
+    public (WorldTexture? Normal, WorldTexture? Blend, float Weight)? PendingNormals;
     public readonly List<AssetPart> Parts = [];
     /// <summary>The carried lights (<see cref="CharacterAppearance.Lights"/>): a bone, the offset from it and an attach slot, posed like a bone-attached part.</summary>
     public readonly List<(int Bone, Matrix4x4 Offset, int AttachIndex, Meitou.Data.World.WorldLight Light)> Lamps = [];

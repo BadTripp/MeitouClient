@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Numerics;
 using Meitou.Data.Fcs;
+using Meitou.Data.Gameplay.Bodies;
 
 namespace Meitou.Data.Characters;
 
@@ -188,16 +189,11 @@ public static class CharacterShape
     /// The body a character's current stats and hunger give (<c>FUN_14052bc70</c>): bulk from strength and the two smithing skills, definition from swimming, athletics,
     /// dexterity, martial arts, cooking and science, starvation from the hunger (0 to 3).
     /// </summary>
-    public static BodyBuild BuildFromStats(bool female, Func<Meitou.Data.Gameplay.Bodies.StatsEnumerated, float> stat, float hunger)
-    {
-        float S(Meitou.Data.Gameplay.Bodies.StatsEnumerated s) => stat(s);
-        return new BodyBuild(
-            MuscleFromStats(S(Meitou.Data.Gameplay.Bodies.StatsEnumerated.Strength), S(Meitou.Data.Gameplay.Bodies.StatsEnumerated.SmithingWeapon), S(Meitou.Data.Gameplay.Bodies.StatsEnumerated.SmithingArmour)),
-            MuscleDefinitionFromStats(female, S(Meitou.Data.Gameplay.Bodies.StatsEnumerated.Swimming), S(Meitou.Data.Gameplay.Bodies.StatsEnumerated.Athletics),
-                S(Meitou.Data.Gameplay.Bodies.StatsEnumerated.Dexterity), S(Meitou.Data.Gameplay.Bodies.StatsEnumerated.MartialArts),
-                S(Meitou.Data.Gameplay.Bodies.StatsEnumerated.Cooking), S(Meitou.Data.Gameplay.Bodies.StatsEnumerated.Science)),
-            StarvationFromNutrition(hunger));
-    }
+    public static BodyBuild BuildFromStats<T>(bool female, T stats, Func<T, StatsEnumerated, float> stat, float hunger) => new(
+        MuscleFromStats(stat(stats, StatsEnumerated.Strength), stat(stats, StatsEnumerated.SmithingWeapon), stat(stats, StatsEnumerated.SmithingArmour)),
+        MuscleDefinitionFromStats(female, stat(stats, StatsEnumerated.Swimming), stat(stats, StatsEnumerated.Athletics), stat(stats, StatsEnumerated.Dexterity),
+            stat(stats, StatsEnumerated.MartialArts), stat(stats, StatsEnumerated.Cooking), stat(stats, StatsEnumerated.Science)),
+        StarvationFromNutrition(hunger));
 
     /// <summary>Starvation from the character's hunger (the original's <c>+0x4b8</c>, 0 to 3): 1 at 4/3 or less, falling to 0 at 2.</summary>
     public static float StarvationFromNutrition(float nutrition) => Math.Clamp((1 - Math.Clamp(nutrition - 1, 0, 1)) * 1.5f, 0, 1);
