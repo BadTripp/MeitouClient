@@ -161,8 +161,9 @@ sealed partial class PlayerInterface
         {
             if (view.Count <= 0 || controls.FirstOrDefault(c => c.Name == name) is not { } slot || (machineDrag is { } d && d.Slot == code - 10)) return;
             var b = slot.Bounds;
-            float side = MathF.Min(b.Width, b.Height);
-            AddItemCell(controls, $"machine-{name}", new(b.X, b.Y, side, side), view.Item, "", view.Name, view.Count, null, "MachineItem", code, slot.Clip);
+            // The item at its own footprint, as the original draws it in a slot (a box of building material is 6 x 3 cells), centred in the slot.
+            float cell = InventoryCell, w = view.Width * cell, h = view.Height * cell;
+            AddItemCell(controls, $"machine-{name}", new(b.X + (b.Width - w) / 2, b.Y + (b.Height - h) / 2, w, h), view.Item, "", view.Name, view.Count, null, "MachineItem", code, slot.Clip);
         }
         for (int k = 0; k < Math.Min(2, m.Inputs.Count); k++) Slot($"in{k + 1}", m.Inputs[k], 10 + k);
         if (m.Output is { } output) Slot("out", output, 8);
