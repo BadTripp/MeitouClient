@@ -2,6 +2,10 @@
 
 Released with tags `launcher-v<version>` by `.github/workflows/launcher-release.yml`; each release needs its `## v<version>` section.
 
+## v1.1.1
+
+- Nightly builds now come twice a day; the afternoon build shows its date in the Versions list like the morning one.
+
 ## v1.1.0
 
 - The launcher updates itself: at startup it installs a new launcher version and restarts into it. Turn this off in Settings
