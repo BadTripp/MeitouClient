@@ -20,9 +20,9 @@ public sealed partial class MedicalState
     readonly List<float> wounds = [];
     ulong rollCounter;
 
-    public MedicalState(IEnumerable<HealthPart> parts) => Parts = this.parts = [.. parts];
+    public MedicalState(IEnumerable<HealthPart> parts) => this.parts = [.. parts];
 
-    public IReadOnlyList<HealthPart> Parts { get; }
+    public IReadOnlyList<HealthPart> Parts => parts;
     readonly HealthPart[] parts;
     /// <summary><see cref="Parts"/> for the every-tick loops (no enumerator to allocate).</summary>
     internal ReadOnlySpan<HealthPart> PartSpan => parts;

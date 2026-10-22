@@ -115,7 +115,8 @@ public sealed class NavmeshWalkability : IWalkability
         var cache = floors;
         if (!ReferenceEquals(cache.World, world)) floors = cache = new FloorCache(world);
         if (cache.Found.TryGetValue((x, z, y, slack), out var known)) return known;
-        if (cache.Found.Count >= FloorCacheLimit) cache.Found.Clear();
+        // Counted apart: ConcurrentDictionary.Count takes every lock, and misses come all at once after a swap, from every partition.
+        if (Interlocked.Increment(ref cache.Added) > FloorCacheLimit) { cache.Found.Clear(); Interlocked.Exchange(ref cache.Added, 0); }
         return cache.Found[(x, z, y, slack)] = IWalkability.ScanFloor(this, x, z, y, slack);
     }
 
@@ -126,6 +127,8 @@ public sealed class NavmeshWalkability : IWalkability
     {
         public readonly NavWorld World = world;
         public readonly System.Collections.Concurrent.ConcurrentDictionary<(float X, float Z, float Y, float Slack), Vector3?> Found = new();
+        /// <summary>Answers added since <see cref="Found"/> was last cleared (a spot asked twice at once counts twice: the limit is loose).</summary>
+        public int Added;
     }
 
     volatile FloorCache floors = new(NavWorld.Empty);

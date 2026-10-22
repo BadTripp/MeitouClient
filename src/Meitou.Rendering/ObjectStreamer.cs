@@ -46,8 +46,14 @@ sealed class ObjectStreamer(WorldObjects objects, ObjectMeshCache meshes) : IDis
     /// <summary>An interior test's answer: for the interiors of <see cref="InteriorVersion"/> <paramref name="Version"/>, at <paramref name="At"/>.</summary>
     public sealed record InteriorAnswer(int Version, Vector3 At, bool Inside);
 
-    /// <summary>Changes whenever the loaded zones or their interiors do (an answer of an older version is asked again).</summary>
+    /// <summary>Changes whenever the loaded interiors do: a zone with interiors comes or goes, or a zone's interiors change (an answer of an older version is asked again).</summary>
     public int InteriorVersion { get; private set; }
+
+    /// <summary>Unloads <paramref name="coordinate"/>'s zone; a new <see cref="InteriorVersion"/> only when it had interiors.</summary>
+    void Drop(ZoneCoordinate coordinate)
+    {
+        if (zones.Remove(coordinate, out var gone) && gone.Interiors.Count > 0) InteriorVersion++;
+    }
 
     public sealed class Zone
     {
@@ -93,8 +99,7 @@ sealed class ObjectStreamer(WorldObjects objects, ObjectMeshCache meshes) : IDis
             staged = value;
             foreach (var coordinate in touched)
             {
-                zones.Remove(coordinate);
-                InteriorVersion++;
+                Drop(coordinate);
                 jobs.Remove(coordinate);
                 if (!populated.Any(p => p.Coordinate == coordinate))
                 {
@@ -151,8 +156,9 @@ sealed class ObjectStreamer(WorldObjects objects, ObjectMeshCache meshes) : IDis
         z.Stand.RemoveAll(Match);
         z.Unresolved.RemoveAll(Match);
         z.Parked.RemoveAll(Match);
+        int had = z.Interiors.Count;
         z.Interiors = [.. z.Interiors.Where(v => v.PlacementId != instanceId)];
-        InteriorVersion++;
+        if (z.Interiors.Count != had) InteriorVersion++;
     }
 
     void EnsurePopulated(ZoneCoordinate zone)
@@ -164,8 +170,7 @@ sealed class ObjectStreamer(WorldObjects objects, ObjectMeshCache meshes) : IDis
 
     void Invalidate(ZoneCoordinate zone)
     {
-        zones.Remove(zone);
-        InteriorVersion++;
+        Drop(zone);
         jobs.Remove(zone);
         runtimeJobs.RemoveAll(j => j.Zone == zone);
         EnsurePopulated(zone);
@@ -312,7 +317,7 @@ sealed class ObjectStreamer(WorldObjects objects, ObjectMeshCache meshes) : IDis
         }
         Wanted = wanted.Count(w => !jobs.ContainsKey(w.Coordinate));
         foreach (var zone in zones.Values.ToArray())
-            if (NearZone(zone.X0, zone.Z0, eye) > range + WorldLayout.ZoneSize) { zones.Remove(zone.Coordinate); InteriorVersion++; }
+            if (NearZone(zone.X0, zone.Z0, eye) > range + WorldLayout.ZoneSize) Drop(zone.Coordinate);
         FillZones(maxNew > 8 ? double.MaxValue : 1.0);
     }
 
@@ -330,8 +335,8 @@ sealed class ObjectStreamer(WorldObjects objects, ObjectMeshCache meshes) : IDis
     {
         var (x0, z0) = WorldLayout.ZoneOrigin(laid.Zone);
         var zone = new Zone { Coordinate = laid.Zone, X0 = x0, Z0 = z0, Interiors = laid.Interiors };
+        if (laid.Interiors.Count > 0 || zones.TryGetValue(laid.Zone, out var old) && old.Interiors.Count > 0) InteriorVersion++;
         zones[laid.Zone] = zone;
-        InteriorVersion++;
         fills.Enqueue(new Fill { Zone = zone, Laid = laid });
     }
 

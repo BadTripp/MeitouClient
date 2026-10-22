@@ -108,15 +108,15 @@ public sealed class RagdollSystem : ITickSystem, IStateHashed, IRagdollState, IR
 
     public BonePose? Publish(CharacterId id) => ragdolls.TryGetValue(id, out var r) ? r.Published : null;
 
-    // Looked up first: the factory lambda captures this, so passing it allocates on every call.
-    (PhysicsFile File, string Path)? FileOf(CharacterAppearance look) => (files.TryGetValue(look, out var known) ? known : files.GetOrAdd(look, a => new(() =>
+    // A static factory given the rigs: nothing allocated on a hit.
+    (PhysicsFile File, string Path)? FileOf(CharacterAppearance look) => files.GetOrAdd(look, static (a, rigs) => new(() =>
     {
         // RACE male ragdoll / female ragdoll (the female file only for a female look; docs/game/ragdolls.md "RagdollPart and requests").
         var name = a.Race.GetPath(a.Female ? "female ragdoll" : "male ragdoll") is { Length: > 0 } f ? f : a.Race.GetPath("male ragdoll");
         if (string.IsNullOrEmpty(name) || rigs.Find(name) is not { } path) return null;
         try { return (PhysicsFile.ReadFile(path), path); }
         catch (Exception e) when (e is FormatException or IOException) { return null; }
-    }))).Value;
+    }), rigs).Value;
 
     RagdollDefinition? DefinitionOf(CharacterAppearance look, SkeletonRig rig, float scale)
     {
