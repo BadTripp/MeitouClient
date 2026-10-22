@@ -105,6 +105,9 @@ When neither joins, the interior polygons connected to the door polygons within 
 edges face: a raised sill reached by steps (~47..52°) that cross the hull, whose lower part is the exterior's (cut at the hull: Y351 for
 `29-rebirth-INGAME`, door Y365..380; Y418 for `27-`, door Y430..441) and upper part the interior's, meeting on the hull's edge.
 **Observed** (zone 18.35, scratch probe): both rooms reached from the street; no other door in 18.35, 19.29, 20.29, 20.32, 21.32, 21.42 needs it.
+Joined edges may lie up to 6 apart (`NavInteriors.JoinDistance`), so an A* portal across a link takes the overlap with that gap. **Observed** (zone 21.31,
+`meitou-tools navmesh`): the Rebel Base Storm House `3384-TwoStorey`'s exterior door edge slants 2.0..2.3 off the interior's (z −1156.3); with a
+2.0 gap the portal was 0.2 wide and radius-4 agents never got in; with 6, (-50620,-1080) → (-50617,-1232) `--to-y 1080` walks in, and back out.
 **Inner seams** (engine choice): Recast welds polygon vertices only within 2 height cells, and a step's corner height can come out
 differently on each side, so a stair foot and the ground beside it can share an X/Z edge without being neighbours. The stitcher
 joins open edges of one tile that coincide reversed and are within the climb at both ends. **Observed** (zone 21.42, `meitou-tools navmesh`):
@@ -114,7 +117,7 @@ agents had no way up; with the seam, ground (-47000,125,48100) reaches the room 
 Contour simplification also leaves near-miss T seams (one edge against two whose middle vertex is off its line). Open edges of one tile left
 unjoined are linked (`Links`, not `Neighbours`) when they run opposite, share one end in X/Z (so floors either side of a thin wall stay apart),
 lie within 1.5 of each other's line at both ends of the overlap, and are within climb + 0.5 there; A* portals for such links take the overlap
-with a 2.0 gap when no facing edge is within 0.2. **Observed** (zone 18.39, `meitou-tools navmesh`): the Swamp Village stair foot's edge
+with the door joins' 6 gap when no facing edge is within 0.2. **Observed** (zone 18.39, `meitou-tools navmesh`): the Swamp Village stair foot's edge
 (-62220,108,34088 → -62208,105,34086) against two edges meeting at (-62216,106,34086) joins both; the path (-62218,34080) → (-62216,34148)
 `--to-y 140` climbs through that vertex (length 83) instead of detouring to the tile line x−62208 (97).
 **Tile seams** (engine choice): tiles are rasterised with a 3-cell border from their neighbours (Recast `borderSize`), so contour
