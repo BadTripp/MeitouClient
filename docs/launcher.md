@@ -12,6 +12,10 @@ items); the launcher never downloads or hosts mods.
   are, so `/releases/latest` (README's link) is the newest launcher; README's
   setup links are `/releases/latest/download/<name>`, so the Setup/AppImage/pkg names must stay free of the version. Full releases of both pass
   `--notes-start-tag` with the previous tag of their own family, so the generated notes never span the other family's tag.
+- Both tag the commit the run started on with `GITHUB_TOKEN`. **Verified** (throwaway test workflow, 2026-10-22): GitHub refuses that
+  token a tag or release (HTTP 403 "Resource not accessible by integration") on a commit whose `.github/workflows/` files differ from
+  the current master, as it lacks the `workflows` permission. So pushing a workflow edit while a release runs fails its release step;
+  re-run it from a new dispatch, or publish the run's artifacts by hand with `gh release create` (launcher 1.1.1 was).
 - Nightlies: `release.yml` also runs twice a day (05:00 UTC "nightly", 14:00 UTC "daily", or by hand with `nightly`) and publishes
   `v<X.Y.Z+1>-nightly.<yyyymmdd>`, a second build on the same UTC day `….<yyyymmdd>.2`
   (patch after the newest full release) as a pre-release without a changelog section; its notes list every
