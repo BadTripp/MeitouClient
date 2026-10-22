@@ -51,7 +51,8 @@ public sealed class CharacterRigs(GameDatabase db, Func<string, string?> findMes
     public string? BodySkeletonName(string path) => skeletonNames.GetOrAdd(path, p => new Lazy<string?>(() => OgreMeshReader.ReadFile(p).SkeletonName)).Value;
 
     /// <summary>The pose setup of <paramref name="c"/> (cached per appearance); null when its body mesh or skeleton cannot be found or read.</summary>
-    public CharacterPoseSetup? For(CharacterAppearance c) => setups.GetOrAdd(c, a => new Lazy<CharacterPoseSetup?>(() => Build(a))).Value;
+    public CharacterPoseSetup? For(CharacterAppearance c) =>
+        (setups.TryGetValue(c, out var known) ? known : setups.GetOrAdd(c, a => new Lazy<CharacterPoseSetup?>(() => Build(a)))).Value;   // looked up first: the factory captures this
 
     CharacterPoseSetup? Build(CharacterAppearance c)
     {

@@ -80,27 +80,29 @@ internal sealed unsafe partial class CharacterRenderer
             if (portraitLive < 0 && (l.PortraitOnly || !FrustumTests.SphereVisible(frustum, l.Centre, l.Radius))) continue;
             if (!depthPass && portraitLive < 0 && FogCull?.Hidden(l.Centre, l.Radius, FogVolumes.CullKind.Characters) == true) continue;
             DrawnCharacters++;
-            bool interior = portraitLive < 0 && InteriorObjects?.InteriorAt(l.Centre) is not null;
+            bool interior = portraitLive < 0 && l.Interior;
+            var world = Relative(l.World, origin);
+            float worldScale = world.ScaleLength();
             foreach (var part in l.Asset.Parts)
             {
                 if (!part.ShowsWith(l.WeaponDrawn)) continue;
-                var world = Relative(l.World, origin);
                 Matrix4x4 model = world;
                 if (!part.Shared) model = attach[l.AttachBase + part.AttachIndex] * world;
+                float modelScale = part.Shared ? worldScale : model.ScaleLength();
                 var mesh = part.Mesh;
-                if (depthPass && part.BoundsRadius * model.ScaleLength() < shadowMinRadius) continue;
+                if (depthPass && part.BoundsRadius * modelScale < shadowMinRadius) continue;
                 int level;
                 if (!GeneratedLod)
                 {
                     // Faithful: the file's own levels by the original's distance_sphere value (its stored radius, bias 1), the shadow passes as the picture
                     // (docs/characters.md "LOD of character meshes").
-                    float own = MeshLod.Value(eye - origin, Vector3.Transform(part.BoundsCentre, model), part.FileRadius * model.ScaleLength());
+                    float own = MeshLod.Value(eye - origin, Vector3.Transform(part.BoundsCentre, model), part.FileRadius * modelScale);
                     level = part.FileDistances is { } fileLevels && MeshLod.Select(fileLevels, own) is int f && f > 0 ? part.FileFirst + f - 1 : 0;
                 }
                 else
                 {
                     // The model is relative to the view's eye (above), so the LOD eye is too: with the world eye every part far from the origin took its last level.
-                    float value = MeshLod.Value(eye - origin, Vector3.Transform(part.BoundsCentre, model), part.BoundsRadius * model.ScaleLength(), depthPass ? LodBias * ShadowLodBias : LodBias);
+                    float value = MeshLod.Value(eye - origin, Vector3.Transform(part.BoundsCentre, model), part.BoundsRadius * modelScale, depthPass ? LodBias * ShadowLodBias : LodBias);
                     // In a shadow map hair is a silhouette, so it takes the rule's own distances there (its levels start CharacterContent.HairLodScale times farther for the picture).
                     if (depthPass) value = Math.Max(part.Material.Shading == CharacterShaders.ShadeHair && !l.Asset.Animal ? value * CharacterContent.HairLodScale : value, shadowLodFloor);
                     level = MeshLod.Select(mesh.Distances, value);

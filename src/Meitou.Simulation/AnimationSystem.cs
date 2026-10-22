@@ -626,7 +626,7 @@ public sealed class AnimationSystem(AnimationLibrary library, AnimationLengths l
         var stance = new AnimationStance { Right = new HandHold(cold.DrawnWeapon), Combat = cold.InCombat, Stealth = (cold.Orders & CharacterOrders.Sneak) != 0, CarryingLeft = !cold.Carrying.IsNone, BeingCarried = !cold.CarriedBy.IsNone };
         if (cold.Medical is not { } body) return stance;
         float left = 100, right = 100;
-        foreach (var part in body.Parts)
+        foreach (var part in body.PartSpan)
         {
             if (part.Template.Type != Meitou.Data.Gameplay.Bodies.BodyPartType.Leg) continue;
             if (part.Template.Side == Meitou.Data.Gameplay.Bodies.BodySide.Left) left = MathF.Min(left, part.Fraction * 100);

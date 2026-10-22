@@ -97,7 +97,38 @@ public sealed class NavmeshWalkability : IWalkability
         return TryStand(w, x, z, nearY, out _, out bool reachable) && reachable;
     }
 
+    public bool TryStand(float x, float z, float nearY, out float y)
+    {
+        var w = world;
+        if (!TryStand(w, x, z, nearY, out y, out bool reachable)) { y = Ground(w, x, z); reachable = false; }
+        return w.Contains(WorldLayout.ZoneOf(x, z)) ? reachable : fallback.IsWalkable(x, z);
+    }
+
     bool TryStand(NavWorld w, float x, float z, float nearY, out float y) => TryStand(w, x, z, nearY, out y, out _);
+
+    /// <summary>
+    /// <see cref="IWalkability.FloorNear"/>, kept for the loaded world it was found on: the AI asks it of the same spots at every think, and a spot with no floor near
+    /// tries every point of the search.
+    /// </summary>
+    public Vector3? FloorNear(float x, float z, float y, float slack)
+    {
+        var cache = floors;
+        if (!ReferenceEquals(cache.World, world)) floors = cache = new FloorCache(world);
+        if (cache.Found.TryGetValue((x, z, y, slack), out var known)) return known;
+        if (cache.Found.Count >= FloorCacheLimit) cache.Found.Clear();
+        return cache.Found[(x, z, y, slack)] = IWalkability.ScanFloor(this, x, z, y, slack);
+    }
+
+    /// <summary>How many <see cref="FloorNear"/> answers are kept at most (engine choice: well above a town's spots).</summary>
+    const int FloorCacheLimit = 16384;
+
+    sealed class FloorCache(NavWorld world)
+    {
+        public readonly NavWorld World = world;
+        public readonly System.Collections.Concurrent.ConcurrentDictionary<(float X, float Z, float Y, float Slack), Vector3?> Found = new();
+    }
+
+    volatile FloorCache floors = new(NavWorld.Empty);
 
     /// <summary>
     /// The real surface of the highest mesh layer at (x, z) within <see cref="StandRise"/> above <paramref name="nearY"/> and <see cref="StandDrop"/> below it

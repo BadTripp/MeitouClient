@@ -105,6 +105,8 @@ internal sealed unsafe partial class CharacterRenderer : IDisposable
         public long Key;
         /// <summary>Beyond <see cref="DrawDistance"/> (or <see cref="CharacterInstance.Hidden"/>) but posed for its portrait (<see cref="PortraitRequests"/>): not drawn in the world.</summary>
         public bool PortraitOnly;
+        /// <summary>In a loaded building's interior (<see cref="WorldObjectRenderer.InteriorAt"/>), found once a frame for every view.</summary>
+        public bool Interior;
     }
 
     /// <summary>What the renderer keeps of a character between frames (by <see cref="CharacterInstance.Key"/>): its last posed palette and the one before.</summary>
@@ -253,6 +255,7 @@ internal sealed unsafe partial class CharacterRenderer : IDisposable
             if (scale != 1) l.World = Matrix4x4.CreateScale(scale) * l.World;
             l.WeaponDrawn = inst.WeaponDrawn;
             l.Centre = centre;
+            l.Interior = !far && InteriorObjects?.InteriorAt(centre) is not null;
             l.Radius = asset.Radius * scale;
             l.BoneBase = boneTotal;
             boneTotal += asset.Rig.BoneCount;

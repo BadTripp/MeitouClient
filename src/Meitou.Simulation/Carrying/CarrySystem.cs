@@ -61,7 +61,7 @@ public sealed partial class CarrySystem(GameConstants constants, BodyOptions opt
     /// </summary>
     public static bool LeftArmUsable(MedicalState medical)
     {
-        foreach (var p in medical.Parts)
+        foreach (var p in medical.PartSpan)
         {
             if ((p.Template.CollapsePart & 4) == 0) continue;
             if (p.Template.Collapses && p.IsDown) return false;
