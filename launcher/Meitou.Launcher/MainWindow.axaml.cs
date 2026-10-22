@@ -162,7 +162,7 @@ public sealed partial class MainWindow : Window
         if (NightlyBox.IsChecked == true && !config.IncludePrereleases)
         {
             bool sure = await AskAsync("Nightly builds",
-                "Nightly builds are made every day from the newest code and are not tested. They may be unstable, crash, and corrupt your save files: "
+                "Nightly builds are made twice a day from the newest code and are not tested. They may be unstable, crash, and corrupt your save files: "
                 + "back up your saves before playing one.\n\nContinue with nightly builds?", "Yes", "No");
             if (!sure) { NightlyBox.IsChecked = false; return; }
         }
