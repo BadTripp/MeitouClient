@@ -10,8 +10,8 @@ using Meitou.Rendering.Ui;
 namespace Meitou.Rendering;
 
 /// <summary>
-/// Text panels drawn over the frame (the viewer's frame statistics and key list). Text is rasterised from a monospace
-/// system font with stb_truetype; without one the overlay stays off. Draws into <see cref="Target"/> after
+/// Text panels drawn over the frame (the viewer's frame statistics and key list). Text is rasterised from a font supplied by
+/// the host with stb_truetype. Draws into <see cref="Target"/> after
 /// everything else, so screenshots taken before it don't include it. Native (docs/renderer-native.md 7.5, 8.9): one <see cref="LegacyProgram"/>
 /// draw in a segment and rendering of its own, the vertices in the frame's constants, the font a native R8 texture.
 /// </summary>
@@ -22,15 +22,6 @@ public sealed unsafe class DebugOverlay : IDisposable
     // The size the glyphs are baked at (16 px; a display face is baked larger so it stays sharp drawn big) and the atlas side that holds them.
     readonly float PixelHeight = 16;
     readonly int AtlasSize = 512;
-
-    static readonly string[] FontCandidates =
-    [
-        @"C:\Windows\Fonts\consola.ttf", @"C:\Windows\Fonts\CascadiaMono.ttf", @"C:\Windows\Fonts\cour.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", "/usr/share/fonts/TTF/DejaVuSansMono.ttf",
-        // stb_truetype cannot bake from .ttc collections without an index, so macOS needs a plain .ttf (Menlo is a .ttc here).
-        "/System/Library/Fonts/Supplemental/Courier New.ttf", "/System/Library/Fonts/SFNS.ttf",
-        "/System/Library/Fonts/Menlo.ttc",
-    ];
 
     // Vertex: position (pixels), uv (u < 0: solid), colour.
     const string Vertex = """
@@ -133,11 +124,10 @@ public sealed unsafe class DebugOverlay : IDisposable
         samplerAtlas = program.Sampler("uAtlas");
     }
 
-    /// <summary>The overlay, or null when no monospace font is found.</summary>
-    public static DebugOverlay? TryCreate(GpuContext gpu)
+    /// <summary>The overlay, or null when the supplied TrueType font is unavailable.</summary>
+    public static DebugOverlay? TryCreate(GpuContext gpu, string? fontPath)
     {
-        var path = FontCandidates.FirstOrDefault(File.Exists);
-        return path is null ? null : new DebugOverlay(gpu, File.ReadAllBytes(path));
+        return fontPath is null ? null : new DebugOverlay(gpu, File.ReadAllBytes(fontPath));
     }
 
     /// <param name="pixelHeight">The size the glyphs are baked at: about the size the face is drawn at keeps it sharp.</param>
