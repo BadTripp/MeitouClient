@@ -117,6 +117,10 @@ Same targets as picking; Task_CutLock / Task_BruteForceLock share the shackle ta
 - Door object fields (**Verified**: save writer `DoorStuff` slot 148 / reader 149): `state` (+0x380: 0 closed, 1 open,
   2 opening, 3 closing; this is not the DoorState enum), `doa` open amount (+0x37c, 0..1), `broken` (+0x3ec), `gatecode`, `wants lock`
   (+0x384), and the lock (`lock lvl`, `locked`, `broken`, `hardness`). `wants lock` starts from `always locks` (gates).
+- **Destroyed buildings have no doors** ([pathfinding](pathfinding.md) "Destroyed interiors", `Building::createPhysical`) and no lock: **Verified** by census, the
+  level data's states of destroyed buildings (both Hub `Defensive Gate IV`, `4400-`/`4617-Newwworld-INGAME`) and two original Hub saves carry no
+  door or lock keys for them (those saves write them only for the Hub's intact Bar and Residential Small). Meitou registers no door or own lock
+  for them; their interior fixtures stay.
 - **Motion** (**Verified**, constructor `FUN_14029fb40`, update slot 28 `FUN_140299030`, pose `FUN_140298d10` by disassembly): doors
   slide, they never swing. Open (`FUN_140297040`) works only from state 0 -> 2 and tests no lock; close (`FUN_140298c50`) only from
   1 -> 3, not on a destroyed door. Each frame `doa` moves by frame time x `door move speed` (+0x388, default 0.5 before the record

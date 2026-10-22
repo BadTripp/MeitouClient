@@ -62,6 +62,8 @@ public sealed record TownBuilding(string InstanceId, string BuildingId, string N
     public bool CanHouse { get; init; }
     /// <summary><c>is wall gate</c>: a town gate, housing only resident entries that name it in <c>building</c>.</summary>
     public bool IsGate { get; init; }
+    /// <summary>The level-data state's <c>destroyed</c>: a ruin, which has no doors (docs/game/locks.md "Doors").</summary>
+    public bool Destroyed { get; init; }
     /// <summary>The level data's <c>residents template</c> of its state (a SQUAD_TEMPLATE id; empty when none).</summary>
     public string ResidentsTemplate { get; init; } = "";
     /// <summary>Its turret, when its record has a <c>BUILDING_FUNCTIONALITY</c> function BF_TURRET (a mounted harpoon turret or crossbow); null otherwise.</summary>
@@ -196,6 +198,7 @@ public static class TownBuildings
                 OwnerFactionId = owner, Fixtures = fixtures ?? [], Zone = b.Zone,
                 CanHouse = record.GetBool("is wall gate") || record.GetReferences("interior").Count > 0 && !record.GetBool("links together"),
                 IsGate = record.GetBool("is wall gate"),
+                Destroyed = resolved.Destroyed,
                 Turret = turret,
                 ResidentsTemplate = state?.GetString("residents template") ?? "",
                 InteriorLayout = state?.GetString("interior layout name") ?? "",

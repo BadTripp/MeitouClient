@@ -98,7 +98,8 @@ public sealed class FixtureRegistry
         var faction = owner >= 0 && owner < data.Factions.Count ? data.Factions[owner] : null;
         var list = new List<Fixture>();
         var record = db.Find(b.BuildingId);
-        if (record is not null)
+        // A destroyed building has no doors and no lock of its own (docs/game/locks.md "Doors"); its interior's fixtures stay.
+        if (record is not null && !b.Destroyed)
         {
             AddDoors(world, db, record, b.Key, site, owner, faction, b.Position, b.Yaw, list);
             if (Lockable(db, record) is { } own) list.Add(Make(world, db, own, b.Key, b.Key, record, site, owner, faction, b.Position, b.Yaw));
