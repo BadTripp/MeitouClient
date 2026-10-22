@@ -20,9 +20,12 @@ public sealed partial class MedicalState
     readonly List<float> wounds = [];
     ulong rollCounter;
 
-    public MedicalState(IEnumerable<HealthPart> parts) => Parts = [.. parts];
+    public MedicalState(IEnumerable<HealthPart> parts) => this.parts = [.. parts];
 
-    public IReadOnlyList<HealthPart> Parts { get; }
+    public IReadOnlyList<HealthPart> Parts => parts;
+    readonly HealthPart[] parts;
+    /// <summary><see cref="Parts"/> for the every-tick loops (no enumerator to allocate).</summary>
+    internal ReadOnlySpan<HealthPart> PartSpan => parts;
 
     /// <summary>Save key <c>blood</c>. Current blood; a character has capacity <see cref="BloodCapacity(RaceData, float, bool, float, float)"/>.</summary>
     public float Blood { get; set; }
@@ -119,7 +122,7 @@ public sealed partial class MedicalState
     {
         float arm = 0, head = 1, torso = float.MaxValue;
         bool anyArm = false, anyTorso = false, left = false, right = false;
-        foreach (var p in Parts)
+        foreach (var p in parts)
         {
             float f = Math.Clamp(p.Fraction, 0, 1);
             switch (p.Template.Type)
@@ -153,7 +156,7 @@ public sealed partial class MedicalState
     float ItemFactor(StatsEnumerated stat, bool legs)
     {
         float f = 1;
-        foreach (var p in Parts)
+        foreach (var p in parts)
         {
             bool isLeg = p.Template.Type == BodyPartType.Leg;
             bool isArm = p.Template.Type == BodyPartType.Arm;
@@ -165,7 +168,7 @@ public sealed partial class MedicalState
 
     bool VitalPartsUp()
     {
-        foreach (var p in Parts)
+        foreach (var p in parts)
             if (p.IsVital && !(p.Fraction > 0)) return false;
         return true;
     }
@@ -210,7 +213,7 @@ public sealed partial class MedicalState
         var c = ctx.Constants;
         float k = c.KnockoutMult1 + (c.KnockoutMult99 - c.KnockoutMult1) * Math.Clamp(ctx.Toughness / 100, 0, 1);
         float sum = 0;
-        foreach (var p in Parts)
+        foreach (var p in parts)
         {
             float m = p.MaxHp;
             if (m <= 0) continue;

@@ -449,34 +449,38 @@ public sealed unsafe class DebugOverlay : IDisposable
     internal void Flush(int width, int height, Meitou.Data.Ui.UiRect? clip, OverlayPass? pass)
     {
         if (batch.Count == 0 || width <= 0 || height <= 0 || Target is null) { batch.Clear(); imageBatch = null; atlasRuns.Clear(); return; }
-        // A native segment of its own. It is begun first: the overlay is also drawn after a frame ended (a screenshot's key list), and the
-        // segment opens the frame whose constants hold the vertices.
-        var t = PassTargets.Of(Target, null).At(new Viewport(0, 0, width, height, 0, 1));
+        Rect2D? scissor = null;
         if (clip is { } rect)
         {
             var clipped = rect.Intersect(new(0, 0, width, height));
             // The target keeps the renderer's lower-left convention; UI rectangles use top-left.
             int left = (int)Math.Floor(clipped.X), right = (int)Math.Ceiling(clipped.X + clipped.Width);
             int top = (int)Math.Floor(clipped.Y), bottom = (int)Math.Ceiling(clipped.Y + clipped.Height);
-            t = t with { Scissor = new Rect2D(new Offset2D(left, height - bottom), new Extent2D((uint)(right - left), (uint)(bottom - top))) };
+            scissor = new Rect2D(new Offset2D(left, height - bottom), new Extent2D((uint)(right - left), (uint)(bottom - top)));
         }
         // The atlas texture of run `run` of the batch: a UI font's (it can change within a batch), else the baked one.
         SampledTexture AtlasAt(int run) => atlasRuns.Count > 0 ? atlasRuns[run].Texture : uiFont is { } ui ? ui.Sampled : atlasSampled;
         if (pass is not null)
         {
+            // Only the scissor goes to the pass (the whole target without a clip, as PassTargets.At gives).
+            var passScissor = scissor ?? new Rect2D(default, new Extent2D((uint)Target.Desc.Width, (uint)Target.Desc.Height));
             var all = CollectionsMarshal.AsSpan(batch);
-            if (atlasRuns.Count <= 1) pass.Add(this, all, imageBatch, t.Scissor, imageBatch is null ? AtlasAt(0) : null);
+            if (atlasRuns.Count <= 1) pass.Add(this, all, imageBatch, passScissor, imageBatch is null ? AtlasAt(0) : null);
             else
                 for (int run = 0; run < atlasRuns.Count; run++)
                 {
                     int from = run == 0 ? 0 : atlasRuns[run].Start, to = run + 1 < atlasRuns.Count ? atlasRuns[run + 1].Start : all.Length;
-                    pass.Add(this, all[from..to], null, t.Scissor, atlasRuns[run].Texture);
+                    pass.Add(this, all[from..to], null, passScissor, atlasRuns[run].Texture);
                 }
             batch.Clear();
             atlasRuns.Clear();
             imageBatch = null;
             return;
         }
+        // A native segment of its own. It is begun first: the overlay is also drawn after a frame ended (a screenshot's key list), and the
+        // segment opens the frame whose constants hold the vertices.
+        var t = PassTargets.Of(Target, null).At(new Viewport(0, 0, width, height, 0, 1));
+        if (scissor is { } s) t = t with { Scissor = s };
         var cmd = Gpu.BeginNative("debug overlay");
         cmd.BeginRendering(t.Rendering);
         program.Set(uScreen, (float)width, height);

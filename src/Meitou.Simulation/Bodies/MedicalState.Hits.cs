@@ -14,7 +14,7 @@ public sealed partial class MedicalState
     public void Heal(in MedicalContext ctx)
     {
         if (Dead) return;
-        foreach (var p in Parts)
+        foreach (var p in parts)
         {
             p.Wear = p.Stun = p.Bandage = p.Rig = 0;
             p.Flesh = p.MaxHp;

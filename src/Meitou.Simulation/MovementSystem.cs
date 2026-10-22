@@ -429,9 +429,10 @@ public sealed class MovementSystem(PathService paths) : ITickSystem, IDisposable
             var step = (dir * speed + push.Sum * SeparationStrength) * dt;
             var shove = closing ? Vector2.Zero : Contact(world, i, cold, ref push, new Vector2(p.Position.X, p.Position.Z) + step);
             step += shove;
-            float x = p.Position.X + step.X, z = p.Position.Z + step.Y;
+            float x = p.Position.X + step.X, z = p.Position.Z + step.Y, y = 0;
+            bool stands = false;
             // Pushed by its neighbours where it cannot stand (over a hole furniture cuts in a floor): its own step alone.
-            if ((push.Sum != Vector2.Zero || shove != Vector2.Zero) && !walk.IsWalkable(x, z, p.Position.Y))
+            if ((push.Sum != Vector2.Zero || shove != Vector2.Zero) && !(stands = walk.TryStand(x, z, p.Position.Y, out y)))
             {
                 step = dir * speed * dt;
                 (x, z) = (p.Position.X + step.X, p.Position.Z + step.Y);
@@ -439,9 +440,10 @@ public sealed class MovementSystem(PathService paths) : ITickSystem, IDisposable
             if (step != Vector2.Zero)
             {
                 // One already off every surface near its height (a stale height) is not held there: it steps down onto what is below.
-                if (walk.IsWalkable(x, z, p.Position.Y) || !walk.IsWalkable(p.Position.X, p.Position.Z, p.Position.Y) && walk.IsWalkable(x, z))
+                if (!stands) stands = walk.TryStand(x, z, p.Position.Y, out y);
+                if (stands || !walk.IsWalkable(p.Position.X, p.Position.Z, p.Position.Y) && walk.IsWalkable(x, z))
                 {
-                    n.Position = new Vector3(x, walk.GroundHeight(x, z, p.Position.Y), z);
+                    n.Position = new Vector3(x, y, z);
                     if (speed > 0.1f) n.Yaw = MathF.Atan2(dir.X, dir.Y);
                 }
                 else

@@ -32,6 +32,15 @@ public interface IWalkability
     float GroundHeight(float x, float z, float nearY) => GroundHeight(x, z);
     /// <summary>Whether a character now at height <paramref name="nearY"/> may stand at world X/Z (a surface only far above it, such as a wall top, does not count).</summary>
     bool IsWalkable(float x, float z, float nearY) => IsWalkable(x, z);
+    /// <summary>
+    /// <see cref="IsWalkable(float, float, float)"/> and, in <paramref name="y"/>, <see cref="GroundHeight(float, float, float)"/> (also when not walkable), answered
+    /// together: a step asks both of the same spot.
+    /// </summary>
+    bool TryStand(float x, float z, float nearY, out float y)
+    {
+        y = GroundHeight(x, z, nearY);
+        return IsWalkable(x, z, nearY);
+    }
     /// <summary>The terrain's own height at world X/Z, also under the water (where <see cref="GroundHeight(float, float)"/> is the flat water surface): the depth of the water is the water level minus this.</summary>
     float TerrainHeight(float x, float z) => GroundHeight(x, z);
 
@@ -41,14 +50,16 @@ public interface IWalkability
     /// floor mesh and the ground below shows through them (Observed: the Hub's Storm House, its counter, tables and stools), so a node or chair there would otherwise
     /// be stood on the ground under the floor.
     /// </summary>
-    Vector3? FloorNear(float x, float z, float y, float slack)
+    Vector3? FloorNear(float x, float z, float y, float slack) => ScanFloor(this, x, z, y, slack);
+
+    /// <summary>The search of <see cref="FloorNear"/>, for an implementation that keeps its answers.</summary>
+    static Vector3? ScanFloor(IWalkability walk, float x, float z, float y, float slack)
     {
         for (float r = 0; r <= FloorSearch; r += 2)
             for (int k = 0; k < (r == 0 ? 1 : 8); k++)
             {
                 float px = x + r * MathF.Cos(k * MathF.PI / 4), pz = z + r * MathF.Sin(k * MathF.PI / 4);
-                if (!IsWalkable(px, pz, y)) continue;
-                float g = GroundHeight(px, pz, y);
+                if (!walk.TryStand(px, pz, y, out float g)) continue;
                 if (MathF.Abs(g - y) <= slack) return new Vector3(px, g, pz);
             }
         return null;

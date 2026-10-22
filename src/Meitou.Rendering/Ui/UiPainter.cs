@@ -108,7 +108,8 @@ public sealed partial class UiPainter : IDisposable
     readonly Dictionary<string, OpacityMask> masks = new(StringComparer.Ordinal);
     readonly List<UiRect> opaqueRects = new();
     readonly List<UiRect> previousOpaqueRects = new();
-    double opaqueArea;
+    double? opaqueArea;
+    int coverageWidth, coverageHeight;
     DebugOverlay.OverlayPass? overlayPass;
 
     /// <summary>
@@ -116,7 +117,15 @@ public sealed partial class UiPainter : IDisposable
     /// texels are all alpha 255, drawn with alpha 1; text and translucent pieces do not count. Overlaps count once. The measure for how
     /// much scene shading a UI depth stamp could skip.
     /// </summary>
-    public float OpaqueCoverage { get; private set; }
+    public float OpaqueCoverage
+    {
+        get
+        {
+            // Measured when asked (the stats line), not every frame: the union is costly and the pieces change whenever a panel or a name tag moves.
+            opaqueArea ??= UnionArea([.. previousOpaqueRects]);
+            return coverageWidth > 0 && coverageHeight > 0 ? (float)(opaqueArea.Value / ((double)coverageWidth * coverageHeight)) : 0;
+        }
+    }
 
     /// <summary>Makes <paramref name="texture"/> the image an ImageBox shows for <c>ImageTexture</c> <paramref name="name"/> (the caller keeps and frees it).</summary>
     public void SetTexture(string name, Texture texture, SampledTexture sampled) => external[name] = (texture, sampled);
@@ -365,9 +374,9 @@ public sealed partial class UiPainter : IDisposable
         {
             previousOpaqueRects.Clear();
             previousOpaqueRects.AddRange(opaqueRects);
-            opaqueArea = UnionArea(opaqueRects);
+            opaqueArea = null;
         }
-        OpaqueCoverage = width > 0 && height > 0 ? (float)(opaqueArea / ((double)width * height)) : 0;
+        (coverageWidth, coverageHeight) = (width, height);
         opaqueRects.Clear();
     }
 

@@ -41,7 +41,7 @@ public sealed partial class MedicalState
         get
         {
             int bits = 0;
-            foreach (var p in Parts)
+            foreach (var p in parts)
                 if (p.Template.LimbSlot is >= 0 and < 4 and var k) bits |= ((int)p.Limb & 3) << (2 * k);
             return bits;
         }
@@ -50,7 +50,7 @@ public sealed partial class MedicalState
     /// <summary>The part of limb slot 0 to 3 (0 left arm, 1 right arm, 2 left leg, 3 right leg); null when the anatomy has none.</summary>
     public HealthPart? LimbPart(int slot)
     {
-        foreach (var p in Parts)
+        foreach (var p in parts)
             if (p.Template.LimbSlot == slot) return p;
         return null;
     }
