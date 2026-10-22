@@ -440,7 +440,10 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
             case AiBehaviour.GoHome:
                 var (target, home, floor) = SpotFor(mind, board, behaviour, type);
                 if (GoToSpot(world.Walkability, table, slot, mind, target, home ? GiveUp.Home : GiveUp.Post, type == TaskType.RUN_AWAY_HOMETOWN ? SpeedMode.Run : SpeedMode.Walk, height: floor))
+                {
                     Become(table, slot, behaviour == AiBehaviour.Sleep ? CharacterTask.Rest : CharacterTask.Idle);
+                    if (home && board.Gate is { } gate && GateSpot(board, mind, type) is not null) table.Next[slot].Yaw = MathF.Atan2(gate.Out.X, gate.Out.Y);   // looking out
+                }
                 break;
             case AiBehaviour.TownNode:
             case AiBehaviour.Shop:
@@ -501,6 +504,7 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
             if (board.Town >= 0) return (Flat(data.Sites[board.Town].Position), true, null);
             return (mind.Squad.HomeCentre, true, null);
         }
+        if (!mind.HomeUnreachable && GateSpot(board, mind, type) is { } guard) return (Flat(guard), true, guard.Y);
         if (board.Home is not { } home || mind.HomeUnreachable || type is TaskType.HOLD_POSITION or TaskType.MAN_THE_GATE) return (mind.Post, false, null);
         HomeSpotKind kind = behaviour == AiBehaviour.Sleep ? HomeSpotKind.Bed : type switch
         {
@@ -709,7 +713,59 @@ public sealed partial class AiSystem(PopulationData data, AiSettings? settings =
             squad.Resume = false;
             ClaimTurrets(world, board, squad);
             ClaimSeats(world, board, squad);
+            FindGate(world, board, squad);
         }
+    }
+
+    /// <summary>
+    /// Sets <see cref="Blackboard.Gate"/>: the home when it is a gate, else, for a squad with a gate guard, the town's gate nearest the squad (the original's
+    /// <c>HOME_GATE</c> chain, docs/game/ai-tasks.md "Town goals"); its first door's leaf, from the door gate (none headless). Kept while the gate stays the same.
+    /// </summary>
+    void FindGate(World world, Blackboard board, Squad squad)
+    {
+        TownBuilding? gate = board.Home is { IsGate: true } home ? home : null;
+        if (gate is null && board.Crowd.ContainsKey(TaskType.MAN_THE_GATE) && board.Town >= 0)
+        {
+            float best = float.MaxValue;
+            foreach (var b in data.Sites[board.Town].Buildings)
+            {
+                float d = Vector2.DistanceSquared(Flat(b.Position), Flat(squad.Position));
+                if (b.IsGate && d < best) (gate, best) = (b, d);
+            }
+        }
+        if (gate is null) { board.Gate = null; return; }
+        if (board.Gate?.Building == gate) return;
+        board.Gate = null;
+        Locks.Fixture? door = null;
+        foreach (var f in world.Fixtures.OfBuilding(gate.Key))
+            if (f.Kind == Locks.FixtureKind.Door && (door is null || f.DoorIndex < door.DoorIndex)) door = f;
+        if (door is null || world.Fixtures.DoorSpotOf(door) is not { } leaf) return;
+        var way = Vector2.Normalize(new Vector2(leaf.Normal.X, leaf.Normal.Z));
+        // Out of the town: the original's side is not decoded (engine choice).
+        var town = board.Town >= 0 ? Flat(data.Sites[board.Town].Position) : Flat(gate.Position);
+        if (Vector2.Dot(way, Flat(leaf.Centre) - town) < 0) way = -way;
+        board.Gate = new GatePost(gate, leaf.Centre with { Y = leaf.Foot }, way, leaf.HalfWidth);
+    }
+
+    /// <summary>How far from a gate's leaf its gate guard stands (Observed, <c>Task_ManTheGate</c>: the door's point 15 along its normal).</summary>
+    const float GateGuardOut = 15;
+
+    /// <summary>
+    /// Where a gate's guards stand: the gate guard 15 out from its leaf; a member whose node goal finds no node in a gate it lives in flanks the opening on that side,
+    /// beyond the leaf's edges, alternately left and right in two rows (engine choice: the original's goal finds nothing there). Null for other goals.
+    /// </summary>
+    static Vector3? GateSpot(Blackboard board, AiMind mind, TaskType type)
+    {
+        if (board.Gate is not { } gate) return null;
+        var front = gate.Door + new Vector3(gate.Out.X, 0, gate.Out.Y) * GateGuardOut;
+        if (type == TaskType.MAN_THE_GATE) return front;
+        if (type is not (TaskType.STAND_AT_GUARD_NODE_HOMEBUILDING or TaskType.STAND_AT_GUARD_NODE_HOMEBUILDING_INDOORS_ONLY or TaskType.STAND_AT_GUARD_NODE_HOMETOWN_OUTSIDE
+            or TaskType.STAND_AT_GENERAL_NODE) || board.Home != gate.Building) return null;
+        foreach (var s in gate.Building.Spots) if (s.IsNode) return null;
+        int step = mind.MemberIndex / 2;
+        float side = (mind.MemberIndex & 1) == 0 ? 1 : -1;
+        var along = new Vector3(-gate.Out.Y, 0, gate.Out.X) * side * (gate.HalfWidth + 6 + 7 * (step / 2));
+        return front + new Vector3(gate.Out.X, 0, gate.Out.Y) * (8 * (step % 2)) + along;
     }
 
     /// <summary>
